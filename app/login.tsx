@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from 'react
 export default function LoginScreen() {
   return (
     <ImageBackground
-      source={require('./assets/images/baggrund-1.png')}
+      source={require('../assets/images/baggrund-1.png')}
       style={styles.background}
     >
       <View style={styles.container}>
