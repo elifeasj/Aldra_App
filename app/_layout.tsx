@@ -1,22 +1,13 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import {
-  useFonts,
-  RedHatDisplay_400Regular,
-  RedHatDisplay_500Medium,
-  RedHatDisplay_700Bold,
-  RedHatDisplay_900Black,
-} from '@expo-google-fonts/red-hat-display';
+import { useFonts } from 'expo-font';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
     const [fontsLoaded] = useFonts({
-        RedHatDisplay_400Regular,
-        RedHatDisplay_500Medium,
-        RedHatDisplay_700Bold,
-        RedHatDisplay_900Black,
+        RedHatDisplay: require('../assets/fonts/RedHatDisplay-Regular.ttf'),
     });
 
     useEffect(() => {
