@@ -19,7 +19,7 @@ export default function Onboarding1() {
         if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
         } else {
-            router.push('/index'); // Gå tilbage til index.js
+            router.push('/'); // Gå tilbage til index.js
         }
     };
 
@@ -101,12 +101,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'flex-start', // Justeret til venstrejustering
         marginBottom: 100,
+        width: '100%',
+
     },
     contentContainer: {
         flex: 0,
         justifyContent: 'center',
         alignItems: 'flex-start',  // Sørger for at teksten er til venstre
-        paddingHorizontal: 20,
     },
     buttonContainer: {
         flexDirection: 'row',  // Vigtigt for at placere knapperne på hver sin side
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         width: '100%',
         marginBottom: 50,
-        paddingHorizontal: 20,
+        paddingHorizontal: 0,
     },
     title: {
         fontSize: 36,
@@ -122,14 +123,16 @@ const styles = StyleSheet.create({
         color: '#42865F',
         marginBottom: 8,
         textAlign: 'left',  // Venstrejuster tekst
+        
     },
     subtitle: {
         fontSize: 22,
         fontWeight: 'bold',
         color: '#42865F',
-        marginBottom: 30,
+        marginBottom: 20,
         textAlign: 'left',  // Venstrejuster tekst
         lineHeight: 27,
+        
     },
     description: {
         fontSize: 20,
@@ -137,6 +140,7 @@ const styles = StyleSheet.create({
         textAlign: 'left',  // Venstrejuster tekst
         lineHeight: 27,
         marginBottom: 20,
+        paddingRight: 39,
     },
     button: {
         paddingVertical: 13,
@@ -165,20 +169,20 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         textAlign: 'center',
-        width: '80',
-        marginLeft: 0, // Afstand mellem tekst og ikon
+        width: '60',
+        marginLeft: 20, // Afstand mellem tekst og ikon
     },
     nextButtonText: {
         color: '#FFFFFF',  // Næste knap tekstfarve
         fontSize: 20,
         fontWeight: 'bold',
         textAlign: 'center',
-        width: '80',
-        marginRight: 0, // Afstand mellem tekst og ikon
+        width: '60',
+        marginRight: 20, // Afstand mellem tekst og ikon
     },
     buttonIcon: {
         marginLeft: 10,
-    },
+    }, 
 
     dotsContainer: {
         flexDirection: 'row', 
