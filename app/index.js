@@ -11,18 +11,25 @@ export default function IntroScreen() {
             style={styles.background}
             resizeMode="cover"
         >
-            <View style={styles.container}>
-                {/* Logo */}
+
+            <View style={styles.overlay} />
+
+            <View style={styles.topContainer}>
                 <Image
                     source={require('../assets/images/aldra_logo.png')} // Logo
                     style={styles.logo}
                 />
-                {/* Velkomsttekst */}
+            </View>
+            <View style={styles.contentContainer}>
                 <Text style={styles.title}>Velkommen til Aldra</Text>
                 <Text style={styles.subtitle}>
                     – din støtte som pårørende til en person med demens
                 </Text>
-                {/* Kom i gang-knap */}
+                <Text style={styles.description}>
+                    Lad os vise dig, hvordan Aldra kan gøre din hverdag lettere.
+                </Text>
+            </View>
+            <View style={styles.buttonContainer}>
                 <TouchableOpacity
                     style={styles.button}
                     onPress={() => router.push('/onboarding')}
@@ -38,39 +45,65 @@ const styles = StyleSheet.create({
     background: {
         flex: 1,
     },
-    container: {
-        flex: 1,
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(70, 109, 82, 0.6)',
+    },
+    topContainer: {
+        flex: 1.5, // Mindsket flex for mindre afstand
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(70, 109, 82, 0.6)', // Valgfri overlay for baggrunden
+        marginBottom: 10, // Mindsket afstand mellem logo og tekst
+    },
+    contentContainer: {
+        flex: 0, // Mindsket flex for tættere layout
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start', 
+        paddingHorizontal: 20,
+        marginTop: 0, // Flytter teksten tættere på logoet
+    },
+    buttonContainer: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        marginBottom: 50,
     },
     logo: {
-        width: 150, // Logoets bredde
-        height: 100, // Logoets højde
-        marginBottom: 20, // Giver afstand til teksten
+        width: 250, // Logoets bredde
+        height: 50, // Logoets højde
+        marginTop: 120,
     },
     title: {
-        fontSize: 36,
+        fontSize: 36, 
         fontWeight: 'bold',
         color: '#FFFFFF',
-        marginBottom: 10,
-        textAlign: 'center',
+        marginBottom: 8,
+        textAlign: 'left',
     },
     subtitle: {
-        fontSize: 18,
-        fontStyle: 'italic',
+        fontSize: 22,
+        fontWeight: 'bold',
         color: '#FFFFFF',
-        marginBottom: 20,
-        textAlign: 'center',
+        marginBottom: 30,
+        textAlign: 'left',
+        paddingRight: 30,
+        lineHeight: 27,
+    },
+    description: {
+        fontSize: 20,
+        color: '#FFFFFF',
+        textAlign: 'left',
+        lineHeight: 27,
     },
     button: {
         backgroundColor: '#FFFFFF',
         paddingVertical: 15,
         paddingHorizontal: 30,
-        borderRadius: 25,
+        borderRadius: 8,
     },
     buttonText: {
         color: '#3E8E7E',
+        fontSize: 18,
         fontWeight: 'bold',
     },
 });

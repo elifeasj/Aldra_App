@@ -1,13 +1,21 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { useFonts } from 'expo-font';
+import { Text, TextInput } from 'react-native';
+
+Text.defaultProps = Text.defaultProps || {};
+Text.defaultProps.style = { fontFamily: 'RedHatDisplay_400Regular' };
+
+TextInput.defaultProps = TextInput.defaultProps || {};
+TextInput.defaultProps.style = { fontFamily: 'RedHatDisplay_400Regular' };
+import { useFonts, RedHatDisplay_400Regular, RedHatDisplay_700Bold } from '@expo-google-fonts/red-hat-display';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
     const [fontsLoaded] = useFonts({
-        RedHatDisplay: require('../assets/fonts/RedHatDisplay-Regular.ttf'),
+        RedHatDisplay_400Regular,
+        RedHatDisplay_700Bold,
     });
 
     useEffect(() => {
@@ -17,7 +25,7 @@ export default function RootLayout() {
     }, [fontsLoaded]);
 
     if (!fontsLoaded) {
-        return null;
+        return null; // Vent med at renderere indtil fontene er indlæst
     }
 
     return (
