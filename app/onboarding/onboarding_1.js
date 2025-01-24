@@ -8,7 +8,7 @@ export default function Onboarding1() {
     const [currentStep, setCurrentStep] = useState(1); // Start på første trin
 
     const handleNext = () => {
-        if (currentStep < 5) { // Antal onboarding-sider
+        if (currentStep < 1) { // Antal onboarding-sider
             setCurrentStep(currentStep + 1);
         } else {
             router.push('/onboarding/onboarding_2'); // Gå videre til næste onboarding
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
         color: '#42865F',
         textAlign: 'left',  // Venstrejuster tekst
         lineHeight: 27,
-        marginBottom: 20,
+        marginBottom: 0,
         paddingRight: 39,
     },
     button: {

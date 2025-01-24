@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(70, 109, 82, 0.6)',
+        backgroundColor: 'rgba(70, 109, 82, 0.8)',
     },
     topContainer: {
         flex: 1.5, // Mindsket flex for mindre afstand

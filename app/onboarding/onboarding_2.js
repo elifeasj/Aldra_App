@@ -5,10 +5,10 @@ import { useState } from 'react';
 
 export default function Onboarding2() {
     const router = useRouter();
-    const [currentStep, setCurrentStep] = useState(1); // Start på første trin
+    const [currentStep, setCurrentStep] = useState(2); // Start på første trin
 
     const handleNext = () => {
-        if (currentStep < 5) { // Antal onboarding-sider
+        if (currentStep < 2) { // Antal onboarding-sider
             setCurrentStep(currentStep + 1);
         } else {
             router.push('/onboarding/onboarding_3'); // Gå videre til næste onboarding
@@ -19,7 +19,7 @@ export default function Onboarding2() {
         if (currentStep > 2) {
             setCurrentStep(currentStep - 2);
         } else {
-            router.push('/'); // Gå tilbage
+            router.push('/onboarding/onboarding_1'); // Gå tilbage
         }
     };
 
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     image: {
-        width: '100%',  // Billedets bredde fylder hele skærmen
+        width: '65%',  // Billedets bredde fylder hele skærmen
         height: '50%',  // Juster højde
         resizeMode: 'contain',  // Sørger for at billedet ikke bliver strakt
         marginBottom: 0,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
         color: '#42865F',
         textAlign: 'left',  // Venstrejuster tekst
         lineHeight: 27,
-        marginBottom: 20,
+        marginBottom: 0,
         paddingRight: 39,
     },
     button: {
