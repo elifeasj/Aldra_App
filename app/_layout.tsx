@@ -1,13 +1,33 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import {
+  useFonts,
+  RedHatDisplay_400Regular,
+  RedHatDisplay_500Medium,
+  RedHatDisplay_700Bold,
+  RedHatDisplay_900Black,
+} from '@expo-google-fonts/red-hat-display';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+    const [fontsLoaded] = useFonts({
+        RedHatDisplay_400Regular,
+        RedHatDisplay_500Medium,
+        RedHatDisplay_700Bold,
+        RedHatDisplay_900Black,
+    });
+
     useEffect(() => {
-        SplashScreen.hideAsync();
-    }, []);
+        if (fontsLoaded) {
+            SplashScreen.hideAsync();
+        }
+    }, [fontsLoaded]);
+
+    if (!fontsLoaded) {
+        return null;
+    }
 
     return (
         <Stack initialRouteName="index">
