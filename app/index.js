@@ -37,7 +37,7 @@ export default function IntroScreen() {
                     >
                     <View style={styles.buttonContent}>
                     <Text style={styles.buttonText}>Kom i gang</Text>
-                    <Icon name="chevron-forward-outline" size={25} color="#3E8E7E" />
+                    <Icon name="chevron-forward-outline" size={25} color="#42865F" />
                     </View>
                 </TouchableOpacity>
             </View>

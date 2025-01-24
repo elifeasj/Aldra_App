@@ -27,13 +27,16 @@ export default function RootLayout() {
     if (!fontsLoaded) {
         return null; // Vent med at renderere indtil fontene er indlæst
     }
+    
 
     return (
         <Stack initialRouteName="index">
             <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-            <Stack.Screen name="register" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding/onboarding_1" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding/onboarding_2" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding/onboarding_3" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding/onboarding_4" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding/onboarding_5" options={{ headerShown: false }} />
         </Stack>
     );
 }
