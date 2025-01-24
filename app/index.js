@@ -14,7 +14,7 @@ export default function IntroScreen() {
             <View style={styles.container}>
                 {/* Logo */}
                 <Image
-                    source={require('../assets/images/Aldra.svg')} // Din logo-fil
+                    source={require('../assets/images/aldra_logo.png')} // Logo
                     style={styles.logo}
                 />
                 {/* Velkomsttekst */}
@@ -45,12 +45,12 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(70, 109, 82, 0.6)', // Valgfri overlay for baggrunden
     },
     logo: {
-        width: 100, // Logoets bredde
+        width: 150, // Logoets bredde
         height: 100, // Logoets højde
         marginBottom: 20, // Giver afstand til teksten
     },
     title: {
-        fontSize: 24,
+        fontSize: 36,
         fontWeight: 'bold',
         color: '#FFFFFF',
         marginBottom: 10,

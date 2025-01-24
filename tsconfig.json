@@ -13,7 +13,8 @@
     "allowJs": true,
     "baseUrl": "./",
     "paths": {
-      "@/*": ["app/*"], 
+      "@/*": ["app/*"],
+      "@/hooks/*": ["hooks/*"],
       "@/components/*": ["components/*"]
     }
   },
