@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function IntroScreen() {
     const router = useRouter();
@@ -32,9 +33,12 @@ export default function IntroScreen() {
             <View style={styles.buttonContainer}>
                 <TouchableOpacity
                     style={styles.button}
-                    onPress={() => router.push('/onboarding')}
-                >
+                    onPress={() => router.push('/onboarding/onboarding_1')}
+                    >
+                    <View style={styles.buttonContent}>
                     <Text style={styles.buttonText}>Kom i gang</Text>
+                    <Icon name="chevron-forward-outline" size={25} color="#3E8E7E" />
+                    </View>
                 </TouchableOpacity>
             </View>
         </ImageBackground>
@@ -67,6 +71,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
         alignItems: 'center',
         marginBottom: 50,
+        paddingHorizontal: 20,
     },
     logo: {
         width: 250, // Logoets bredde
@@ -95,15 +100,32 @@ const styles = StyleSheet.create({
         textAlign: 'left',
         lineHeight: 27,
     },
+
     button: {
         backgroundColor: '#FFFFFF',
         paddingVertical: 15,
-        paddingHorizontal: 30,
         borderRadius: 8,
+        width: '100%',
+        alignSelf: 'center',
     },
+    
+    buttonContent: {
+        flexDirection: 'row', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        paddingHorizontal: 20, 
+    },
+    
     buttonText: {
         color: '#3E8E7E',
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
+        flex: 1,
+        textAlign: 'center', 
+    },
+
+    buttonIcon: {
+        width: 16, 
+        height: 16,
     },
 });
