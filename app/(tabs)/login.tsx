@@ -12,9 +12,10 @@ export default function LoginScreen() {
       </View>
     </ImageBackground>
   ); */
+  <Text>Velkommen til AldraApp!</Text>
 }
 
-<Text>Velkommen til AldraApp!</Text>
+
 
 const styles = StyleSheet.create({
   background: {
