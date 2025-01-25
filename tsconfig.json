@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
-    "jsx": "react",
+    "jsx": "react-native",  // Ændret fra "react" til "react-native"
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

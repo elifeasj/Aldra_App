@@ -11,7 +11,7 @@ app.use(bodyParser.json());  // Tillader JSON data i anmodninger
 const client = new Client({
   user: 'postgres',  // PostgreSQL-brugernavn
   host: 'localhost',
-  database: 'aldra_database',  // Din database
+  database: 'aldradatabase',  // Din database
   password: '1234',  // Din adgangskode
   port: 5432,
 });
