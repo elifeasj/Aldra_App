@@ -36,5 +36,8 @@
         "listUnknownPackages": false
       }
     }
+  },
+  "devDependencies": {
+    "@types/react-native": "^0.72.8"
   }
 }
