@@ -1,56 +1,43 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const { Client } = require('pg');  // PostgreSQL-klienten
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { MongoClient } = require('mongodb');
 
 const app = express();
-app.use(cors());
-app.use(bodyParser.json());
+app.use(cors());  // Aktiverer CORS for alle anmodninger
+app.use(bodyParser.json());  // Tillader JSON data i anmodninger
 
-// MongoDB Atlas URI
-const uri = 'mongodb+srv://elfitaydin:Melo11oktober!@aldra.ica31.mongodb.net/?retryWrites=true&w=majority&appName=Aldra';
-
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-
-// Opret forbindelse til MongoDB Atlas
-client.connect()
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((error) => {
-    console.error('Error connecting to MongoDB:', error);
-  });
-
-// Definere bruger-modellen
-const UserSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  password: String, // For nemheds skyld, husk at hashe passwords før gemme i produktion!
-  relationToDementiaPerson: String,
+// Opret forbindelse til PostgreSQL
+const client = new Client({
+  user: 'postgres',  // PostgreSQL-brugernavn
+  host: 'localhost',
+  database: 'aldra_database',  // Din database
+  password: '1234',  // Din adgangskode
+  port: 5432,
 });
 
-const User = mongoose.model('User', UserSchema);
+client.connect()
+  .then(() => console.log('Connected to PostgreSQL'))
+  .catch((error) => console.error('Error connecting to PostgreSQL:', error));
 
 // Opret bruger rute
 app.post('/register', async (req, res) => {
   const { name, email, password, relationToDementiaPerson } = req.body;
 
   try {
-    const newUser = new User({
-      name,
-      email,
-      password, // I praksis skal du hash adgangskoden
-      relationToDementiaPerson
-    });
-
-    await newUser.save();
+    // Indsæt bruger i databasen
+    await client.query(
+      'INSERT INTO Users (name, email, password, relation_to_dementia_person) VALUES ($1, $2, $3, $4)',
+      [name, email, password, relationToDementiaPerson]
+    );
     res.status(200).send('User registered successfully');
   } catch (error) {
+    console.error('Error registering user:', error);
     res.status(500).send('Error registering user');
   }
 });
 
+// Start serveren
 app.listen(5001, () => {
   console.log('Server kører på http://localhost:5001');
 });
