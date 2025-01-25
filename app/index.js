@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import "expo-router/entry";
 import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function IntroScreen() {
@@ -8,16 +9,14 @@ export default function IntroScreen() {
 
     return (
         <ImageBackground
-            source={require('../assets/images/baggrund-1.png')} // Baggrundsbilledet
+            source={require('../assets/images/baggrund-1.png')} // Sørg for at stien er korrekt
             style={styles.background}
             resizeMode="cover"
         >
-
             <View style={styles.overlay} />
-
             <View style={styles.topContainer}>
                 <Image
-                    source={require('../assets/images/aldra_logo.png')} // Logo
+                    source={require('../assets/images/aldra_logo.png')} // Sørg for at stien er korrekt
                     style={styles.logo}
                 />
             </View>
@@ -34,10 +33,10 @@ export default function IntroScreen() {
                 <TouchableOpacity
                     style={styles.button}
                     onPress={() => router.push('/onboarding/onboarding_1')}
-                    >
+                >
                     <View style={styles.buttonContent}>
-                    <Text style={styles.buttonText}>Kom i gang</Text>
-                    <Icon name="chevron-forward-outline" size={25} color="#42865F" />
+                        <Text style={styles.buttonText}>Kom i gang</Text>
+                        <Icon name="chevron-forward-outline" size={25} color="#42865F" />
                     </View>
                 </TouchableOpacity>
             </View>
@@ -54,17 +53,17 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(70, 109, 82, 0.8)',
     },
     topContainer: {
-        flex: 1.5, // Mindsket flex for mindre afstand
+        flex: 1.5,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 10, // Mindsket afstand mellem logo og tekst
+        marginBottom: 10,
     },
     contentContainer: {
-        flex: 0, // Mindsket flex for tættere layout
+        flex: 0,
         justifyContent: 'flex-start',
-        alignItems: 'flex-start', 
+        alignItems: 'flex-start',
         paddingHorizontal: 20,
-        marginTop: 0, // Flytter teksten tættere på logoet
+        marginTop: 0,
     },
     buttonContainer: {
         flex: 1,
@@ -74,12 +73,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     logo: {
-        width: 250, // Logoets bredde
-        height: 50, // Logoets højde
+        width: 250,
+        height: 50,
         marginTop: 120,
     },
     title: {
-        fontSize: 36, 
+        fontSize: 36,
         fontWeight: 'bold',
         color: '#FFFFFF',
         marginBottom: 8,
@@ -100,7 +99,6 @@ const styles = StyleSheet.create({
         textAlign: 'left',
         lineHeight: 27,
     },
-
     button: {
         backgroundColor: '#FFFFFF',
         paddingVertical: 15,
@@ -108,24 +106,17 @@ const styles = StyleSheet.create({
         width: '100%',
         alignSelf: 'center',
     },
-    
     buttonContent: {
-        flexDirection: 'row', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        paddingHorizontal: 20, 
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
     },
-    
     buttonText: {
         color: '#3E8E7E',
         fontSize: 20,
         fontWeight: 'bold',
         flex: 1,
-        textAlign: 'center', 
-    },
-
-    buttonIcon: {
-        width: 16, 
-        height: 16,
+        textAlign: 'center',
     },
 });
