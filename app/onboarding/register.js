@@ -87,31 +87,31 @@ export default function Register() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingHorizontal: 30,
+        paddingHorizontal: 20,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#ffffff',
         paddingBottom: 30, // Adds space at the bottom of the form
     },
     title: {
-        fontSize: 32,
+        fontSize: 38,
         fontWeight: 'bold',
         color: '#42865F', // Grøn farve
         marginTop: 40,
         marginBottom: 15,
-        textAlign: 'center',
+        textAlign: 'left',
     },
     subtitle: {
-        fontSize: 16,
+        fontSize: 18,
         color: '#555',
-        textAlign: 'center',
+        textAlign: 'left',
         marginBottom: 30,
         width: '80%', // Control width for text wrapping
     },
     input: {
         width: '100%',
         padding: 15,
-        marginBottom: 18,
+        marginBottom: 30,
         borderWidth: 1,
         borderColor: '#ccc',
         borderRadius: 10,
