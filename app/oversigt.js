@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 
-export default function Oversigt({ route }) {
-    const { userName } = route.params || { userName: 'Bruger' }; // Standard hvis data mangler
+export default function Oversigt() {
+    const route = useRoute();
+    const { userName } = (route.params && route.params.userName) ? route.params : { userName: 'Bruger' }; // Standard hvis data mangler
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
@@ -22,7 +24,7 @@ export default function Oversigt({ route }) {
                     <Text style={styles.cardTitle}>Minder</Text>
                     <Text>5 minder tilføjet</Text>
                     <TouchableOpacity style={styles.button}>
-                        <Text style={styles.buttonText}>Tilføj ny minde</Text>
+                        <Text style={styles.buttonText}>Tilføj nyt minde</Text>
                     </TouchableOpacity>
                 </View>
             </View>

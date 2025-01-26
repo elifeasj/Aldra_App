@@ -31,7 +31,8 @@ export default function Register() {
         };
 
         try {
-            const response = await fetch('http://localhost:5001/register', {
+            console.log('Sending request to server with data:', userData);
+            const response = await fetch('http://192.168.0.134:5001/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -47,6 +48,7 @@ export default function Register() {
             }
 
             const data = await response.json();
+            console.log('Registration successful:', data);
             navigation.navigate('oversigt', { userName: data.name });
         } catch (error) {
             console.error('Network request failed:', error);
