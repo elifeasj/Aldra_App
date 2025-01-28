@@ -31,6 +31,19 @@ export default function Register() {
 
         try {
             console.log('Sending request to server with data:', userData);
+            
+            // Tjek om serveren er tilgængelig først
+            try {
+                const serverCheck = await fetch('http://192.168.0.234:5001/');
+                if (!serverCheck.ok) {
+                    throw new Error('Server ikke tilgængelig');
+                }
+            } catch (error) {
+                console.error('Server connection error:', error);
+                alert('Kunne ikke forbinde til serveren. Kontroller din internetforbindelse og prøv igen.');
+                return;
+            }
+
             const response = await fetch('http://192.168.0.234:5001/register', {
                 method: 'POST',
                 headers: {
@@ -40,10 +53,20 @@ export default function Register() {
                 body: JSON.stringify(userData),
             });
 
-            const data = await response.json();
+            console.log('Server response status:', response.status);
+            const responseText = await response.text();
+            console.log('Server response:', responseText);
+
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (error) {
+                console.error('Error parsing response:', error);
+                throw new Error('Uventet svar fra serveren');
+            }
 
             if (!response.ok) {
-                throw new Error(data.message || 'Registration failed');
+                throw new Error(data.message || 'Registrering mislykkedes');
             }
 
             // Send brugernavnet med i navigationen
@@ -53,7 +76,11 @@ export default function Register() {
             });
         } catch (error) {
             console.error('Error during registration:', error);
-            alert('Der opstod en fejl under registreringen. Prøv igen.');
+            if (error.message.includes('Network request failed')) {
+                alert('Kunne ikke forbinde til serveren. Kontroller din internetforbindelse.');
+            } else {
+                alert('Der opstod en fejl under registreringen: ' + error.message);
+            }
         }
     };
 

@@ -5,115 +5,117 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function Oversigt() {
     const { userName } = useLocalSearchParams();
-    const displayName = userName || 'Linda';
+    const displayName = userName || 'Bruger';
 
     return (
         <ScrollView style={styles.container}>
-            <Text style={styles.title}>Hej, {displayName}!</Text>
-            <Text style={styles.subtitle}>Din oversigt</Text>
+            <View style={styles.content}>
+                <Text style={styles.title}>Hej, {displayName}!</Text>
+                <Text style={styles.subtitle}>Din oversigt</Text>
 
-            {/* Top kort række */}
-            <View style={styles.cardRow}>
-                {/* Familie kort */}
-                <View style={[styles.card, styles.halfCard]}>
-                    <View style={styles.cardHeader}>
-                        <Text style={styles.cardTitle}>Familie</Text>
-                        <Ionicons name="people" size={22} color="white" />
-                    </View>
-                    <TouchableOpacity style={styles.cardButton}>
-                        <Text style={styles.cardButtonText}>Opret Aldra-link</Text>
-                        <Ionicons name="chevron-forward" size={16} color="#42865F" />
-                    </TouchableOpacity>
-                </View>
-
-                {/* Minder kort */}
-                <View style={[styles.card, styles.halfCard]}>
-                    <View style={styles.cardHeader}>
-                        <Text style={styles.cardTitle}>Minder</Text>
-                        <Ionicons name="images" size={22} color="white" />
-                    </View>
-                    <View style={styles.cardContent}>
-                        <Text style={styles.cardSubtext}>5 minder tilføjet</Text>
-                        <Text style={styles.cardSubtext}>Se eller tilføj flere.</Text>
-                    </View>
-                    <TouchableOpacity style={styles.cardButton}>
-                        <Text style={styles.cardButtonText}>Tilføj ny minde</Text>
-                        <Ionicons name="chevron-forward" size={16} color="#42865F" />
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {/* Færdiggør profil kort */}
-            <View style={[styles.card, styles.progressCard]}>
-                <View style={styles.progressContainer}>
-                    <View style={styles.progressCircle}>
-                        <Text style={styles.progressText}>20%</Text>
-                    </View>
-                    <View style={styles.progressTextContainer}>
-                        <Text style={styles.progressTitle}>Færdiggør din profil</Text>
-                        <Text style={styles.progressSubtext}>Udfyld din profil for at tilpasse appen til dine behov.</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="white" style={styles.progressArrow} />
-                </View>
-            </View>
-
-            {/* Kommende besøg sektion */}
-            <View style={styles.visitsSection}>
-                <Text style={styles.sectionTitle}>Kommende besøg</Text>
-                
-                <View style={styles.visitCard}>
-                    <View style={styles.visitInfo}>
-                        <Text style={styles.visitTitle}>Besøg mor</Text>
-                        <Text style={styles.visitDate}>22. november 2024</Text>
-                    </View>
-                    <TouchableOpacity style={styles.addLogButton}>
-                        <Text style={styles.addLogButtonText}>Tilføj log</Text>
-                        <View style={styles.addIconContainer}>
-                            <Ionicons name="add" size={20} color="#42865F" />
+                {/* Top kort række */}
+                <View style={styles.cardRow}>
+                    {/* Familie kort */}
+                    <View style={[styles.card, styles.halfCard]}>
+                        <View style={styles.cardHeader}>
+                            <Text style={styles.cardTitle}>Familie</Text>
+                            <Ionicons name="people" size={22} color="white" />
                         </View>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.visitCard}>
-                    <View style={styles.visitInfo}>
-                        <Text style={styles.visitTitle}>Snak med overlæge</Text>
-                        <Text style={styles.visitDate}>29. november 2024</Text>
+                        <TouchableOpacity style={styles.cardButton}>
+                            <Text style={styles.cardButtonText}>Opret Aldra-link</Text>
+                            <Ionicons name="chevron-forward" size={16} color="#42865F" />
+                        </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={styles.addLogButton}>
-                        <Text style={styles.addLogButtonText}>Tilføj log</Text>
-                        <View style={styles.addIconContainer}>
-                            <Ionicons name="add" size={20} color="#42865F" />
+
+                    {/* Minder kort */}
+                    <View style={[styles.card, styles.halfCard]}>
+                        <View style={styles.cardHeader}>
+                            <Text style={styles.cardTitle}>Minder</Text>
+                            <Ionicons name="images" size={22} color="white" />
                         </View>
-                    </TouchableOpacity>
+                        <View style={styles.cardContent}>
+                            <Text style={styles.cardSubtext}>5 minder tilføjet</Text>
+                            <Text style={styles.cardSubtext}>Se eller tilføj flere.</Text>
+                        </View>
+                        <TouchableOpacity style={styles.cardButton}>
+                            <Text style={styles.cardButtonText}>Tilføj ny minde</Text>
+                            <Ionicons name="chevron-forward" size={16} color="#42865F" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
-            </View>
 
-            {/* Vejledninger sektion */}
-            <View style={styles.guidanceSection}>
-                <Text style={styles.sectionTitle}>Vejledninger</Text>
-                <Text style={styles.guidanceSubtitle}>Effektiv Kommunikation</Text>
-                
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardScroll}>
-                    <TouchableOpacity style={styles.guidanceCard}>
-                        <Image 
-                            source={require('../../assets/images/frame_1.png')} 
-                            style={styles.guidanceImage}
-                        />
-                        <View style={styles.guidanceOverlay}>
-                            <Text style={styles.guidanceCardText}>Tal Langsomt og Klar</Text>
+                {/* Færdiggør profil kort */}
+                <View style={[styles.card, styles.progressCard]}>
+                    <View style={styles.progressContainer}>
+                        <View style={styles.progressCircle}>
+                            <Text style={styles.progressText}>20%</Text>
                         </View>
-                    </TouchableOpacity>
+                        <View style={styles.progressTextContainer}>
+                            <Text style={styles.progressTitle}>Færdiggør din profil</Text>
+                            <Text style={styles.progressSubtext}>Udfyld din profil for at tilpasse appen til dine behov.</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color="white" style={styles.progressArrow} />
+                    </View>
+                </View>
 
-                    <TouchableOpacity style={styles.guidanceCard}>
-                        <Image 
-                            source={require('../../assets/images/frame_1.png')} 
-                            style={styles.guidanceImage}
-                        />
-                        <View style={styles.guidanceOverlay}>
-                            <Text style={styles.guidanceCardText}>Ikke Afbryd</Text>
+                {/* Kommende besøg sektion */}
+                <View style={styles.visitsSection}>
+                    <Text style={styles.sectionTitle}>Kommende besøg</Text>
+                    
+                    <View style={styles.visitCard}>
+                        <View style={styles.visitInfo}>
+                            <Text style={styles.visitTitle}>Besøg mor</Text>
+                            <Text style={styles.visitDate}>22. november 2024</Text>
                         </View>
-                    </TouchableOpacity>
-                </ScrollView>
+                        <TouchableOpacity style={styles.addLogButton}>
+                            <Text style={styles.addLogButtonText}>Tilføj log</Text>
+                            <View style={styles.addIconContainer}>
+                                <Ionicons name="add" size={20} color="#42865F" />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.visitCard}>
+                        <View style={styles.visitInfo}>
+                            <Text style={styles.visitTitle}>Snak med overlæge</Text>
+                            <Text style={styles.visitDate}>29. november 2024</Text>
+                        </View>
+                        <TouchableOpacity style={styles.addLogButton}>
+                            <Text style={styles.addLogButtonText}>Tilføj log</Text>
+                            <View style={styles.addIconContainer}>
+                                <Ionicons name="add" size={20} color="#42865F" />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Vejledninger sektion */}
+                <View style={styles.guidanceSection}>
+                    <Text style={styles.sectionTitle}>Vejledninger</Text>
+                    <Text style={styles.guidanceSubtitle}>Effektiv Kommunikation</Text>
+                    
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardScroll}>
+                        <TouchableOpacity style={styles.guidanceCard}>
+                            <Image 
+                                source={require('../../assets/images/frame_1.png')} 
+                                style={styles.guidanceImage}
+                            />
+                            <View style={styles.guidanceOverlay}>
+                                <Text style={styles.guidanceCardText}>Tal Langsomt og Klar</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.guidanceCard}>
+                            <Image 
+                                source={require('../../assets/images/frame_1.png')} 
+                                style={styles.guidanceImage}
+                            />
+                            <View style={styles.guidanceOverlay}>
+                                <Text style={styles.guidanceCardText}>Ikke Afbryd</Text>
+                            </View>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </View>
             </View>
         </ScrollView>
     );
@@ -123,18 +125,21 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    content: {
         padding: 20,
         paddingTop: 60,
+        marginTop: 35,
     },
     title: {
         fontSize: 32,
         fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
-        marginBottom: 4,
+        marginBottom: 25,
     },
     subtitle: {
-        fontSize: 18,
-        fontFamily: 'RedHatDisplay_400Regular',
+        fontSize: 20,
+        fontFamily: 'RedHatDisplay_700Bold',
         color: '#333',
         marginBottom: 24,
     },
