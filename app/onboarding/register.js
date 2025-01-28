@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Pressable } from 'react-native';
-import SelectDropdown from 'react-native-select-dropdown';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Pressable, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 
@@ -13,12 +12,13 @@ export default function Register() {
     const [relation, setRelation] = useState('');
     const [customRelation, setCustomRelation] = useState('');
     const [termsAccepted, setTermsAccepted] = useState(false);
+    const [showRelationPicker, setShowRelationPicker] = useState(false);
 
     const relations = ["Ægtefælle/Partner", "Barn", "Søskende", "Forældre", "Andet"];
 
     const registerUser = async () => {
-        if (!termsAccepted) {
-            alert('Du skal acceptere vilkår og betingelser for at fortsætte.');
+        if (!name || !email || !password || (!relation && !customRelation) || !termsAccepted) {
+            alert('Alle felter skal udfyldes.');
             return;
         }
 
@@ -26,33 +26,31 @@ export default function Register() {
             name,
             email,
             password,
-            relationToDementiaPerson: relation || customRelation,
+            relationToDementiaPerson: relation === 'Andet' ? customRelation : relation,
             termsAccepted,
         };
 
         try {
             console.log('Sending request to server with data:', userData);
-            const response = await fetch('http://192.168.0.134:5001/register', {
+            const response = await fetch('http://192.168.0.234:5001/register', {
                 method: 'POST',
                 headers: {
+                    'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(userData),
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Registration failed:', errorText);
-                alert(`Registration failed: ${errorText}`);
-                return;
+                throw new Error(data.message || 'Registration failed');
             }
 
-            const data = await response.json();
-            console.log('Registration successful:', data);
             navigation.navigate('oversigt', { userName: data.name });
         } catch (error) {
-            console.error('Network request failed:', error);
-            alert(`Network request failed: ${error.message}`);
+            console.error('Error during registration:', error);
+            alert(error.message || 'Noget gik galt under registreringen');
         }
     };
 
@@ -70,7 +68,7 @@ export default function Register() {
                     style={styles.input}
                     placeholder="Indtast dit navn"
                     value={name}
-                    onChangeText={(text) => setName(text)}
+                    onChangeText={setName}
                 />
 
                 <Text style={styles.label}>E-mail</Text>
@@ -78,43 +76,58 @@ export default function Register() {
                     style={styles.input}
                     placeholder="Indtast din e-mail"
                     value={email}
-                    onChangeText={(text) => setEmail(text)}
+                    onChangeText={setEmail}
                     keyboardType="email-address"
                 />
 
-                <Text style={styles.label}>Adgangkode</Text>
+                <Text style={styles.label}>Adgangskode</Text>
                 <TextInput
                     style={styles.input}
                     placeholder="Indtast en adgangskode"
                     value={password}
-                    onChangeText={(text) => setPassword(text)}
+                    onChangeText={setPassword}
                     secureTextEntry
                 />
 
                 <Text style={styles.label}>Relation til personen med demens</Text>
-                <View style={styles.dropdownWrapper}>
-                    <SelectDropdown
-                        data={relations}
-                        defaultButtonText="Vælg relation"
-                        onSelect={(selectedItem) => {
-                            setRelation(selectedItem);
-                            if (selectedItem !== "Andet") {
-                                setCustomRelation('');
-                            }
-                        }}
-                        buttonStyle={styles.dropdownButton}
-                        buttonTextStyle={styles.dropdownButtonText}
-                        dropdownStyle={styles.dropdownStyle}
-                        rowTextStyle={styles.dropdownRowText}
-                    />
+                <View style={styles.dropdownContainer}>
+                    <TouchableOpacity 
+                        style={styles.dropdownButton}
+                        onPress={() => setShowRelationPicker(!showRelationPicker)}
+                    >
+                        <Text style={styles.dropdownButtonText}>
+                            {relation || "Vælg relation"}
+                        </Text>
+                        <Text style={styles.dropdownArrow}>{showRelationPicker ? '▲' : '▼'}</Text>
+                    </TouchableOpacity>
+                    
+                    {showRelationPicker && (
+                        <View style={styles.dropdownList}>
+                            {relations.map((item) => (
+                                <TouchableOpacity
+                                    key={item}
+                                    style={styles.dropdownItem}
+                                    onPress={() => {
+                                        setRelation(item);
+                                        if (item !== "Andet") {
+                                            setCustomRelation('');
+                                        }
+                                        setShowRelationPicker(false);
+                                    }}
+                                >
+                                    <Text style={styles.dropdownItemText}>{item}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
                 </View>
 
-                {relation === 'Andet' && (
+                {relation === "Andet" && (
                     <TextInput
                         style={styles.input}
-                        placeholder="Indtast din relation"
+                        placeholder="Angiv relation"
                         value={customRelation}
-                        onChangeText={(text) => setCustomRelation(text)}
+                        onChangeText={setCustomRelation}
                     />
                 )}
 
@@ -189,30 +202,57 @@ const styles = StyleSheet.create({
         color: '#333',
         marginBottom: 10,
     },
-    dropdownWrapper: {
+    dropdownContainer: {
         width: '100%',
-        zIndex: 1000, // Sikrer, at dropdown vises korrekt
+        marginBottom: 20,
+        zIndex: 1000,
     },
     dropdownButton: {
         width: '100%',
         height: 50,
+        backgroundColor: '#f7f7f7',
         borderWidth: 1,
         borderColor: '#ccc',
         borderRadius: 10,
-        marginBottom: 20,
-        backgroundColor: '#f7f7f7',
+        paddingHorizontal: 15,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     dropdownButtonText: {
         fontSize: 16,
         color: '#333',
     },
-    dropdownStyle: {
-        borderRadius: 10,
-        zIndex: 1000, // Forhindrer dropdown i at blive skjult
-    },
-    dropdownRowText: {
+    dropdownArrow: {
         fontSize: 16,
-        color: '#555',
+        color: '#666',
+    },
+    dropdownList: {
+        position: 'absolute',
+        top: 55,
+        width: '100%',
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    dropdownItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    dropdownItemText: {
+        fontSize: 16,
+        color: '#333',
     },
     checkboxContainer: {
         flexDirection: 'row',

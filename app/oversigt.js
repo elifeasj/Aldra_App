@@ -4,7 +4,7 @@ import { useRoute } from '@react-navigation/native';
 
 export default function Oversigt() {
     const route = useRoute();
-    const { userName } = (route.params && route.params.userName) ? route.params : { userName: 'Bruger' }; // Standard hvis data mangler
+    const { userName } = route.params ? route.params : { userName: 'Bruger' }; // Standard hvis data mangler
 
     return (
         <ScrollView contentContainerStyle={styles.container}>

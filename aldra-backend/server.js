@@ -59,6 +59,6 @@ app.post('/register', async (req, res) => {
 });
 
 // Start serveren
-app.listen(5001, () => {
-  console.log('Server kører på http://localhost:5001');
+app.listen(5001, '0.0.0.0', () => {
+  console.log('Server kører på http://0.0.0.0:5001');
 });
