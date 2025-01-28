@@ -181,14 +181,23 @@ export default function Kalender() {
         >
             <View style={styles.modalContainer}>
                 <View style={styles.modalContent}>
-                    <Text style={styles.modalTitle}>Opret besøg</Text>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Opret besøg</Text>
+                        <TouchableOpacity 
+                            style={styles.closeButton}
+                            onPress={() => setIsModalVisible(false)}
+                        >
+                            <Ionicons name="close" size={24} color="#42865F" />
+                        </TouchableOpacity>
+                    </View>
                     
                     <Text style={styles.label}>Titel</Text>
                     <TextInput
                         style={styles.input}
                         value={newAppointment.title}
                         onChangeText={(text) => setNewAppointment(prev => ({ ...prev, title: text }))}
-                        placeholder="Indtast titel"
+                        placeholder="Skriv titel her..."
+                        placeholderTextColor="#8F9BB3"
                     />
 
                     <Text style={styles.label}>Beskrivelse</Text>
@@ -201,16 +210,16 @@ export default function Kalender() {
                             }
                         }}
                         placeholder="Skriv beskrivelse her..."
+                        placeholderTextColor="#8F9BB3"
                         multiline
-                        maxLength={50}
-                    />
+                        maxLength={50}                    />
                     <Text style={styles.characterCount}>{newAppointment.description.length}/50</Text>
 
                     <TouchableOpacity
                         style={styles.dateButton}
                         onPress={() => setShowDatePicker(true)}
                     >
-                        <Text style={styles.dateButtonText}>
+                        <Text style={[styles.dateButtonText, !newAppointment.date && { color: '#8F9BB3' }]}>
                             {newAppointment.date 
                                 ? new Date(newAppointment.date).toLocaleDateString('da-DK')
                                 : 'Dato'}
@@ -225,7 +234,7 @@ export default function Kalender() {
                             style={[styles.timeButton, { marginRight: 8 }]}
                             onPress={() => setShowStartTimePicker(true)}
                         >
-                            <Text style={styles.timeButtonText}>
+                            <Text style={[styles.timeButtonText, !newAppointment.startTime && { color: '#8F9BB3' }]}>
                                 {newAppointment.startTime || 'Start tid'}
                             </Text>
                             <View style={styles.timeButtonIcon}>
@@ -237,7 +246,7 @@ export default function Kalender() {
                             style={[styles.timeButton, { marginLeft: 8 }]}
                             onPress={() => setShowEndTimePicker(true)}
                         >
-                            <Text style={styles.timeButtonText}>
+                            <Text style={[styles.timeButtonText, !newAppointment.endTime && { color: '#8F9BB3' }]}>
                                 {newAppointment.endTime || 'Slut tid'}
                             </Text>
                             <View style={styles.timeButtonIcon}>
@@ -414,7 +423,7 @@ export default function Kalender() {
                             .sort((a, b) => a.startTime.localeCompare(b.startTime))
                             .map(appointment => (
                             <View key={appointment.id} style={styles.appointmentItem}>
-                                <View style={styles.timeContainer}>
+                                <View style={styles.appointmentTimeContainer}>
                                     <View style={styles.greenDot} />
                                     <Text style={styles.timeText}>{`${appointment.startTime}-${appointment.endTime}`}</Text>
                                 </View>
@@ -463,7 +472,7 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 20,
-        paddingTop: 0,
+        paddingTop: 40,
     },
     title: {
         fontSize: 32,
@@ -477,7 +486,7 @@ const styles = StyleSheet.create({
     appointmentItem: {
         marginBottom: 20,
     },
-    timeContainer: {
+    appointmentTimeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 8,
@@ -550,14 +559,26 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 20,
-        maxHeight: '95%',
+        maxHeight: '100%',
+        paddingBottom: 50,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        paddingRight: 10,
+    },
+    closeButton: {
+        marginLeft: 'auto',
     },
     modalTitle: {
         fontSize: 28,
         fontFamily: 'RedHatDisplay_700Bold',
-        color: '#000000',
-        marginBottom: 20,
-        textAlign: 'center',
+        color: '#42865F',
+        paddingLeft: 0,
+        paddingTop: 10,
+        paddingBottom: 10,
     },
     label: {
         fontSize: 16,
@@ -570,7 +591,7 @@ const styles = StyleSheet.create({
         borderColor: '#E5E5E5',
         borderRadius: 10,
         padding: 15,
-        marginBottom: 20,
+        marginBottom: 10,
         fontFamily: 'RedHatDisplay_400Regular',
         fontSize: 16,
     },
@@ -625,10 +646,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 30,
+        marginTop: 10,
     },
     reminderText: {
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#000000',
     },
@@ -639,7 +661,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     addButtonText: {
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: 'RedHatDisplay_700Bold',
         color: '#FFFFFF',
     },
@@ -681,7 +703,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#666666',
         textAlign: 'right',
-        marginBottom: 15,
+        marginBottom: 5,
         fontFamily: 'RedHatDisplay_400Regular',
     },
 });
