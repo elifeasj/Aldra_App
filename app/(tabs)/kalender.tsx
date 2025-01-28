@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Switch, Platform, Animated, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Switch, Platform, Animated, KeyboardAvoidingView, ViewStyle, TextStyle } from 'react-native';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -613,6 +613,38 @@ export default function Kalender() {
                     {/* Calendar */}
                     <Calendar
                         style={styles.calendar}
+                        renderArrow={(direction: 'left' | 'right') => (
+                            <View style={{ 
+                                paddingHorizontal: direction === 'left' ? 0 : 0,
+                                marginLeft: direction === 'left' ? -10 : 0,
+                                marginRight: direction === 'right' ? -10 : 0,
+                                width: 40,
+                                height: 40,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderWidth: 1,
+                                borderRadius: 8,
+                                borderColor: 'rgba(0, 0, 0, 0.2)',
+                                padding: 5,
+                            }}>
+                                <Ionicons 
+                                    name={direction === 'left' ? 'chevron-back' : 'chevron-forward'} 
+                                    size={25} 
+                                    color="#000000"
+                                />
+                            </View>
+                        )}
+                        renderHeader={(date: Date) => {
+                            const dateObj = new Date(date);
+                            const month = dateObj.toLocaleString('da-DK', { month: 'long' });
+                            const year = dateObj.getFullYear().toString();
+                            return (
+                                <View style={styles.customHeader}>
+                                    <Text style={styles.monthText}>{month}</Text>
+                                    <Text style={styles.yearText}>{year}</Text>
+                                </View>
+                            );
+                        }}
                         theme={{
                             calendarBackground: '#fff',
                             selectedDayBackgroundColor: '#42865F',
@@ -624,7 +656,23 @@ export default function Kalender() {
                             textMonthFontFamily: 'RedHatDisplay_700Bold',
                             textDayHeaderFontFamily: 'RedHatDisplay_400Regular',
                             dotColor: '#42865F',
-                            selectedDotColor: '#ffffff'
+                            selectedDotColor: '#ffffff',
+                            arrowColor: '#42865F',
+                            'stylesheet.calendar.header': {
+                                header: {
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    paddingHorizontal: 20,
+                                    alignItems: 'center',
+                                    marginTop: 10,
+                                    marginBottom: 10,
+                                },
+                                monthText: {
+                                    fontSize: 18,
+                                    fontFamily: 'RedHatDisplay_700Bold',
+                                    color: '#000',
+                                },
+                            },
                         }}
                         current={selectedDate}
                         onDayPress={onDayPress}
@@ -632,19 +680,6 @@ export default function Kalender() {
                         markedDates={getMarkedDates()}
                         firstDay={1}
                         locale="da"
-                        renderHeader={(date: Date) => {
-                            const monthNames = [
-                                'januar', 'februar', 'marts', 'april', 'maj', 'juni',
-                                'juli', 'august', 'september', 'oktober', 'november', 'december'
-                            ];
-                            const month = monthNames[date.getMonth()];
-                            const year = date.getFullYear();
-                            return (
-                                <Text style={styles.calendarHeader}>
-                                    {month} {year}
-                                </Text>
-                            );
-                        }}
                         dayNamesShort={['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør']}
                     />
 
@@ -665,14 +700,14 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
-    },
+    } as ViewStyle,
     dateText: {
         fontSize: 18,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#42865F',
         paddingHorizontal: 20,
         paddingBottom: 40,
-    },
+    } as TextStyle,
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -680,40 +715,47 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 10,
         marginTop: 80,
-    },
+    } as ViewStyle,
     content: {
         padding: 20,
         paddingTop: 0,
-    },
+        flex: 1,
+    } as ViewStyle,
     title: {
         fontSize: 36,
         fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
-    },
+    } as TextStyle,
     appointmentsContainer: {
-        marginTop: 20,
-        paddingHorizontal: 20,
-    },
+        marginTop: 5,
+        marginHorizontal: -20,
+    } as ViewStyle,
     appointmentItem: {
-        marginBottom: 20,
-    },
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E5E5',
+    } as ViewStyle,
     appointmentTimeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 8,
-    },
+    } as ViewStyle,
     greenDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
         backgroundColor: '#42865F',
         marginRight: 8,
-    },
+    } as ViewStyle,
     timeText: {
         color: '#42865F',
         fontFamily: 'RedHatDisplay_400Regular',
         fontSize: 14,
-    },
+    } as TextStyle,
     appointmentContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -722,18 +764,18 @@ const styles = StyleSheet.create({
         padding: 15,
         borderRadius: 10,
         minHeight: 50,
-    },
+    } as ViewStyle,
     appointmentTitle: {
         fontSize: 16,
         fontFamily: 'RedHatDisplay_700Bold',
         color: '#000',
         flex: 1,
-    },
+    } as TextStyle,
     appointmentActions: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-    },
+    } as ViewStyle,
     addLogButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -741,13 +783,13 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 20,
-    },
+    } as ViewStyle,
     addLogText: {
         color: '#42865F',
         marginRight: 5,
         fontFamily: 'RedHatDisplay_400Regular',
         fontSize: 14,
-    },
+    } as TextStyle,
     addIconContainer: {
         backgroundColor: '#E8F0EB',
         borderRadius: 12,
@@ -756,19 +798,19 @@ const styles = StyleSheet.create({
         height: 24,
         justifyContent: 'center',
         alignItems: 'center',
-    },
+    } as ViewStyle,
     menuButton: {
         padding: 5,
-    },
+    } as ViewStyle,
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
-    },
+    } as ViewStyle,
     modalContainer: {
         width: '100%',
         backgroundColor: 'transparent',
-    },
+    } as ViewStyle,
     modalContent: {
         backgroundColor: '#ffffff',
         borderTopLeftRadius: 20,
@@ -777,17 +819,17 @@ const styles = StyleSheet.create({
         maxHeight: '100%',
         paddingBottom: 50,
 
-    },
+    } as ViewStyle,
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 20,
         paddingRight: 10,
-    },
+    } as ViewStyle,
     closeButton: {
         marginLeft: 'auto',
-    },
+    } as ViewStyle,
     modalTitle: {
         fontSize: 28,
         fontFamily: 'RedHatDisplay_700Bold',
@@ -795,13 +837,13 @@ const styles = StyleSheet.create({
         paddingLeft: 0,
         paddingTop: 10,
         paddingBottom: 10,
-    },
+    } as TextStyle,
     label: {
         fontSize: 18,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#000',
         marginBottom: 8,
-    },
+    } as TextStyle,
     input: {
         borderWidth: 1,
         borderColor: '#E5E5E5',
@@ -810,15 +852,15 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         fontFamily: 'RedHatDisplay_400Regular',
         fontSize: 16,
-    },
+    } as TextStyle,
     descriptionContainer: {
         position: 'relative',
         marginBottom: 10,
-    },
+    } as ViewStyle,
     descriptionInput: {
         height: 100,
         textAlignVertical: 'top',
-    },
+    } as TextStyle,
     dateButton: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -828,21 +870,23 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         padding: 15,
         marginBottom: 20,
-    },
+    } as ViewStyle,
     dateButtonText: {
         fontSize: 16,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#000000',
-    },
+    } as TextStyle,
     dateButtonIcon: {
         width: 24,
         height: 24,
-    },
+        justifyContent: 'center',
+        alignItems: 'center',
+    } as ViewStyle,
     timeContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 20,
-    },
+    } as ViewStyle,
     timeButton: {
         flex: 1,
         flexDirection: 'row',
@@ -852,54 +896,59 @@ const styles = StyleSheet.create({
         borderColor: '#E5E5E5',
         borderRadius: 10,
         padding: 15,
-    },
+    } as ViewStyle,
     timeButtonText: {
         fontSize: 16,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#000000',
-    },
+    } as TextStyle,
     timeButtonIcon: {
         width: 24,
         height: 24,
-    },
+        justifyContent: 'center',
+        alignItems: 'center',
+    } as ViewStyle,
     reminderContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 30,
         marginTop: 10,
-    },
+    } as ViewStyle,
     reminderText: {
         fontSize: 18,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#000000',
-    },
+    } as TextStyle,
     addButton: {
         backgroundColor: '#42865F',
         borderRadius: 10,
         padding: 15,
         alignItems: 'center',
-    },
+    } as ViewStyle,
     addButtonText: {
         fontSize: 18,
         fontFamily: 'RedHatDisplay_700Bold',
         color: '#FFFFFF',
-    },
+    } as TextStyle,
     pickerHeader: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
         padding: 0,
-    },
+    } as ViewStyle,
     pickerButton: {
         paddingRight: 10,
-    },
+    } as ViewStyle,
     buttonText: {
         fontSize: 20,
         fontFamily: 'RedHatDisplay_700Bold',
-    },
+    } as TextStyle,
     calendar: {
         height: 350,
-    },
+        paddingBottom: 10,
+        backgroundColor: '#fff',
+        marginHorizontal: -20,
+    } as ViewStyle,
     dateTimePickerContainer: {
         position: 'absolute',
         bottom: 0,
@@ -918,7 +967,7 @@ const styles = StyleSheet.create({
         },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
-    },
+    } as ViewStyle,
     characterCount: {
         fontSize: 12,
         color: '#666666',
@@ -926,10 +975,10 @@ const styles = StyleSheet.create({
         bottom: 20,
         right: 10,
         fontFamily: 'RedHatDisplay_400Regular',
-    },
+    } as TextStyle,
     scrollView: {
         flex: 1,
-    },
+    } as ViewStyle,
     createButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -938,20 +987,38 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 8,
-    },
+    } as ViewStyle,
     createButtonText: {
         fontSize: 16,
         fontFamily: 'RedHatDisplay_500Medium',
         color: '#fff',
+    } as TextStyle,
+    customHeader: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+    },
+    monthText: {
+        fontSize: 24,
+        fontFamily: 'RedHatDisplay_700Bold',
+        color: '#000000',
+        marginBottom: 2,
+        textTransform: 'capitalize',
+    },
+    yearText: {
+        fontSize: 16,
+        fontFamily: 'RedHatDisplay_400Regular',
+        color: '#666666',
+        marginTop: 2,
     },
     calendarHeader: {
         fontSize: 18,
         fontFamily: 'RedHatDisplay_700Bold',
         color: '#000000',
         margin: 10,
-    },
+    } as TextStyle,
     headerButtons: {
         flexDirection: 'row',
         alignItems: 'center',
-    }
+    } as ViewStyle
 });
