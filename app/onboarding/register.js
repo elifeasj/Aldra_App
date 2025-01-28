@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Image, TouchableOpacity, ScrollView, Pressable, SafeAreaView, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Register() {
     const router = useRouter();
@@ -30,6 +31,12 @@ export default function Register() {
         };
 
         try {
+            // Gem brugerdata i AsyncStorage
+            await AsyncStorage.setItem('userData', JSON.stringify({
+                name,
+                relationToDementiaPerson: relation
+            }));
+
             console.log('Sending request to server with data:', userData);
             
             // Tjek om serveren er tilgængelig først

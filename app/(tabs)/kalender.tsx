@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Switch, Platform, Animated, KeyboardAvoidingView, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Switch, Platform, Animated, KeyboardAvoidingView, ViewStyle, TextStyle, Alert } from 'react-native';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useRouter } from 'expo-router';
 
 interface Appointment {
     id: number;
@@ -45,6 +46,7 @@ LocaleConfig.locales['da'] = {
 LocaleConfig.defaultLocale = 'da';
 
 export default function Kalender() {
+    const router = useRouter();
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [datesWithAppointments, setDatesWithAppointments] = useState<string[]>([]);
@@ -333,6 +335,37 @@ export default function Kalender() {
         }
     };
 
+    const handleDeleteAppointment = async (id: number) => {
+        try {
+            console.log('Attempting to delete appointment with ID:', id);
+            const response = await fetch(`${API_URL}/appointments/${id}`, {
+                method: 'DELETE',
+            });
+
+            console.log('Delete response status:', response.status);
+            const responseData = await response.json();
+            console.log('Delete response data:', responseData);
+
+            if (!response.ok) {
+                throw new Error('Failed to delete appointment');
+            }
+
+            // Opdater listen af aftaler efter sletning
+            setAppointments(prevAppointments => {
+                console.log('Current appointments:', prevAppointments);
+                const newAppointments = prevAppointments.filter(appointment => appointment.id !== id);
+                console.log('Appointments after deletion:', newAppointments);
+                return newAppointments;
+            });
+
+            // Opdater kalenderen
+            fetchDatesWithAppointments();
+        } catch (error) {
+            console.error('Error deleting appointment:', error);
+            alert('Der opstod en fejl ved sletning af aftalen');
+        }
+    };
+
     const renderModal = () => (
         <Modal
             transparent={true}
@@ -383,16 +416,16 @@ export default function Kalender() {
                                     style={[styles.input, styles.descriptionInput]}
                                     value={newAppointment.description}
                                     onChangeText={(text) => {
-                                        if (text.length <= 50) {
+                                        if (text.length <= 20) {
                                             setNewAppointment(prev => ({ ...prev, description: text }));
                                         }
                                     }}
                                     placeholder="Skriv beskrivelse her..."
                                     placeholderTextColor="#8F9BB3"
                                     multiline
-                                    maxLength={50}
+                                    maxLength={20}
                                 />
-                                <Text style={styles.characterCount}>{newAppointment.description?.length || 0}/50</Text>
+                                <Text style={styles.characterCount}>{newAppointment.description?.length || 0}/20</Text>
                             </View>
                         </KeyboardAvoidingView>
 
@@ -565,26 +598,62 @@ export default function Kalender() {
             .sort((a, b) => a.start_time.localeCompare(b.start_time))
             .map(appointment => (
                 <View key={appointment.id} style={styles.appointmentItem}>
-                    <View style={styles.appointmentTimeContainer}>
-                        <View style={styles.greenDot} />
-                        <Text style={styles.timeText}>
-                            {`${appointment.start_time.substring(0, 5)}-${appointment.end_time.substring(0, 5)}`}
-                        </Text>
-                    </View>
                     <View style={styles.appointmentContent}>
-                        <Text style={styles.appointmentTitle}>{appointment.title}</Text>
-                        <View style={styles.appointmentActions}>
-                            <TouchableOpacity style={styles.addLogButton}>
+                        <View style={styles.topRow}>
+                            <View style={styles.leftContent}>
+                                <View style={styles.timeWrapper}>
+                                    <View style={styles.greenDot} />
+                                    <Text style={styles.timeText} numberOfLines={1}>
+                                        {`${appointment.start_time.substring(0, 5)}-${appointment.end_time.substring(0, 5)}`}
+                                    </Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity 
+                                style={styles.menuButton}
+                                onPress={() => {
+                                    Alert.alert(
+                                        "Slet aftale",
+                                        "Er du sikker på, at du vil slette denne aftale?",
+                                        [
+                                            {
+                                                text: "Annuller",
+                                                style: "cancel"
+                                            },
+                                            {
+                                                text: "Slet",
+                                                onPress: () => handleDeleteAppointment(appointment.id),
+                                                style: "destructive"
+                                            }
+                                        ]
+                                    );
+                                }}
+                            >
+                                <Ionicons name="ellipsis-horizontal" size={20} color="#42865F" />
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.titleRow}>
+                            <View style={styles.titleAndDescription}>
+                                <Text style={styles.appointmentTitle} numberOfLines={1}>
+                                    {appointment.title}
+                                </Text>
+                                {appointment.description && (
+                                    <Text style={styles.appointmentDescription} numberOfLines={2}>
+                                        {appointment.description}
+                                    </Text>
+                                )}
+                            </View>
+                            <TouchableOpacity 
+                                style={styles.addLogButton}
+                                onPress={() => router.push('/ny-log')}
+                            >
                                 <Text style={styles.addLogText}>Tilføj log</Text>
                                 <View style={styles.addIconContainer}>
-                                    <Ionicons name="add" size={16} color="#42865F" />
+                                    <Ionicons name="add" size={20} color="#FFFFFF" weight="bold" />
                                 </View>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.menuButton}>
-                                <Ionicons name="ellipsis-vertical" size={20} color="#000" />
                             </TouchableOpacity>
                         </View>
                     </View>
+                    <View style={styles.bottomBorder} />
                 </View>
             ));
     };
@@ -608,7 +677,7 @@ export default function Kalender() {
                     year: 'numeric'
                 }).toLowerCase()}
             </Text>
-            <ScrollView style={styles.scrollView}>
+            
                 <View style={styles.content}>
                     {/* Calendar */}
                     <Calendar
@@ -623,7 +692,7 @@ export default function Kalender() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 borderWidth: 1,
-                                borderRadius: 8,
+                                borderRadius: 12,
                                 borderColor: 'rgba(0, 0, 0, 0.2)',
                                 padding: 5,
                             }}>
@@ -650,10 +719,12 @@ export default function Kalender() {
                             selectedDayBackgroundColor: '#42865F',
                             selectedDayTextColor: '#fff',
                             todayTextColor: '#42865F',
+                            todayTextFontFamily: 'RedHatDisplay_700Bold',
+                            todayFontWeight: '700',
                             dayTextColor: '#000',
                             textDisabledColor: '#d9e1e8',
                             monthTextColor: '#000',
-                            textMonthFontFamily: 'RedHatDisplay_700Bold',
+                            textMonthFontFamily: 'RedHatDisplay_500Medium',
                             textDayHeaderFontFamily: 'RedHatDisplay_400Regular',
                             dotColor: '#42865F',
                             selectedDotColor: '#ffffff',
@@ -669,7 +740,7 @@ export default function Kalender() {
                                 },
                                 monthText: {
                                     fontSize: 18,
-                                    fontFamily: 'RedHatDisplay_700Bold',
+                                    fontFamily: 'RedHatDisplay_500Medium',
                                     color: '#000',
                                 },
                             },
@@ -684,11 +755,18 @@ export default function Kalender() {
                     />
 
                     {/* Appointments List */}
-                    <View style={styles.appointmentsContainer}>
-                        {renderAppointments()}
+                    <View style={styles.appointmentsHeader}>
+                        <View style={styles.appointmentsTitleContainer}>
+                            <Text style={styles.appointmentsTitle}>Aftaler</Text>
+                        </View>
+                        <View style={styles.appointmentsSeparator} />
                     </View>
+                    <ScrollView style={styles.appointmentsScrollView}>
+                        <View style={styles.appointmentsContainer}>
+                            {renderAppointments()}
+                        </View>
+                    </ScrollView>
                 </View>
-            </ScrollView>
 
             {/* Add Visit Modal */}
             {renderModal()}
@@ -706,7 +784,7 @@ const styles = StyleSheet.create({
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#42865F',
         paddingHorizontal: 20,
-        paddingBottom: 40,
+        paddingBottom: 10,
     } as TextStyle,
     header: {
         flexDirection: 'row',
@@ -714,11 +792,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 10,
-        marginTop: 80,
+        marginTop: 90,
     } as ViewStyle,
     content: {
         padding: 20,
-        paddingTop: 0,
+        paddingTop: 10,
         flex: 1,
     } as ViewStyle,
     title: {
@@ -727,80 +805,109 @@ const styles = StyleSheet.create({
         color: '#42865F',
     } as TextStyle,
     appointmentsContainer: {
-        marginTop: 5,
+        marginTop: 0,
         marginHorizontal: -20,
     } as ViewStyle,
     appointmentItem: {
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        justifyContent: 'flex-start',
         paddingVertical: 15,
-        paddingHorizontal: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E5E5',
+        paddingHorizontal: 15,
+        position: 'relative',
+        height: 115,
     } as ViewStyle,
-    appointmentTimeContainer: {
+    appointmentContent: {
+        flexDirection: 'column',
+        gap: 8,
+        height: '100%',
+        justifyContent: 'space-between',
+    } as ViewStyle,
+    bottomBorder: {
+        position: 'absolute',
+        bottom: 0,
+        left: 20,
+        right: 20,
+        height: 1,
+        backgroundColor: '#E5E5E5',
+    } as ViewStyle,
+    topRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        height: 30,
+    } as ViewStyle,
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        paddingHorizontal: 10,
+        paddingBottom: 10,
+        height: 60,
+    } as ViewStyle,
+    leftContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
+        height: 30,
     } as ViewStyle,
+    timeWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        height: 30,
+    } as ViewStyle,
+    titleAndDescription: {
+        flex: 1,
+        marginRight: 10,
+        maxWidth: '70%',
+        height: '100%',
+    } as ViewStyle,
+    timeText: {
+        color: '#42865F',
+        fontFamily: 'RedHatDisplay_500Medium',
+        fontSize: 14,
+    } as TextStyle,
+    appointmentTitle: {
+        fontSize: 20,
+        fontFamily: 'RedHatDisplay_500Medium',
+        color: '#000',
+        marginTop: -2,
+    } as TextStyle,
+    appointmentDescription: {
+        fontSize: 16,
+        fontFamily: 'RedHatDisplay_400Regular',
+        color: '#666666',
+        marginTop: 2,
+    } as TextStyle,
     greenDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
         backgroundColor: '#42865F',
-        marginRight: 8,
+        marginRight: 0,
     } as ViewStyle,
-    timeText: {
-        color: '#42865F',
-        fontFamily: 'RedHatDisplay_400Regular',
-        fontSize: 14,
-    } as TextStyle,
-    appointmentContent: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#F5F5F5',
-        padding: 15,
-        borderRadius: 10,
-        minHeight: 50,
-    } as ViewStyle,
-    appointmentTitle: {
-        fontSize: 16,
-        fontFamily: 'RedHatDisplay_700Bold',
-        color: '#000',
-        flex: 1,
-    } as TextStyle,
-    appointmentActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
+    menuButton: {
+        padding: 5,
     } as ViewStyle,
     addLogButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: '#42865F',
         paddingVertical: 8,
         paddingHorizontal: 12,
-        borderRadius: 20,
+        borderRadius: 8,
     } as ViewStyle,
     addLogText: {
-        color: '#42865F',
+        color: '#FFFFFF',
         marginRight: 5,
-        fontFamily: 'RedHatDisplay_400Regular',
-        fontSize: 14,
+        fontFamily: 'RedHatDisplay_700Bold',
+        fontSize: 16,
     } as TextStyle,
     addIconContainer: {
-        backgroundColor: '#E8F0EB',
         borderRadius: 12,
         padding: 2,
-        width: 24,
-        height: 24,
+        width: 26,
+        height: 26,
         justifyContent: 'center',
         alignItems: 'center',
-    } as ViewStyle,
-    menuButton: {
-        padding: 5,
     } as ViewStyle,
     modalOverlay: {
         flex: 1,
@@ -921,16 +1028,13 @@ const styles = StyleSheet.create({
         color: '#000000',
     } as TextStyle,
     addButton: {
-        backgroundColor: '#42865F',
-        borderRadius: 10,
-        padding: 15,
-        alignItems: 'center',
+        padding: 5,
     } as ViewStyle,
     addButtonText: {
-        fontSize: 18,
-        fontFamily: 'RedHatDisplay_700Bold',
         color: '#FFFFFF',
-    } as TextStyle,
+        fontSize: 16,
+        fontFamily: 'RedHatDisplay_500Medium',
+    },
     pickerHeader: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
@@ -1000,7 +1104,7 @@ const styles = StyleSheet.create({
     },
     monthText: {
         fontSize: 24,
-        fontFamily: 'RedHatDisplay_700Bold',
+        fontFamily: 'RedHatDisplay_500Medium',
         color: '#000000',
         marginBottom: 2,
         textTransform: 'capitalize',
@@ -1020,5 +1124,35 @@ const styles = StyleSheet.create({
     headerButtons: {
         flexDirection: 'row',
         alignItems: 'center',
-    } as ViewStyle
+    } as ViewStyle,
+    appointmentsScrollView: {
+        flex: 1,
+    } as ViewStyle,
+    separator: {
+        height: 1,
+        backgroundColor: '#E5E5E5',
+        marginVertical: 15,
+        marginHorizontal: -20,
+    } as ViewStyle,
+    appointmentsHeader: {
+        marginTop: 20,
+        paddingBottom: 0,
+    } as ViewStyle,
+    appointmentsTitleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    } as ViewStyle,
+    appointmentsTitle: {
+        fontSize: 22,
+        fontFamily: 'RedHatDisplay_500Medium',
+        color: '#000000',
+        marginBottom: 10,
+    } as TextStyle,
+    appointmentsSeparator: {
+        height: 1,
+        backgroundColor: '#E5E5E5',
+        width: '100%',
+    } as ViewStyle,
 });

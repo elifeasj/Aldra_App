@@ -325,22 +325,33 @@ app.put('/appointments/:id', async (req, res) => {
   }
 });
 
-// DELETE appointment
+// Delete an appointment
 app.delete('/appointments/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await client.query(
-      'DELETE FROM appointments WHERE id = $1 RETURNING *',
-      [id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Appointment not found' });
+    try {
+        const { id } = req.params;
+        console.log('Received delete request for appointment ID:', id);
+        
+        const result = await client.query(
+            'DELETE FROM appointments WHERE id = $1 RETURNING *',
+            [id]
+        );
+        console.log('Delete query result:', result.rows);
+
+        if (result.rows.length === 0) {
+            console.log('No appointment found with ID:', id);
+            return res.status(404).json({ error: 'Appointment not found' });
+        }
+
+        console.log('Successfully deleted appointment with ID:', id);
+        res.json({ message: 'Appointment deleted successfully' });
+    } catch (error) {
+        console.error('Detailed error deleting appointment:', {
+            error: error.message,
+            stack: error.stack,
+            params: req.params
+        });
+        res.status(500).json({ error: 'Internal server error' });
     }
-    res.json({ message: 'Appointment deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting appointment:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
 });
 
 // Start server
