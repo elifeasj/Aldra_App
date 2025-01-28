@@ -56,6 +56,7 @@ const initializeDatabase = async () => {
         reminder BOOLEAN DEFAULT false,
         user_id INTEGER,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
       );
     `);
@@ -73,17 +74,6 @@ const initializeDatabase = async () => {
       `);
       console.log('Test user created successfully');
     }
-
-    // Insert test appointments
-    const testDate = '2025-01-28';
-    await client.query(`
-      INSERT INTO appointments (title, description, date, start_time, end_time, reminder, user_id)
-      VALUES 
-        ('Besøg mor', '', $1, '14:00', '15:00', true, (SELECT id FROM users WHERE email = 'test@example.com')),
-        ('Snak med overlæge', '', $1, '11:30', '12:00', false, (SELECT id FROM users WHERE email = 'test@example.com'))
-    `, [testDate]);
-    console.log('Test appointments created successfully');
-
   } catch (error) {
     console.error('Error initializing database:', error);
     throw error;
@@ -101,9 +91,24 @@ client.connect()
     process.exit(1);
   });
 
-// Test GET-rute
+// Helper function to format time
+function formatTimeForDB(timeStr) {
+  return timeStr.replace('.', ':');
+}
+
+// Helper function to format date for comparison
+function formatDateForComparison(dateStr) {
+  // Create date object in local timezone
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Root endpoint for health check
 app.get('/', (req, res) => {
-  res.send('Server is running');
+  res.json({ status: 'ok' });
 });
 
 // Tilføj en GET-rute til /register for test
@@ -169,36 +174,132 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// GET all appointments for a specific date
-app.get('/appointments/:date', async (req, res) => {
+// Get all dates that have appointments
+app.get('/appointments/dates/all', async (req, res) => {
   try {
-    const { date } = req.params;
+    console.log('Fetching all appointment dates');
     const result = await client.query(
-      'SELECT * FROM appointments WHERE date = $1 ORDER BY start_time',
-      [date]
+      `SELECT DISTINCT date::date as date
+       FROM appointments 
+       ORDER BY date`
     );
-    res.json(result.rows);
+
+    console.log('Raw dates from database:', result.rows);
+
+    // Format all dates
+    const dates = result.rows.map(row => formatDateForComparison(row.date));
+    console.log('Final formatted dates:', dates);
+    res.json(dates);
   } catch (error) {
-    console.error('Error fetching appointments:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching appointment dates:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
   }
 });
 
-// POST new appointment
+// Get appointments for a specific date
+app.get('/appointments/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    console.log('Fetching appointments for date:', date);
+    
+    // Format the date for comparison
+    const formattedDate = formatDateForComparison(date);
+    console.log('Formatted date for query:', formattedDate);
+
+    const result = await client.query(
+      `SELECT * FROM appointments 
+       WHERE date::date = $1::date
+       ORDER BY start_time ASC`,
+      [formattedDate]
+    );
+
+    // Format the time strings
+    const formattedAppointments = result.rows.map(appointment => ({
+      ...appointment,
+      date: formatDateForComparison(appointment.date),
+      start_time: appointment.start_time.substring(0, 5),
+      end_time: appointment.end_time.substring(0, 5)
+    }));
+
+    console.log('Returning appointments:', formattedAppointments);
+    res.json(formattedAppointments);
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
+  }
+});
+
+// Create new appointment
 app.post('/appointments', async (req, res) => {
   try {
-    const { title, description, date, startTime, endTime, reminder, userId } = req.body;
-    const result = await client.query(
-      `INSERT INTO appointments 
-       (title, description, date, start_time, end_time, reminder, user_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       RETURNING *`,
-      [title, description, date, startTime, endTime, reminder, userId]
+    console.log('Received appointment data:', req.body);
+    const { title, description, date, startTime, endTime, reminder } = req.body;
+
+    // Validate required fields
+    if (!title || !date || !startTime || !endTime) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        received: { title, date, startTime, endTime }
+      });
+    }
+
+    // Format date and times for database
+    const formattedDate = formatDateForComparison(date);
+    const formattedStartTime = formatTimeForDB(startTime);
+    const formattedEndTime = formatTimeForDB(endTime);
+
+    // Get test user id
+    const userResult = await client.query(
+      "SELECT id FROM users WHERE email = 'test@example.com'"
     );
-    res.status(201).json(result.rows[0]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Test user not found' });
+    }
+
+    const userId = userResult.rows[0].id;
+
+    console.log('Inserting appointment with values:', {
+      title,
+      description,
+      date: formattedDate,
+      startTime: formattedStartTime,
+      endTime: formattedEndTime,
+      reminder,
+      userId
+    });
+
+    const result = await client.query(
+      `INSERT INTO appointments (title, description, date, start_time, end_time, reminder, user_id)
+       VALUES ($1, $2, $3::date, $4::time, $5::time, $6, $7)
+       RETURNING *`,
+      [title, description, formattedDate, formattedStartTime, formattedEndTime, reminder, userId]
+    );
+
+    // Format the returned appointment
+    const appointment = result.rows[0];
+    const formattedAppointment = {
+      ...appointment,
+      date: formatDateForComparison(appointment.date),
+      start_time: appointment.start_time.substring(0, 5),
+      end_time: appointment.end_time.substring(0, 5)
+    };
+
+    console.log('Appointment created:', formattedAppointment);
+    res.json(formattedAppointment);
   } catch (error) {
-    console.error('Error creating appointment:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Detailed error in /appointments POST:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message,
+      stack: error.stack
+    });
   }
 });
 
@@ -209,7 +310,7 @@ app.put('/appointments/:id', async (req, res) => {
     const { title, description, date, startTime, endTime, reminder } = req.body;
     const result = await client.query(
       `UPDATE appointments 
-       SET title = $1, description = $2, date = $3, start_time = $4, end_time = $5, reminder = $6
+       SET title = $1, description = $2, date = $3, start_time = $4, end_time = $5, reminder = $6, updated_at = CURRENT_TIMESTAMP
        WHERE id = $7 
        RETURNING *`,
       [title, description, date, startTime, endTime, reminder, id]
@@ -242,7 +343,10 @@ app.delete('/appointments/:id', async (req, res) => {
   }
 });
 
-// Start serveren
-app.listen(5001, '0.0.0.0', () => {
-  console.log('Server kører på http://0.0.0.0:5001');
+// Start server
+const PORT = 5001;
+const HOST = '192.168.0.234';
+
+app.listen(PORT, HOST, () => {
+    console.log(`Server running at http://${HOST}:${PORT}/`);
 });

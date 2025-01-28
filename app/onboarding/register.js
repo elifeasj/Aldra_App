@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Image, TouchableOpacity, ScrollView, Pressable, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Image, TouchableOpacity, ScrollView, Pressable, SafeAreaView, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 
@@ -85,98 +85,106 @@ export default function Register() {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.headerContainer}>
-                <Image
-                    source={require('../../assets/images/aldra_logo.png')}
-                    style={styles.logo}
-                />
-            </View>
-            <View style={styles.contentContainer}>
-                <ScrollView style={styles.scrollView}>
-                    <Text style={styles.title}>Velkommen!</Text>
-                    <Text style={styles.subtitle}>
-                        Opret dig som ny bruger på Aldra og få adgang{'\n'}til personlig vejledning og ressourcer.
-                    </Text>
-
-                    <Text style={styles.label}>Navn</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Indtast dit navn"
-                        value={name}
-                        onChangeText={setName}
-                        placeholderTextColor="#666"
+        <KeyboardAvoidingView 
+            behavior="position" 
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flex: 1 }}
+            keyboardVerticalOffset={-200}
+            enabled
+        >
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.headerContainer}>
+                    <Image
+                        source={require('../../assets/images/aldra_logo.png')}
+                        style={styles.logo}
                     />
-
-                    <Text style={styles.label}>E-mail</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Indtast din e-mail"
-                        value={email}
-                        onChangeText={setEmail}
-                        keyboardType="email-address"
-                        placeholderTextColor="#666"
-                    />
-
-                    <Text style={styles.label}>Adgangskode</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Indtast en adgangskode"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                        placeholderTextColor="#666"
-                    />
-
-                    <Text style={styles.label}>Relation til personen med demens</Text>
-                    <TouchableOpacity 
-                        style={styles.dropdownButton}
-                        onPress={() => setShowRelationPicker(!showRelationPicker)}
-                    >
-                        <Text style={[styles.dropdownButtonText, !relation && styles.placeholder]}>
-                            {relation || "Vælg relation"}
+                </View>
+                <View style={styles.contentContainer}>
+                    <ScrollView style={styles.scrollView}>
+                        <Text style={styles.title}>Velkommen!</Text>
+                        <Text style={styles.subtitle}>
+                            Opret dig som ny bruger på Aldra og få adgang{'\n'}til personlig vejledning og ressourcer.
                         </Text>
-                        <Text style={styles.dropdownArrow}>{showRelationPicker ? '▲' : '▼'}</Text>
-                    </TouchableOpacity>
-                    
-                    {showRelationPicker && (
-                        <View style={styles.dropdownList}>
-                            {relations.map((item) => (
-                                <TouchableOpacity
-                                    key={item}
-                                    style={styles.dropdownItem}
-                                    onPress={() => {
-                                        setRelation(item);
-                                        setShowRelationPicker(false);
-                                    }}
-                                >
-                                    <Text style={styles.dropdownItemText}>{item}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    )}
 
-                    <View style={styles.termsContainer}>
-                        <Pressable
-                            onPress={() => setTermsAccepted(!termsAccepted)}
-                            style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}
+                        <Text style={styles.label}>Navn</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Indtast dit navn"
+                            value={name}
+                            onChangeText={setName}
+                            placeholderTextColor="#666"
+                        />
+
+                        <Text style={styles.label}>E-mail</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Indtast din e-mail"
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            placeholderTextColor="#666"
+                        />
+
+                        <Text style={styles.label}>Adgangskode</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Indtast en adgangskode"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            placeholderTextColor="#666"
+                        />
+
+                        <Text style={styles.label}>Relation til personen med demens</Text>
+                        <TouchableOpacity 
+                            style={styles.dropdownButton}
+                            onPress={() => setShowRelationPicker(!showRelationPicker)}
                         >
-                            {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
-                        </Pressable>
-                        <Text style={styles.termsText}>
-                            Jeg har læst og accepterer vilkår og betingelser
-                        </Text>
-                    </View>
+                            <Text style={[styles.dropdownButtonText, !relation && styles.placeholder]}>
+                                {relation || "Vælg relation"}
+                            </Text>
+                            <Text style={styles.dropdownArrow}>{showRelationPicker ? '▲' : '▼'}</Text>
+                        </TouchableOpacity>
+                        
+                        {showRelationPicker && (
+                            <View style={styles.dropdownList}>
+                                {relations.map((item) => (
+                                    <TouchableOpacity
+                                        key={item}
+                                        style={styles.dropdownItem}
+                                        onPress={() => {
+                                            setRelation(item);
+                                            setShowRelationPicker(false);
+                                        }}
+                                    >
+                                        <Text style={styles.dropdownItemText}>{item}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
 
-                    <TouchableOpacity 
-                        style={styles.button} 
-                        onPress={registerUser}
-                    >
-                        <Text style={styles.buttonText}>Opret ny bruger</Text>
-                    </TouchableOpacity>
-                </ScrollView>
-            </View>
-        </SafeAreaView>
+                        <View style={styles.termsContainer}>
+                            <Pressable
+                                onPress={() => setTermsAccepted(!termsAccepted)}
+                                style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}
+                            >
+                                {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
+                            </Pressable>
+                            <Text style={styles.termsText}>
+                                Jeg har læst og accepterer vilkår og betingelser
+                            </Text>
+                        </View>
+
+                        <TouchableOpacity 
+                            style={styles.button} 
+                            onPress={registerUser}
+                        >
+                            <Text style={styles.buttonText}>Opret ny bruger</Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </View>
+            </SafeAreaView>
+        </KeyboardAvoidingView>
     );
 }
 
