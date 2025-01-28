@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Image, TouchableOpacity, ScrollView, Pressable, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 
@@ -10,14 +10,13 @@ export default function Register() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [relation, setRelation] = useState('');
-    const [customRelation, setCustomRelation] = useState('');
-    const [termsAccepted, setTermsAccepted] = useState(false);
     const [showRelationPicker, setShowRelationPicker] = useState(false);
+    const [termsAccepted, setTermsAccepted] = useState(false);
 
     const relations = ["Ægtefælle/Partner", "Barn", "Søskende", "Forældre", "Andet"];
 
     const registerUser = async () => {
-        if (!name || !email || !password || (!relation && !customRelation) || !termsAccepted) {
+        if (!name || !email || !password || !relation || !termsAccepted) {
             alert('Alle felter skal udfyldes.');
             return;
         }
@@ -26,7 +25,7 @@ export default function Register() {
             name,
             email,
             password,
-            relationToDementiaPerson: relation === 'Andet' ? customRelation : relation,
+            relationToDementiaPerson: relation,
             termsAccepted,
         };
 
@@ -47,55 +46,67 @@ export default function Register() {
                 throw new Error(data.message || 'Registration failed');
             }
 
-            navigation.navigate('oversigt', { userName: data.name });
+            // Send brugernavnet med i navigationen
+            router.push({
+                pathname: '/(tabs)/oversigt',
+                params: { userName: data.name }
+            });
         } catch (error) {
             console.error('Error during registration:', error);
-            alert(error.message || 'Noget gik galt under registreringen');
+            alert('Der opstod en fejl under registreringen. Prøv igen.');
         }
     };
 
     return (
-        <View style={styles.mainContainer}>
-            <ScrollView contentContainerStyle={styles.container}>
-                <Text style={styles.logo}>aldra</Text>
-                <Text style={styles.title}>Velkommen!</Text>
-                <Text style={styles.subtitle}>
-                    Opret dig som ny bruger på Aldra og få adgang til personlig vejledning og ressourcer.
-                </Text>
-
-                <Text style={styles.label}>Navn</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Indtast dit navn"
-                    value={name}
-                    onChangeText={setName}
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.headerContainer}>
+                <Image
+                    source={require('../../assets/images/aldra_logo.png')}
+                    style={styles.logo}
                 />
+            </View>
+            <View style={styles.contentContainer}>
+                <ScrollView style={styles.scrollView}>
+                    <Text style={styles.title}>Velkommen!</Text>
+                    <Text style={styles.subtitle}>
+                        Opret dig som ny bruger på Aldra og få adgang{'\n'}til personlig vejledning og ressourcer.
+                    </Text>
 
-                <Text style={styles.label}>E-mail</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Indtast din e-mail"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                />
+                    <Text style={styles.label}>Navn</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Indtast dit navn"
+                        value={name}
+                        onChangeText={setName}
+                        placeholderTextColor="#666"
+                    />
 
-                <Text style={styles.label}>Adgangskode</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Indtast en adgangskode"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                />
+                    <Text style={styles.label}>E-mail</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Indtast din e-mail"
+                        value={email}
+                        onChangeText={setEmail}
+                        keyboardType="email-address"
+                        placeholderTextColor="#666"
+                    />
 
-                <Text style={styles.label}>Relation til personen med demens</Text>
-                <View style={styles.dropdownContainer}>
+                    <Text style={styles.label}>Adgangskode</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Indtast en adgangskode"
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry
+                        placeholderTextColor="#666"
+                    />
+
+                    <Text style={styles.label}>Relation til personen med demens</Text>
                     <TouchableOpacity 
                         style={styles.dropdownButton}
                         onPress={() => setShowRelationPicker(!showRelationPicker)}
                     >
-                        <Text style={styles.dropdownButtonText}>
+                        <Text style={[styles.dropdownButtonText, !relation && styles.placeholder]}>
                             {relation || "Vælg relation"}
                         </Text>
                         <Text style={styles.dropdownArrow}>{showRelationPicker ? '▲' : '▼'}</Text>
@@ -109,9 +120,6 @@ export default function Register() {
                                     style={styles.dropdownItem}
                                     onPress={() => {
                                         setRelation(item);
-                                        if (item !== "Andet") {
-                                            setCustomRelation('');
-                                        }
                                         setShowRelationPicker(false);
                                     }}
                                 >
@@ -120,101 +128,101 @@ export default function Register() {
                             ))}
                         </View>
                     )}
-                </View>
 
-                {relation === "Andet" && (
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Angiv relation"
-                        value={customRelation}
-                        onChangeText={setCustomRelation}
-                    />
-                )}
+                    <View style={styles.termsContainer}>
+                        <Pressable
+                            onPress={() => setTermsAccepted(!termsAccepted)}
+                            style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}
+                        >
+                            {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
+                        </Pressable>
+                        <Text style={styles.termsText}>
+                            Jeg har læst og accepterer vilkår og betingelser
+                        </Text>
+                    </View>
 
-                <View style={styles.checkboxContainer}>
-                    <Pressable
-                        onPress={() => setTermsAccepted(!termsAccepted)}
-                        style={[
-                            styles.checkbox,
-                            termsAccepted && styles.checkboxChecked,
-                        ]}
+                    <TouchableOpacity 
+                        style={styles.button} 
+                        onPress={registerUser}
                     >
-                        {termsAccepted && <Text style={styles.checkboxText}>✔</Text>}
-                    </Pressable>
-                    <Text style={styles.checkboxLabel}>
-                        Jeg har læst og accepterer vilkår og betingelser
-                    </Text>
-                </View>
-
-                <TouchableOpacity style={styles.button} onPress={registerUser}>
-                    <Text style={styles.buttonText}>Opret ny bruger</Text>
-                </TouchableOpacity>
-            </ScrollView>
-        </View>
+                        <Text style={styles.buttonText}>Opret ny bruger</Text>
+                    </TouchableOpacity>
+                </ScrollView>
+            </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    mainContainer: {
+    safeArea: {
         flex: 1,
-        zIndex: 0, // Sørger for, at dropdown ikke bliver skjult
+        backgroundColor: '#42865F',
     },
-    container: {
-        flexGrow: 1,
-        paddingHorizontal: 20,
-        paddingVertical: 30,
-        justifyContent: 'flex-start',
-        backgroundColor: '#ffffff',
+    headerContainer: {
+        backgroundColor: '#42865F',
+        paddingVertical: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingBottom: 30,
+    },
+    contentContainer: {
+        flex: 1,
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 35,
+        borderTopRightRadius: 35,
+        paddingBottom: 0,
+        marginBottom: -50,
+    },
+    scrollView: {
+        flex: 1,
+        padding: 20,
     },
     logo: {
-        fontSize: 36,
-        fontWeight: 'bold',
-        color: '#42865F',
-        marginBottom: 30,
-        textAlign: 'center',
+        width: 150,
+        height: 40,
+        marginTop: 0,
     },
     title: {
-        fontSize: 28,
-        fontWeight: 'bold',
+        fontSize: 38,
+        fontFamily: 'RedHatDisplay_700Bold',
+        marginBottom: 10,
+        marginTop: 15,
         color: '#42865F',
-        marginBottom: 15,
-        textAlign: 'center',
     },
     subtitle: {
-        fontSize: 16,
-        color: '#555',
-        textAlign: 'center',
-        marginBottom: 30,
+        fontSize: 18,
+        color: '#333',
+        marginBottom: 20,
+        lineHeight: 27,
+        fontFamily: 'RedHatDisplay_400Regular',
+    },
+    label: {
+        fontSize: 18,
+        marginBottom: 8,
+        color: '#000',
+        fontFamily: 'RedHatDisplay_500Medium',
     },
     input: {
         width: '100%',
-        padding: 15,
-        marginBottom: 20,
+        height: 48,
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 10,
-        fontSize: 16,
-        backgroundColor: '#f7f7f7',
-        color: '#333',
-    },
-    label: {
-        fontSize: 16,
-        color: '#333',
-        marginBottom: 10,
-    },
-    dropdownContainer: {
-        width: '100%',
+        borderColor: '#E0E0E0',
+        borderRadius: 8,
+        paddingHorizontal: 16,
         marginBottom: 20,
-        zIndex: 1000,
+        fontSize: 16,
+        backgroundColor: '#fff',
+        fontFamily: 'RedHatDisplay_400Regular',
     },
     dropdownButton: {
-        width: '100%',
-        height: 50,
-        backgroundColor: '#f7f7f7',
+        backgroundColor: '#fff',
         borderWidth: 1,
         borderColor: '#ccc',
-        borderRadius: 10,
+        borderRadius: 8,
+        paddingVertical: 12,
         paddingHorizontal: 15,
+        marginBottom: 20,
+        width: '100%',
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -222,39 +230,36 @@ const styles = StyleSheet.create({
     dropdownButtonText: {
         fontSize: 16,
         color: '#333',
+        fontFamily: 'RedHatDisplay_400Regular',
+    },
+    dropdownList: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 8,
+        marginTop: -20,
+        marginBottom: 20,
+        zIndex: 1000,
+        elevation: 5,
+    },
+    dropdownItem: {
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
+    },
+    dropdownItemText: {
+        fontSize: 16,
+        color: '#000',
+        fontFamily: 'RedHatDisplay_400Regular',
     },
     dropdownArrow: {
         fontSize: 16,
         color: '#666',
     },
-    dropdownList: {
-        position: 'absolute',
-        top: 55,
-        width: '100%',
-        backgroundColor: 'white',
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 10,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+    placeholder: {
+        color: '#666',
     },
-    dropdownItem: {
-        paddingVertical: 12,
-        paddingHorizontal: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    dropdownItemText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    checkboxContainer: {
+    termsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 30,
@@ -262,34 +267,38 @@ const styles = StyleSheet.create({
     checkbox: {
         width: 24,
         height: 24,
-        borderWidth: 2,
-        borderColor: '#ccc',
+        borderWidth: 1,
+        borderColor: '#42865F',
         borderRadius: 4,
+        marginRight: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 10,
     },
     checkboxChecked: {
         backgroundColor: '#42865F',
-        borderColor: '#42865F',
     },
-    checkboxText: {
+    checkmark: {
         color: '#fff',
-        fontWeight: 'bold',
+        fontSize: 16,
     },
-    checkboxLabel: {
+    termsText: {
         fontSize: 14,
-        color: '#555',
+        color: '#333',
+        flex: 1,
+        fontFamily: 'RedHatDisplay_400Regular',
     },
     button: {
         backgroundColor: '#42865F',
-        paddingVertical: 16,
-        borderRadius: 10,
+        borderRadius: 8,
+        height: 48,
+        justifyContent: 'center',
         alignItems: 'center',
+        marginBottom: 20,
     },
     buttonText: {
-        color: '#ffffff',
-        fontSize: 18,
+        color: '#fff',
+        fontSize: 20,
         fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
     },
 });

@@ -119,28 +119,27 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 36,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
         marginBottom: 8,
-        textAlign: 'left',  // Venstrejuster tekst
-        
+        textAlign: 'left',  
     },
     subtitle: {
         fontSize: 22,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
         marginBottom: 20,
-        textAlign: 'left',  // Venstrejuster tekst
+        textAlign: 'left',
         lineHeight: 27,
-        
     },
     description: {
         fontSize: 20,
+        fontFamily: 'RedHatDisplay_400Regular',
         color: '#42865F',
-        textAlign: 'left',  // Venstrejuster tekst
+        textAlign: 'left',
         lineHeight: 27,
         marginBottom: 0,
-        paddingRight: 0,
+        paddingRight: 39,
     },
     button: {
         paddingVertical: 13,
@@ -165,20 +164,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     prevButtonText: {
-        color: '#42865F',  // Forrige knap tekstfarve
+        color: '#42865F',  
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         textAlign: 'center',
         width: '60',
-        marginLeft: 20, // Afstand mellem tekst og ikon
+        marginLeft: 20, 
     },
     nextButtonText: {
-        color: '#FFFFFF',  // Næste knap tekstfarve
+        color: '#FFFFFF',  
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         textAlign: 'center',
         width: '60',
-        marginRight: 20, // Afstand mellem tekst og ikon
+        marginRight: 20, 
     },
     buttonIcon: {
         marginLeft: 10,
@@ -188,7 +187,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row', 
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 30, // Afstand til knapperne
+        marginBottom: 30, 
     },
     dot: {
         fontSize: 45,
@@ -196,6 +195,6 @@ const styles = StyleSheet.create({
         marginHorizontal: 1,
     },
     activeDot: {
-        color: '#42865F', // Farve for aktive punkter
+        color: '#42865F', 
     },
 });

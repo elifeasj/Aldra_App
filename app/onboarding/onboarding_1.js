@@ -90,16 +90,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     image: {
-        width: '100%',  // Billedets bredde fylder hele skærmen
-        height: '50%',  // Juster højde
-        resizeMode: 'contain',  // Sørger for at billedet ikke bliver strakt
+        width: '100%',  
+        height: '50%',  
+        resizeMode: 'contain',  
         marginBottom: 0,
         marginTop: 60,
     },
     topContainer: {
         flex: 2,
         justifyContent: 'center',
-        alignItems: 'flex-start', // Justeret til venstrejustering
+        alignItems: 'flex-start', 
         marginBottom: 100,
         width: '100%',
 
@@ -107,11 +107,11 @@ const styles = StyleSheet.create({
     contentContainer: {
         flex: 0,
         justifyContent: 'center',
-        alignItems: 'flex-start',  // Sørger for at teksten er til venstre
+        alignItems: 'flex-start',  
     },
     buttonContainer: {
-        flexDirection: 'row',  // Vigtigt for at placere knapperne på hver sin side
-        justifyContent: 'space-between',  // Sørger for at knapperne er på hver sin side
+        flexDirection: 'row',  
+        justifyContent: 'space-between',  
         alignItems: 'center',
         width: '100%',
         marginBottom: 50,
@@ -119,25 +119,26 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 36,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
         marginBottom: 8,
-        textAlign: 'left',  // Venstrejuster tekst
+        textAlign: 'left',  
         
     },
     subtitle: {
         fontSize: 22,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
         marginBottom: 20,
-        textAlign: 'left',  // Venstrejuster tekst
+        textAlign: 'left',  
         lineHeight: 27,
         
     },
     description: {
         fontSize: 20,
+        fontFamily: 'RedHatDisplay_400Regular',
         color: '#42865F',
-        textAlign: 'left',  // Venstrejuster tekst
+        textAlign: 'left',  
         lineHeight: 27,
         marginBottom: 0,
         paddingRight: 39,
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
         paddingVertical: 13,
         paddingHorizontal: 30,
         borderRadius: 8,
-        width: '40%', // Juster knapperne så de ikke fylder hele bredden
+        width: '40%', 
         marginBottom: 20,
     },
     prevButton: {
@@ -165,20 +166,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     prevButtonText: {
-        color: '#42865F',  // Forrige knap tekstfarve
+        color: '#42865F',  
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         textAlign: 'center',
         width: '60',
-        marginLeft: 20, // Afstand mellem tekst og ikon
+        marginLeft: 20, 
     },
     nextButtonText: {
-        color: '#FFFFFF',  // Næste knap tekstfarve
+        color: '#FFFFFF',  
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         textAlign: 'center',
         width: '60',
-        marginRight: 20, // Afstand mellem tekst og ikon
+        marginRight: 20, 
     },
     buttonIcon: {
         marginLeft: 10,
@@ -188,7 +189,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row', 
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 30, // Afstand til knapperne
+        marginBottom: 30, 
     },
     dot: {
         fontSize: 45,
@@ -196,6 +197,6 @@ const styles = StyleSheet.create({
         marginHorizontal: 1,
     },
     activeDot: {
-        color: '#42865F', // Farve for aktive punkter
+        color: '#42865F', 
     },
 });

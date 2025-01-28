@@ -79,14 +79,14 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 36,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         color: '#FFFFFF',
         marginBottom: 8,
         textAlign: 'left',
     },
     subtitle: {
         fontSize: 22,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         color: '#FFFFFF',
         marginBottom: 30,
         textAlign: 'left',
@@ -95,28 +95,30 @@ const styles = StyleSheet.create({
     },
     description: {
         fontSize: 20,
+        fontFamily: 'RedHatDisplay_400Regular',
         color: '#FFFFFF',
         textAlign: 'left',
         lineHeight: 27,
     },
     button: {
         backgroundColor: '#FFFFFF',
-        paddingVertical: 15,
         borderRadius: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 24,
         width: '100%',
         alignSelf: 'center',
     },
     buttonContent: {
         flexDirection: 'row',
-        justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        justifyContent: 'space-between',
     },
     buttonText: {
-        color: '#3E8E7E',
-        fontSize: 20,
-        fontWeight: 'bold',
+        color: '#42865F',
+        fontSize: 18,
+        fontFamily: 'RedHatDisplay_700Bold',
         flex: 1,
         textAlign: 'center',
+        marginLeft: 24, // For at kompensere for ikonet og holde teksten i midten
     },
 });

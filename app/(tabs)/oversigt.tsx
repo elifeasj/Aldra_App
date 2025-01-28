@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function Oversigt() {
-    const route = useRoute();
-    const { userName } = route.params ? route.params : { userName: 'Bruger' }; // Standard hvis data mangler
+    const { userName } = useLocalSearchParams();
+    const displayName = userName || 'Bruger';
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>Hej, {userName}!</Text>
+            <Text style={styles.title}>Hej, {displayName}!</Text>
             <Text style={styles.subtitle}>Din oversigt</Text>
 
             {/* Oversigtskort */}
@@ -63,46 +63,45 @@ const styles = StyleSheet.create({
     container: {
         flexGrow: 1,
         padding: 20,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#fff',
     },
     title: {
         fontSize: 32,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
+        marginBottom: 8,
     },
     subtitle: {
-        fontSize: 18,
-        color: '#555',
-        marginVertical: 10,
+        fontSize: 20,
+        fontFamily: 'RedHatDisplay_400Regular',
+        color: '#333',
+        marginBottom: 30,
     },
     cardContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginVertical: 20,
+        gap: 20,
     },
     card: {
-        flex: 1,
-        backgroundColor: '#e0f5e9',
-        padding: 15,
-        borderRadius: 10,
-        marginHorizontal: 5,
+        backgroundColor: '#F5F5F5',
+        borderRadius: 12,
+        padding: 20,
     },
     cardTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 20,
+        fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
-        marginBottom: 10,
+        marginBottom: 15,
     },
     button: {
-        marginTop: 10,
         backgroundColor: '#42865F',
-        padding: 10,
         borderRadius: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
         alignItems: 'center',
     },
     buttonText: {
-        color: '#ffffff',
+        color: '#fff',
         fontSize: 16,
+        fontFamily: 'RedHatDisplay_700Bold',
     },
     visits: {
         marginTop: 20,

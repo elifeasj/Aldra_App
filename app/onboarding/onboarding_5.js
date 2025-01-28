@@ -91,19 +91,17 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 40,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         color: '#fff',
         marginBottom: 12,
-        textAlign: 'left',  // Venstrejuster tekst
+        textAlign: 'left',
         paddingRight: 30,
-        
     },
-
     description: {
         fontSize: 24,
-        fontWeight: 'regular',
+        fontFamily: 'RedHatDisplay_400Regular',
         color: '#ffff',
-        textAlign: 'left',  // Venstrejuster tekst
+        textAlign: 'left',
         lineHeight: 35,
         marginBottom: 70,
         paddingRight: 50,
@@ -127,13 +125,13 @@ const styles = StyleSheet.create({
     },
 
     nextButtonText: {
-        color: '#42865F',  // Næste knap tekstfarve
+        color: '#42865F',
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: 'RedHatDisplay_700Bold',
         textAlign: 'center',
         width: '60',
         flex: 1,
-        marginRight: 0, // Afstand mellem tekst og ikon
+        marginRight: 0,
     },
     buttonIcon: {
         marginLeft: 10,
