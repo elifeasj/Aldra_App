@@ -19,7 +19,8 @@
         }
       ],
       "expo-font",
-      "expo-router"
+      "expo-router",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true
@@ -27,11 +28,22 @@
     "extra": {
       "router": {
         "origin": false
-      },
-      "eas": {
-        "projectId": "353b4f0f-2aa3-4f8c-9ed4-e5c59de58a5e"
       }
     },
-    "owner": "effyo"
+    "owner": "effyo",
+    "android": {
+      "package": "com.effyo.aldraapp",
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.effyo.aldraapp",
+      "supportsTablet": true
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/images/favicon.png"
+    }
   }
 }
