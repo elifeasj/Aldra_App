@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Button } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { launchImageLibrary, ImagePickerResponse } from 'react-native-image-picker';
+
+const API_URL = 'http://your-api-url.com'; // Erstat med din faktiske API URL
 
 interface UserData {
     name: string;
     relationToDementiaPerson: string;
 }
 
-export default function Profil() {
+const Profil = () => {
     const [userData, setUserData] = useState<UserData>({
         name: '',
         relationToDementiaPerson: ''
     });
+
+    const [profileImage, setProfileImage] = useState<string | null>(null);
 
     useEffect(() => {
         loadUserData();
@@ -40,6 +45,48 @@ export default function Profil() {
         return relation;
     };
 
+    const uploadImage = () => {
+        launchImageLibrary({
+            mediaType: 'photo',
+            includeBase64: false,
+        }, (response: ImagePickerResponse) => {
+            if (response.didCancel) {
+                console.log('User cancelled image picker');
+            } else if (response.error) {
+                console.error('ImagePicker Error: ', response.error);
+            } else {
+                if (response.assets && response.assets.length > 0) {
+                    const source = { uri: response.assets[0].uri };
+                    setProfileImage(source.uri);
+                    uploadProfileImage(response.assets[0]);
+                }
+            }
+        });
+    };
+
+    const uploadProfileImage = async (asset: any) => {
+        const formData = new FormData();
+        formData.append('profileImage', {
+            uri: asset.uri,
+            type: asset.type,
+            name: asset.fileName || 'photo.jpg',
+        });
+
+        try {
+            const response = await fetch(`${API_URL}/upload-profile-image`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            const data = await response.json();
+            console.log('Upload success:', data);
+        } catch (error) {
+            console.error('Error uploading image:', error);
+        }
+    };
+
     return (
         <ScrollView style={styles.container}>
             <View style={styles.header}>
@@ -51,16 +98,26 @@ export default function Profil() {
 
             <View style={styles.profileSection}>
                 <View style={styles.profileContainer}>
-                    <Image 
-                        source={require('../../assets/images/frame_1.png')} 
-                        style={styles.profileImage}
-                    />
+                    {profileImage ? (
+                        <Image 
+                            source={{ uri: profileImage }} 
+                            style={styles.profileImage}
+                        />
+                    ) : (
+                        <Image 
+                            source={require('../../assets/images/frame_1.png')} 
+                            style={styles.profileImage}
+                        />
+                    )}
                     <View style={styles.profileInfo}>
                         <Text style={styles.name}>{userData.name}</Text>
                         <Text style={styles.subtitle}>
                             {formatRelation(userData.relationToDementiaPerson)} til person med demens
                         </Text>
                     </View>
+                    <TouchableOpacity style={styles.uploadButton} onPress={uploadImage}>
+                        <Text style={styles.uploadButtonText}>Upload profilbillede</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
 
@@ -363,4 +420,17 @@ const styles = StyleSheet.create({
         fontFamily: 'RedHatDisplay_400Regular',
         marginVertical: 20,
     },
+    uploadButton: {
+        backgroundColor: '#42865F',
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        borderRadius: 6,
+        marginLeft: 15,
+    },
+    uploadButtonText: {
+        color: '#fff',
+        fontFamily: 'RedHatDisplay_500Medium',
+    },
 });
+
+export default Profil;
