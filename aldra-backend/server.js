@@ -3,6 +3,7 @@ const { Client } = require('pg');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
+const bcrypt = require('bcrypt');
 
 const app = express();
 app.use(cors({
@@ -29,8 +30,11 @@ const client = new Client({
 });
 
 // Initialize database
-const initializeDatabase = async () => {
+async function initializeDatabase() {
   try {
+    // Drop appointments_and_logs table if it exists
+    await client.query('DROP TABLE IF EXISTS appointments_and_logs CASCADE');
+
     // Create users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -39,10 +43,9 @@ const initializeDatabase = async () => {
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         relation_to_dementia_person VARCHAR(255),
-        terms_accepted BOOLEAN DEFAULT false,
-        status VARCHAR(50) DEFAULT 'active',
-        last_activity TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        termsAccepted BOOLEAN DEFAULT false
       );
     `);
     console.log('Users table created successfully');
@@ -51,6 +54,7 @@ const initializeDatabase = async () => {
     await client.query(`
       CREATE TABLE IF NOT EXISTS appointments (
         id SERIAL PRIMARY KEY,
+        appointment_id INTEGER UNIQUE NOT NULL GENERATED ALWAYS AS IDENTITY,
         title VARCHAR(255) NOT NULL,
         description TEXT,
         date DATE NOT NULL,
@@ -69,12 +73,14 @@ const initializeDatabase = async () => {
     await client.query(`
       CREATE TABLE IF NOT EXISTS logs (
         id SERIAL PRIMARY KEY,
+        appointment_id INTEGER UNIQUE,
         title VARCHAR(255) NOT NULL,
         description TEXT,
         date DATE NOT NULL,
         user_id INTEGER,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (appointment_id) REFERENCES appointments(appointment_id),
         FOREIGN KEY (user_id) REFERENCES users(id)
       );
     `);
@@ -84,9 +90,8 @@ const initializeDatabase = async () => {
     await client.query(`
       CREATE TABLE IF NOT EXISTS push_tokens (
         id SERIAL PRIMARY KEY,
+        token TEXT UNIQUE NOT NULL,
         user_id INTEGER,
-        token VARCHAR(255) NOT NULL,
-        platform VARCHAR(255) NOT NULL,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
       );
@@ -97,37 +102,23 @@ const initializeDatabase = async () => {
     await client.query(`
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER,
-        appointment_id INTEGER,
         title VARCHAR(255) NOT NULL,
         body TEXT,
-        scheduled_for TIMESTAMPTZ NOT NULL,
-        sent BOOLEAN DEFAULT false,
-        sent_at TIMESTAMPTZ,
+        appointment_id INTEGER,
+        user_id INTEGER,
+        scheduled_for TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (appointment_id) REFERENCES appointments(id)
+        FOREIGN KEY (appointment_id) REFERENCES appointments(appointment_id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
       );
     `);
     console.log('Notifications table created successfully');
 
-    // Insert test user if not exists
-    const userResult = await client.query(
-      "SELECT id FROM users WHERE email = 'test@example.com'"
-    );
-    
-    if (userResult.rows.length === 0) {
-      await client.query(`
-        INSERT INTO users (name, email, password, relation_to_dementia_person, terms_accepted)
-        VALUES ('Test User', 'test@example.com', 'password123', 'Caregiver', true)
-      `);
-      console.log('Test user created successfully');
-    }
   } catch (error) {
     console.error('Error initializing database:', error);
     throw error;
   }
-};
+}
 
 // Connect to database and initialize
 client.connect()
@@ -165,7 +156,7 @@ app.get('/register', (req, res) => {
   res.send('This is the register endpoint. Use POST to register a user.');
 });
 
-// Opret bruger-rute
+// Register a new user
 app.post('/register', async (req, res) => {
   console.log('Received registration request with body:', req.body);
   
@@ -191,7 +182,7 @@ app.post('/register', async (req, res) => {
 
     // Indsæt bruger i databasen og returnér data
     const result = await client.query(
-      'INSERT INTO users (name, email, password, relation_to_dementia_person, terms_accepted) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      'INSERT INTO users (name, email, password, relation_to_dementia_person, termsAccepted) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [name, email, password, relationToDementiaPerson, termsAccepted]
     );
     
@@ -284,71 +275,45 @@ app.get('/appointments/:date', async (req, res) => {
   }
 });
 
+// Get all appointments
+app.get('/appointments', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM appointments ORDER BY date DESC, start_time ASC');
+    console.log('Sending appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching appointments:', err);
+    res.status(500).json({ error: 'Error fetching appointments' });
+  }
+});
+
 // Create new appointment
 app.post('/appointments', async (req, res) => {
   try {
     console.log('Received appointment data:', req.body);
-    const { title, description, date, startTime, endTime, reminder } = req.body;
-
-    // Validate required fields
-    if (!title || !date || !startTime || !endTime) {
-      return res.status(400).json({ 
-        error: 'Missing required fields',
-        received: { title, date, startTime, endTime }
-      });
+    const { title, description, date, start_time, end_time, reminder, user_id } = req.body;
+    
+    // Valider at alle nødvendige felter er der
+    if (!title || !description || !date || !start_time || !end_time) {
+      console.error('Missing required fields:', { title, description, date, start_time, end_time });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Format date and times for database
-    const formattedDate = formatDateForComparison(date);
-    const formattedStartTime = formatTimeForDB(startTime);
-    const formattedEndTime = formatTimeForDB(endTime);
-
-    // Get test user id
-    const userResult = await client.query(
-      "SELECT id FROM users WHERE email = 'test@example.com'"
+    // Indsæt appointment
+    const result = await client.query(
+      'INSERT INTO appointments (title, description, date, start_time, end_time, reminder, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [title, description, date, start_time, end_time, reminder, user_id]
     );
     
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Test user not found' });
-    }
-
-    const userId = userResult.rows[0].id;
-
-    console.log('Inserting appointment with values:', {
-      title,
-      description,
-      date: formattedDate,
-      startTime: formattedStartTime,
-      endTime: formattedEndTime,
-      reminder,
-      userId
-    });
-
-    const result = await client.query(
-      `INSERT INTO appointments (title, description, date, start_time, end_time, reminder, user_id)
-       VALUES ($1, $2, $3::date, $4::time, $5::time, $6, $7)
-       RETURNING *`,
-      [title, description, formattedDate, formattedStartTime, formattedEndTime, reminder, userId]
-    );
-
-    // Format the returned appointment
-    const appointment = result.rows[0];
-    const formattedAppointment = {
-      ...appointment,
-      date: formatDateForComparison(appointment.date),
-      start_time: appointment.start_time.substring(0, 5),
-      end_time: appointment.end_time.substring(0, 5)
-    };
-
-    console.log('Appointment created:', formattedAppointment);
-    res.json(formattedAppointment);
+    console.log('Created appointment:', result.rows[0]);
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Detailed error in /appointments POST:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message,
-      stack: error.stack
+    console.error('Detailed error creating appointment:', {
+      error: error.message,
+      stack: error.stack,
+      body: req.body
     });
+    res.status(500).json({ error: 'Failed to create appointment', details: error.message });
   }
 });
 
@@ -356,13 +321,13 @@ app.post('/appointments', async (req, res) => {
 app.put('/appointments/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, date, startTime, endTime, reminder } = req.body;
+    const { title, description, date, start_time, end_time, reminder } = req.body;
     const result = await client.query(
       `UPDATE appointments 
        SET title = $1, description = $2, date = $3, start_time = $4, end_time = $5, reminder = $6, updated_at = CURRENT_TIMESTAMP
        WHERE id = $7 
        RETURNING *`,
-      [title, description, date, startTime, endTime, reminder, id]
+      [title, description, date, start_time, end_time, reminder, id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Appointment not found' });
@@ -376,31 +341,39 @@ app.put('/appointments/:id', async (req, res) => {
 
 // Delete an appointment
 app.delete('/appointments/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('Received delete request for appointment ID:', id);
+    
+    const result = await client.query('BEGIN');
     try {
-        const { id } = req.params;
-        console.log('Received delete request for appointment ID:', id);
-        
-        const result = await client.query(
-            'DELETE FROM appointments WHERE id = $1 RETURNING *',
-            [id]
-        );
-        console.log('Delete query result:', result.rows);
+      // Først sletter vi alle logs der er knyttet til denne aftale
+      await client.query('DELETE FROM logs WHERE appointment_id = $1', [id]);
+      console.log('Deleted associated logs');
 
-        if (result.rows.length === 0) {
-            console.log('No appointment found with ID:', id);
-            return res.status(404).json({ error: 'Appointment not found' });
-        }
+      // Derefter sletter vi selve aftalen
+      const result = await client.query('DELETE FROM appointments WHERE id = $1 RETURNING *', [id]);
+      
+      if (result.rows.length === 0) {
+        throw new Error('Appointment not found');
+      }
 
-        console.log('Successfully deleted appointment with ID:', id);
-        res.json({ message: 'Appointment deleted successfully' });
-    } catch (error) {
-        console.error('Detailed error deleting appointment:', {
-            error: error.message,
-            stack: error.stack,
-            params: req.params
-        });
-        res.status(500).json({ error: 'Internal server error' });
+      await client.query('COMMIT');
+      console.log('Appointment deleted successfully');
+      res.json({ message: 'Appointment deleted successfully' });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error deleting appointment:', err);
+      res.status(500).json({ error: 'Failed to delete appointment' });
     }
+  } catch (error) {
+    console.error('Detailed error deleting appointment:', {
+      error: error.message,
+      stack: error.stack,
+      params: req.params
+    });
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Endpoint to update user's last activity
@@ -425,59 +398,145 @@ app.post('/api/update-activity', async (req, res) => {
   }
 });
 
-// Endpoint for creating a new log
-app.post('/logs', async (req, res) => {
+// Get all logs with appointment info
+app.get('/admin/logs-view', async (req, res) => {
   try {
-    console.log('Received log data:', req.body);
-    const { title, description, date } = req.body;
-    
-    // For now, we'll use the test user's ID (1)
-    const userId = 1;
-
     const result = await client.query(`
-      INSERT INTO logs (title, description, date, user_id)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `, [title, description, date, userId]);
-
-    res.status(201).json({
-      success: true,
-      message: 'Log created successfully',
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error creating log:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error creating log',
-      error: error.message
-    });
+      SELECT 
+        l.*,
+        a.title as appointment_title,
+        a.description as appointment_description,
+        a.start_time as appointment_start_time,
+        a.end_time as appointment_end_time,
+        CASE 
+          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
+          ELSE 'Ingen aftale'
+        END as appointment_reference
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs with appointments:', err);
+    res.status(500).json({ error: 'Error fetching logs with appointments' });
   }
 });
 
-// Endpoint for getting all logs for a user
+// Get all logs
 app.get('/logs', async (req, res) => {
   try {
+    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
+    console.log('Sending logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Get a specific log
+app.get('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
     // For now, we'll use the test user's ID (1)
     const userId = 1;
 
     const result = await client.query(`
       SELECT * FROM logs
-      WHERE user_id = $1
-      ORDER BY date DESC, created_at DESC
-    `, [userId]);
+      WHERE id = $1 AND user_id = $2
+    `, [logId, userId]);
 
-    res.json({
-      success: true,
-      data: result.rows
-    });
-  } catch (error) {
-    console.error('Error fetching logs:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching logs',
-      error: error.message
-    });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Sending log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching log:', err);
+    res.status(500).json({ error: 'Error fetching log' });
+  }
+});
+
+// Create a new log
+app.post('/logs', async (req, res) => {
+  try {
+    console.log('Received log data:', req.body);
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      INSERT INTO logs (title, description, date, appointment_id, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [title, description, date, appointment_id, userId]);
+
+    console.log('Created log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating log:', err);
+    res.status(500).json({ error: 'Error creating log' });
+  }
+});
+
+// Update a log
+app.put('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      UPDATE logs
+      SET title = $1, 
+          description = $2, 
+          date = $3,
+          appointment_id = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [title, description, date, appointment_id, logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Updated log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating log:', err);
+    res.status(500).json({ error: 'Error updating log' });
+  }
+});
+
+// Get all logs with their appointment_id
+app.get('/logs-with-appointments', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.id as log_id,
+        l.title as log_title,
+        l.description as log_description,
+        l.date as log_date,
+        l.appointment_id,
+        a.title as appointment_title
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointment IDs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
   }
 });
 
@@ -621,6 +680,12 @@ cron.schedule('0 0 * * *', async () => {
         WHERE user_id = ANY($1)
       `, [userIds]);
 
+      // Slet logs
+      await client.query(`
+        DELETE FROM logs 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
       // Slet brugere
       const deleteResult = await client.query(`
         DELETE FROM users 
@@ -634,6 +699,63 @@ cron.schedule('0 0 * * *', async () => {
     }
   } catch (error) {
     console.error('Fejl ved håndtering af inaktive brugere:', error);
+  }
+});
+
+// Get all appointments with their logs
+app.get('/appointments-with-logs', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        a.*,
+        COALESCE(json_agg(
+          CASE WHEN l.id IS NOT NULL THEN
+            json_build_object(
+              'id', l.id,
+              'title', l.title,
+              'description', l.description,
+              'date', l.date
+            )
+          END
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') as logs
+      FROM appointments a
+      LEFT JOIN logs l ON a.appointment_id = l.appointment_id
+      GROUP BY a.id
+      ORDER BY a.date DESC, a.start_time ASC;
+    `);
+    
+    console.log('Appointments with logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching appointments with logs:', err);
+    res.status(500).json({ error: 'Error fetching appointments with logs' });
+  }
+});
+
+// Get all logs with appointment info
+app.get('/admin/logs-view', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.*,
+        a.title as appointment_title,
+        a.description as appointment_description,
+        a.start_time as appointment_start_time,
+        a.end_time as appointment_end_time,
+        CASE 
+          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
+          ELSE 'Ingen aftale'
+        END as appointment_reference
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs with appointments:', err);
+    res.status(500).json({ error: 'Error fetching logs with appointments' });
   }
 });
 

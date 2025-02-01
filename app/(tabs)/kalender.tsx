@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 import { TimeIntervalTriggerInput, SchedulableTriggerInputTypes } from 'expo-notifications';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
+import { useIsFocused, useFocusEffect } from '@react-navigation/native';
 
 interface Appointment {
     id: number;
@@ -50,6 +51,7 @@ LocaleConfig.defaultLocale = 'da';
 
 export default function Kalender() {
     const router = useRouter();
+    const isFocused = useIsFocused();
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [datesWithAppointments, setDatesWithAppointments] = useState<string[]>([]);
@@ -77,13 +79,72 @@ export default function Kalender() {
 
     const [currentDate, setCurrentDate] = useState(new Date());
 
+    // State til at holde styr på hvilke aftaler der har logs
+    const [appointmentsWithLogs, setAppointmentsWithLogs] = useState<{ [key: number]: number }>({});
+
     useEffect(() => {
         const timer = setInterval(() => {
             setCurrentDate(new Date());
         }, 1000);
 
+        // Fetch initial data
+        fetchDatesWithAppointments();
+        fetchAppointments(selectedDate);
+
         return () => clearInterval(timer);
     }, []);
+
+    // Funktion til at tjekke logs for appointments
+    const checkLogsForAppointments = async (appointments: Appointment[]) => {
+        try {
+            const response = await fetch(`${API_URL}/logs`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch logs');
+            }
+            const logs = await response.json();
+            
+            console.log('Fetched logs:', logs);
+            
+            // Map logs til appointments baseret på appointment_id
+            const logsMap: { [key: number]: number } = {};
+            
+            if (Array.isArray(logs)) {
+                logs.forEach((log: any) => {
+                    if (log.appointment_id) {
+                        console.log('Mapping log:', log.id, 'to appointment:', log.appointment_id);
+                        logsMap[log.appointment_id] = log.id;
+                    }
+                });
+            }
+            
+            console.log('Final logs map:', logsMap);
+            setAppointmentsWithLogs(logsMap);
+        } catch (error) {
+            console.error('Error checking logs:', error);
+        }
+    };
+
+    // Kør checkLogsForAppointments når appointments ændres
+    useEffect(() => {
+        if (appointments.length > 0) {
+            checkLogsForAppointments(appointments);
+        }
+    }, [appointments]);
+
+    // Opdater logs hver 2. sekund
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (appointments.length > 0) {
+                checkLogsForAppointments(appointments);
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [appointments]);
+
+    useEffect(() => {
+        fetchAppointments(selectedDate);
+    }, [selectedDate]);
 
     useEffect(() => {
         if (isModalVisible) {
@@ -336,32 +397,22 @@ export default function Kalender() {
     const onStartTimeChange = (event: any, selectedTime?: Date) => {
         if (selectedTime) {
             setTempStartTime(selectedTime);
-            // Opdater visningen i realtid
-            const formattedTime = selectedTime.toLocaleTimeString('da-DK', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-            setNewAppointment(prev => ({
-                ...prev,
-                start_time: formattedTime
-            }));
+            const hours = selectedTime.getHours().toString().padStart(2, '0');
+            const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+            const formattedTime = `${hours}:${minutes}`; // Format til HH:MM
+            setNewAppointment(prev => ({ ...prev, start_time: formattedTime }));
+            console.log('Start time set in newAppointment:', formattedTime); // Log den nye start tid
         }
     };
 
     const onEndTimeChange = (event: any, selectedTime?: Date) => {
         if (selectedTime) {
             setTempEndTime(selectedTime);
-            // Opdater visningen i realtid
-            const formattedTime = selectedTime.toLocaleTimeString('da-DK', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-            setNewAppointment(prev => ({
-                ...prev,
-                end_time: formattedTime
-            }));
+            const hours = selectedTime.getHours().toString().padStart(2, '0');
+            const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+            const formattedTime = `${hours}:${minutes}`; // Format til HH:MM
+            setNewAppointment(prev => ({ ...prev, end_time: formattedTime }));
+            console.log('End time set in newAppointment:', formattedTime); // Log den nye slut tid
         }
     };
 
@@ -375,11 +426,9 @@ export default function Kalender() {
     };
 
     const handleConfirmStartTime = () => {
-        const formattedTime = tempStartTime.toLocaleTimeString('da-DK', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
+        const hours = tempStartTime.getHours().toString().padStart(2, '0');
+        const minutes = tempStartTime.getMinutes().toString().padStart(2, '0');
+        const formattedTime = `${hours}:${minutes}`; // Format til HH:MM
 
         // Tjek om starttiden er den samme som sluttiden
         if (formattedTime === newAppointment.end_time) {
@@ -399,11 +448,9 @@ export default function Kalender() {
     };
 
     const handleConfirmEndTime = () => {
-        const formattedTime = tempEndTime.toLocaleTimeString('da-DK', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
+        const hours = tempEndTime.getHours().toString().padStart(2, '0');
+        const minutes = tempEndTime.getMinutes().toString().padStart(2, '0');
+        const formattedTime = `${hours}:${minutes}`; // Format til HH:MM
 
         // Tjek om sluttiden er den samme som starttiden
         if (formattedTime === newAppointment.start_time) {
@@ -423,6 +470,7 @@ export default function Kalender() {
     };
 
     const handleCreateAppointment = async () => {
+        console.log('Værdier før oprettelse af aftale:', newAppointment); // Tilføj logbesked
         if (!newAppointment.title || !newAppointment.date || !newAppointment.start_time || !newAppointment.end_time) {
             alert('Udfyld venligst alle påkrævede felter');
             return;
@@ -438,19 +486,38 @@ export default function Kalender() {
                 reminder: newAppointment.reminder
             });
 
+            console.log('Data der sendes til server:', {
+                title: newAppointment.title,
+                description: newAppointment.description,
+                date: newAppointment.date,
+                startTime: newAppointment.start_time,
+                endTime: newAppointment.end_time,
+                reminder: newAppointment.reminder
+            });
+
             const response = await fetch(`${API_URL}/appointments`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                  'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    title: newAppointment.title,
-                    description: newAppointment.description,
-                    date: newAppointment.date,
-                    startTime: newAppointment.start_time,
-                    endTime: newAppointment.end_time,
-                    reminder: newAppointment.reminder
+                  title: newAppointment.title,
+                  description: newAppointment.description,
+                  date: newAppointment.date,
+                  start_time: newAppointment.start_time,
+                  end_time: newAppointment.end_time,     
+                  reminder: newAppointment.reminder
                 }),
+              });
+              
+
+            console.log('Data sendt til server:', {
+                title: newAppointment.title,
+                description: newAppointment.description,
+                date: newAppointment.date,
+                startTime: newAppointment.start_time,
+                endTime: newAppointment.end_time,
+                reminder: newAppointment.reminder
             });
 
             if (!response.ok) {
@@ -791,70 +858,107 @@ export default function Kalender() {
         </Modal>
     );
 
+    const renderAppointment = (appointment: Appointment) => {
+        const hasLog = appointmentsWithLogs[appointment.id];
+        
+        return (
+            <View key={appointment.id} style={styles.appointmentItem}>
+                <View style={styles.appointmentContent}>
+                    <View style={styles.topRow}>
+                        <View style={styles.leftContent}>
+                            <View style={styles.timeWrapper}>
+                                <View style={styles.greenDot} />
+                                <Text style={styles.timeText} numberOfLines={1}>
+                                    {`${appointment.start_time.substring(0, 5)}-${appointment.end_time.substring(0, 5)}`}
+                                </Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity 
+                            style={styles.menuButton}
+                            onPress={() => {
+                                Alert.alert(
+                                    "Slet aftale",
+                                    "Er du sikker på, at du vil slette denne aftale?",
+                                    [
+                                        {
+                                            text: "Annuller",
+                                            style: "cancel"
+                                        },
+                                        {
+                                            text: "Slet",
+                                            onPress: () => handleDeleteAppointment(appointment.id),
+                                            style: "destructive"
+                                        }
+                                    ]
+                                );
+                            }}
+                        >
+                            <Ionicons name="ellipsis-horizontal" size={20} color="#42865F" />
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.titleRow}>
+                        <View style={styles.titleAndDescription}>
+                            <Text style={styles.appointmentTitle} numberOfLines={1}>
+                                {appointment.title}
+                            </Text>
+                            {appointment.description && (
+                                <Text style={styles.appointmentDescription} numberOfLines={2}>
+                                    {appointment.description}
+                                </Text>
+                            )}
+                        </View>
+                        <TouchableOpacity 
+                            style={[
+                                styles.addLogButton,
+                                appointmentsWithLogs[appointment.id] ? styles.editLogButton : styles.addLogButton
+                            ]}
+                            onPress={() => {
+                                if (appointmentsWithLogs[appointment.id]) {
+                                    // Naviger til edit log side
+                                    router.push({
+                                        pathname: '/ny-log',
+                                        params: { 
+                                            date: appointment.date,
+                                            appointment_id: appointment.id,
+                                            logId: appointmentsWithLogs[appointment.id]
+                                        }
+                                    });
+                                } else {
+                                    // Opret ny log
+                                    router.push({
+                                        pathname: '/ny-log',
+                                        params: { 
+                                            date: appointment.date,
+                                            appointment_id: appointment.id
+                                        }
+                                    });
+                                }
+                            }}
+                        >
+                            {appointmentsWithLogs[appointment.id] ? (
+                                <>
+                                    <Ionicons name="pencil" size={16} color="#42865F" />
+                                    <Text style={styles.editLogText}>Rediger</Text>
+                                </>
+                            ) : (
+                                <>
+                                    <Ionicons name="add" size={16} color="#FFFFFF" />
+                                    <Text style={styles.addLogText}>Tilføj log</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                <View style={styles.bottomBorder} />
+            </View>
+        );
+    };
+
     const renderAppointments = () => {
         console.log('Rendering appointments:', appointments);
         return appointments
             .sort((a, b) => a.start_time.localeCompare(b.start_time))
-            .map(appointment => (
-                <View key={appointment.id} style={styles.appointmentItem}>
-                    <View style={styles.appointmentContent}>
-                        <View style={styles.topRow}>
-                            <View style={styles.leftContent}>
-                                <View style={styles.timeWrapper}>
-                                    <View style={styles.greenDot} />
-                                    <Text style={styles.timeText} numberOfLines={1}>
-                                        {`${appointment.start_time.substring(0, 5)}-${appointment.end_time.substring(0, 5)}`}
-                                    </Text>
-                                </View>
-                            </View>
-                            <TouchableOpacity 
-                                style={styles.menuButton}
-                                onPress={() => {
-                                    Alert.alert(
-                                        "Slet aftale",
-                                        "Er du sikker på, at du vil slette denne aftale?",
-                                        [
-                                            {
-                                                text: "Annuller",
-                                                style: "cancel"
-                                            },
-                                            {
-                                                text: "Slet",
-                                                onPress: () => handleDeleteAppointment(appointment.id),
-                                                style: "destructive"
-                                            }
-                                        ]
-                                    );
-                                }}
-                            >
-                                <Ionicons name="ellipsis-horizontal" size={20} color="#42865F" />
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.titleRow}>
-                            <View style={styles.titleAndDescription}>
-                                <Text style={styles.appointmentTitle} numberOfLines={1}>
-                                    {appointment.title}
-                                </Text>
-                                {appointment.description && (
-                                    <Text style={styles.appointmentDescription} numberOfLines={2}>
-                                        {appointment.description}
-                                    </Text>
-                                )}
-                            </View>
-                            <TouchableOpacity 
-                                style={styles.addLogButton}
-                                onPress={() => router.push('/ny-log')}
-                            >
-                                <Text style={styles.addLogText}>Tilføj log</Text>
-                                <View style={styles.addIconContainer}>
-                                    <Ionicons name="add" size={20} color="#FFFFFF" weight="bold" />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                    <View style={styles.bottomBorder} />
-                </View>
-            ));
+            .map(appointment => renderAppointment(appointment));
     };
 
     const styles = StyleSheet.create({
@@ -971,27 +1075,36 @@ export default function Kalender() {
             padding: 5,
         } as ViewStyle,
         addLogButton: {
-            flexDirection: 'row',
-            alignItems: 'center',
             backgroundColor: '#42865F',
-            paddingVertical: 8,
-            paddingHorizontal: 12,
-            borderRadius: 8,
-        } as ViewStyle,
-        addLogText: {
-            color: '#FFFFFF',
-            marginRight: 5,
-            fontFamily: 'RedHatDisplay_700Bold',
-            fontSize: 16,
-        } as TextStyle,
-        addIconContainer: {
-            borderRadius: 12,
-            padding: 2,
-            width: 26,
-            height: 26,
+            flexDirection: 'row',
             justifyContent: 'center',
             alignItems: 'center',
+            padding: 8,
+            gap: 4,
+            borderRadius: 8,
         } as ViewStyle,
+        editLogButton: {
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderColor: '#42865F',
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 8,
+            gap: 4,
+            borderRadius: 8,
+        } as ViewStyle,
+        editLogText: {
+            color: '#42865F',
+            fontSize: 14,
+            fontFamily: 'RedHatDisplay_500Medium',
+            marginLeft: 4,
+        } as TextStyle,
+        addLogText: {
+            color: '#FFFFFF',
+            fontSize: 14,
+            fontFamily: 'RedHatDisplay_500Medium',
+        } as TextStyle,
         modalOverlay: {
             flex: 1,
             backgroundColor: 'rgba(0, 0, 0, 0.5)',

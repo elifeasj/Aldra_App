@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     addLogButtonText: {
-        fontSize: 14,
+        fontSize: 16,
         fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
         letterSpacing: 0.1,

@@ -31,7 +31,7 @@
     "expo-notifications": "~0.29.13",
     "expo-router": "^4.0.17",
     "expo-splash-screen": "~0.29.21",
-    "expo-updates": "^0.26.14",
+    "expo-updates": "^0.26.15",
     "express": "^4.17.1",
     "metro": "^0.81.0",
     "pg": "^8.10.0",
