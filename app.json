@@ -38,9 +38,12 @@
       }
     },
     "ios": {
-      "bundleIdentifier": "com.effyo.aldraapp",
-      "supportsTablet": true
-    },
+  "bundleIdentifier": "com.effyo.aldraapp",
+  "supportsTablet": true,
+  "infoPlist": {
+    "NSPhotoLibraryUsageDescription": "Denne app har brug for adgang til dit fotobibliotek for at uploade et profilbillede."
+  }
+},
     "web": {
       "bundler": "metro",
       "favicon": "./assets/images/favicon.png"

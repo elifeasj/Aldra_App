@@ -4,6 +4,9 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
 const bcrypt = require('bcrypt');
+const multer = require('multer');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
 const app = express();
 app.use(cors({
@@ -145,6 +148,35 @@ function formatDateForComparison(dateStr) {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+// Konfigurer multer til filupload
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // Sørg for, at denne mappe eksisterer
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    cb(null, uuidv4() + ext);
+  }
+});
+const upload = multer({ storage: storage });
+
+// Endpoint til upload af profilbillede
+app.post('/upload-profile-image', upload.single('profileImage'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    // Generér URL til det uploadede billede – justér URL'en efter dine behov
+    const imageUrl = `http://localhost:5001/uploads/${req.file.filename}`;
+    // Eventuelt: opdater brugerens profil i databasen med imageUrl her
+
+    return res.json({ imageUrl });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // Root endpoint for health check
 app.get('/', (req, res) => {
