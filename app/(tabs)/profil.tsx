@@ -4,7 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 
-const API_URL = 'http://your-api-url.com'; // Erstat med din faktiske API URL
+
+const API_URL = 'http://localhost:5001'; // Erstat med din faktiske API URL
 
 interface UserData {
   id?: number; // Tilføjet id, hvis det modtages
@@ -84,18 +85,23 @@ const Profil = () => {
       if (result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         setProfileImage(asset.uri);
-        uploadProfileImage({ uri: asset.uri, type: 'image/jpeg', fileName: 'photo.jpg' });
+        // Send også brugerens id med, hvis det findes
+        uploadProfileImage({ uri: asset.uri, type: 'image/jpeg', fileName: 'photo.jpg' }, userData.id);
       }
     }
   };
   
-  const uploadProfileImage = async (asset: { uri?: string; type?: string; fileName?: string }) => {
+  // Ændret til at modtage en ekstra parameter "userId" og tilføje den i formData
+  const uploadProfileImage = async (
+    asset: { uri?: string; type?: string; fileName?: string },
+    userId?: number
+  ) => {
     if (!asset.uri) {
       console.error('Ingen uri modtaget for billede');
       return;
     }
+  
     const formData = new FormData();
-    // TypeScript-klagen om 'uri' undgås ved at caste objektet til any.
     formData.append(
       'profileImage',
       {
@@ -104,26 +110,41 @@ const Profil = () => {
         name: asset.fileName || 'photo.jpg',
       } as any
     );
-
+  
+    if (userId) {
+      formData.append('userId', String(userId));
+    }
+  
     try {
       const response = await fetch(`${API_URL}/upload-profile-image`, {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
-      const data = await response.json();
-      console.log('Upload success:', data);
-      // Hvis serveren returnerer en imageUrl, kan du opdatere profilbilledet
-      if (data.imageUrl) {
-        setProfileImage(data.imageUrl);
+  
+      const text = await response.text();
+      console.log('Response text:', text);
+  
+      if (!response.ok) {
+        console.error('Server responded with an error:', response.status);
+        return;
       }
+  
+      let data;
+      try {
+        data = JSON.parse(text);
+        console.log('Upload success:', data);
+        if (data.imageUrl) {
+          setProfileImage(data.imageUrl);
+        }
+      } catch (jsonError) {
+        console.error('Error parsing JSON:', jsonError);
+      }
+  
     } catch (error) {
       console.error('Error uploading image:', error);
     }
   };
-
+  
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -152,7 +173,7 @@ const Profil = () => {
             )}
             {/* Overlay med plus-ikon placeret i bunden af billedet */}
             <TouchableOpacity style={styles.uploadOverlay} onPress={pickImage}>
-                <Ionicons name="add" size={20} color="#fff" />
+              <Ionicons name="add" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
           <View style={styles.profileInfo}>

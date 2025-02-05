@@ -38,7 +38,7 @@ async function initializeDatabase() {
     // Drop appointments_and_logs table if it exists
     await client.query('DROP TABLE IF EXISTS appointments_and_logs CASCADE');
 
-    // Create users table
+    // Create users table med ny kolonne profile_image
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -46,6 +46,7 @@ async function initializeDatabase() {
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         relation_to_dementia_person VARCHAR(255),
+        profile_image TEXT,  -- Ny kolonne til profilbillede URL
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         termsAccepted BOOLEAN DEFAULT false
@@ -162,21 +163,29 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Endpoint til upload af profilbillede
-app.post('/upload-profile-image', upload.single('profileImage'), (req, res) => {
+app.post('/upload-profile-image', upload.single('profileImage'), async (req, res) => {
   try {
+    console.log('Request body:', req.body);  // Log the request body
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    // Generér URL til det uploadede billede – justér URL'en efter dine behov
-    const imageUrl = `http://localhost:5001/uploads/${req.file.filename}`;
-    // Eventuelt: opdater brugerens profil i databasen med imageUrl her
 
+    const imageUrl = `http://localhost:5001/uploads/${req.file.filename}`;
+    console.log('Image URL:', imageUrl);  // Log the image URL before saving
+    const { userId } = req.body;
+    if (userId) {
+      await client.query(
+        'UPDATE users SET profile_image = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [imageUrl, userId]
+      );
+    }
     return res.json({ imageUrl });
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 // Root endpoint for health check
 app.get('/', (req, res) => {
@@ -788,6 +797,2793 @@ app.get('/admin/logs-view', async (req, res) => {
   } catch (err) {
     console.error('Error fetching logs with appointments:', err);
     res.status(500).json({ error: 'Error fetching logs with appointments' });
+  }
+});
+
+// Get all logs
+app.get('/logs', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
+    console.log('Sending logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Get a specific log
+app.get('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      SELECT * FROM logs
+      WHERE id = $1 AND user_id = $2
+    `, [logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Sending log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching log:', err);
+    res.status(500).json({ error: 'Error fetching log' });
+  }
+});
+
+// Create a new log
+app.post('/logs', async (req, res) => {
+  try {
+    console.log('Received log data:', req.body);
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      INSERT INTO logs (title, description, date, appointment_id, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [title, description, date, appointment_id, userId]);
+
+    console.log('Created log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating log:', err);
+    res.status(500).json({ error: 'Error creating log' });
+  }
+});
+
+// Update a log
+app.put('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      UPDATE logs
+      SET title = $1, 
+          description = $2, 
+          date = $3,
+          appointment_id = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [title, description, date, appointment_id, logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Updated log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating log:', err);
+    res.status(500).json({ error: 'Error updating log' });
+  }
+});
+
+// Get all logs with their appointment_id
+app.get('/logs-with-appointments', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.id as log_id,
+        l.title as log_title,
+        l.description as log_description,
+        l.date as log_date,
+        l.appointment_id,
+        a.title as appointment_title
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointment IDs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Endpoint til at gemme push tokens
+app.post('/push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    
+    // Tjek om token allerede eksisterer
+    const existingToken = await client.query(
+      'SELECT * FROM push_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (existingToken.rows.length === 0) {
+      // Indsæt nyt token
+      await client.query(
+        'INSERT INTO push_tokens (token, platform) VALUES ($1, $2)',
+        [token, platform]
+      );
+    }
+
+    res.json({ message: 'Token gemt' });
+  } catch (error) {
+    console.error('Fejl ved gemning af push token:', error);
+    res.status(500).json({ error: 'Intern serverfejl' });
+  }
+});
+
+// Route til at registrere push token
+app.post('/api/register-push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    const userId = req.user.id;
+
+    await client.query(
+      'SELECT upsert_push_token($1, $2, $3)',
+      [userId, token, platform]
+    );
+
+    res.status(200).json({ message: 'Push token registreret' });
+  } catch (error) {
+    console.error('Fejl ved registrering af push token:', error);
+    res.status(500).json({ error: 'Kunne ikke registrere push token' });
+  }
+});
+
+// Route til at gemme notifikation
+app.post('/api/schedule-notification', async (req, res) => {
+  try {
+    const { appointmentId, title, body, scheduledFor } = req.body;
+    const userId = req.user.id;
+
+    const result = await client.query(
+      'SELECT schedule_notification($1, $2, $3, $4, $5)',
+      [userId, appointmentId, title, body, scheduledFor]
+    );
+
+    res.status(200).json({ 
+      message: 'Notifikation planlagt',
+      notificationId: result.rows[0].schedule_notification
+    });
+  } catch (error) {
+    console.error('Fejl ved planlægning af notifikation:', error);
+    res.status(500).json({ error: 'Kunne ikke planlægge notifikation' });
+  }
+});
+
+// Funktion til at sende planlagte notifikationer
+async function sendScheduledNotifications() {
+  try {
+    const result = await client.query(`
+      SELECT n.*, pt.token 
+      FROM notifications n
+      JOIN push_tokens pt ON n.user_id = pt.user_id
+      WHERE n.sent = false 
+      AND n.scheduled_for BETWEEN NOW() AND NOW() + INTERVAL '30 minutes'
+      AND pt.platform = 'ios'
+    `);
+
+    for (const notification of result.rows) {
+      // Send push notifikation via Expo
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: notification.token,
+          title: notification.title,
+          body: notification.body,
+          sound: 'default',
+          badge: 1,
+          priority: 'high'
+        })
+      });
+
+      // Marker notifikationen som sendt
+      await client.query(
+        'UPDATE notifications SET sent = true, sent_at = NOW() WHERE id = $1',
+        [notification.id]
+      );
+    }
+  } catch (error) {
+    console.error('Fejl ved afsendelse af planlagte notifikationer:', error);
+  }
+}
+
+// Kør check for planlagte notifikationer hvert minut
+setInterval(sendScheduledNotifications, 60000);
+
+// Planlæg cron job til at køre hver nat kl. 00:00 for at tjekke inaktive brugere
+cron.schedule('0 0 * * *', async () => {
+  console.log('Kører cron job for at tjekke inaktive brugere...');
+  try {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    console.log(`Tjekker for brugere der har været inaktive siden: ${oneYearAgo.toISOString()}`);
+
+    // Find brugere der skal slettes
+    const usersToDelete = await client.query(`
+      SELECT id, email, last_activity 
+      FROM users 
+      WHERE last_activity < $1
+    `, [oneYearAgo]);
+
+    if (usersToDelete.rowCount > 0) {
+      console.log(`Fundet ${usersToDelete.rowCount} inaktive brugere til sletning:`);
+      
+      // Log brugere der skal slettes
+      usersToDelete.rows.forEach(user => {
+        console.log(`- Bruger ID: ${user.id}, Email: ${user.email}, Sidste aktivitet: ${user.last_activity}`);
+      });
+
+      // Slet relaterede data først (foreign key-begrænsninger)
+      const userIds = usersToDelete.rows.map(user => user.id);
+      
+      // Slet aftaler
+      await client.query(`
+        DELETE FROM appointments 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet logs
+      await client.query(`
+        DELETE FROM logs 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet brugere
+      const deleteResult = await client.query(`
+        DELETE FROM users 
+        WHERE id = ANY($1) 
+        RETURNING id, email
+      `, [userIds]);
+
+      console.log(`Slettet ${deleteResult.rowCount} inaktive brugere og deres data`);
+    } else {
+      console.log('Ingen inaktive brugere fundet til sletning');
+    }
+  } catch (error) {
+    console.error('Fejl ved håndtering af inaktive brugere:', error);
+  }
+});
+
+// Get all appointments with their logs
+app.get('/appointments-with-logs', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        a.*,
+        COALESCE(json_agg(
+          CASE WHEN l.id IS NOT NULL THEN
+            json_build_object(
+              'id', l.id,
+              'title', l.title,
+              'description', l.description,
+              'date', l.date
+            )
+          END
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') as logs
+      FROM appointments a
+      LEFT JOIN logs l ON a.appointment_id = l.appointment_id
+      GROUP BY a.id
+      ORDER BY a.date DESC, a.start_time ASC;
+    `);
+    
+    console.log('Appointments with logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching appointments with logs:', err);
+    res.status(500).json({ error: 'Error fetching appointments with logs' });
+  }
+});
+
+// Get all logs with appointment info
+app.get('/admin/logs-view', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.*,
+        a.title as appointment_title,
+        a.description as appointment_description,
+        a.start_time as appointment_start_time,
+        a.end_time as appointment_end_time,
+        CASE 
+          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
+          ELSE 'Ingen aftale'
+        END as appointment_reference
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs with appointments:', err);
+    res.status(500).json({ error: 'Error fetching logs with appointments' });
+  }
+});
+
+// Get all logs
+app.get('/logs', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
+    console.log('Sending logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Get a specific log
+app.get('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      SELECT * FROM logs
+      WHERE id = $1 AND user_id = $2
+    `, [logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Sending log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching log:', err);
+    res.status(500).json({ error: 'Error fetching log' });
+  }
+});
+
+// Create a new log
+app.post('/logs', async (req, res) => {
+  try {
+    console.log('Received log data:', req.body);
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      INSERT INTO logs (title, description, date, appointment_id, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [title, description, date, appointment_id, userId]);
+
+    console.log('Created log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating log:', err);
+    res.status(500).json({ error: 'Error creating log' });
+  }
+});
+
+// Update a log
+app.put('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      UPDATE logs
+      SET title = $1, 
+          description = $2, 
+          date = $3,
+          appointment_id = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [title, description, date, appointment_id, logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Updated log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating log:', err);
+    res.status(500).json({ error: 'Error updating log' });
+  }
+});
+
+// Get all logs with their appointment_id
+app.get('/logs-with-appointments', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.id as log_id,
+        l.title as log_title,
+        l.description as log_description,
+        l.date as log_date,
+        l.appointment_id,
+        a.title as appointment_title
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointment IDs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Endpoint til at gemme push tokens
+app.post('/push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    
+    // Tjek om token allerede eksisterer
+    const existingToken = await client.query(
+      'SELECT * FROM push_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (existingToken.rows.length === 0) {
+      // Indsæt nyt token
+      await client.query(
+        'INSERT INTO push_tokens (token, platform) VALUES ($1, $2)',
+        [token, platform]
+      );
+    }
+
+    res.json({ message: 'Token gemt' });
+  } catch (error) {
+    console.error('Fejl ved gemning af push token:', error);
+    res.status(500).json({ error: 'Intern serverfejl' });
+  }
+});
+
+// Route til at registrere push token
+app.post('/api/register-push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    const userId = req.user.id;
+
+    await client.query(
+      'SELECT upsert_push_token($1, $2, $3)',
+      [userId, token, platform]
+    );
+
+    res.status(200).json({ message: 'Push token registreret' });
+  } catch (error) {
+    console.error('Fejl ved registrering af push token:', error);
+    res.status(500).json({ error: 'Kunne ikke registrere push token' });
+  }
+});
+
+// Route til at gemme notifikation
+app.post('/api/schedule-notification', async (req, res) => {
+  try {
+    const { appointmentId, title, body, scheduledFor } = req.body;
+    const userId = req.user.id;
+
+    const result = await client.query(
+      'SELECT schedule_notification($1, $2, $3, $4, $5)',
+      [userId, appointmentId, title, body, scheduledFor]
+    );
+
+    res.status(200).json({ 
+      message: 'Notifikation planlagt',
+      notificationId: result.rows[0].schedule_notification
+    });
+  } catch (error) {
+    console.error('Fejl ved planlægning af notifikation:', error);
+    res.status(500).json({ error: 'Kunne ikke planlægge notifikation' });
+  }
+});
+
+// Funktion til at sende planlagte notifikationer
+async function sendScheduledNotifications() {
+  try {
+    const result = await client.query(`
+      SELECT n.*, pt.token 
+      FROM notifications n
+      JOIN push_tokens pt ON n.user_id = pt.user_id
+      WHERE n.sent = false 
+      AND n.scheduled_for BETWEEN NOW() AND NOW() + INTERVAL '30 minutes'
+      AND pt.platform = 'ios'
+    `);
+
+    for (const notification of result.rows) {
+      // Send push notifikation via Expo
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: notification.token,
+          title: notification.title,
+          body: notification.body,
+          sound: 'default',
+          badge: 1,
+          priority: 'high'
+        })
+      });
+
+      // Marker notifikationen som sendt
+      await client.query(
+        'UPDATE notifications SET sent = true, sent_at = NOW() WHERE id = $1',
+        [notification.id]
+      );
+    }
+  } catch (error) {
+    console.error('Fejl ved afsendelse af planlagte notifikationer:', error);
+  }
+}
+
+// Kør check for planlagte notifikationer hvert minut
+setInterval(sendScheduledNotifications, 60000);
+
+// Planlæg cron job til at køre hver nat kl. 00:00 for at tjekke inaktive brugere
+cron.schedule('0 0 * * *', async () => {
+  console.log('Kører cron job for at tjekke inaktive brugere...');
+  try {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    console.log(`Tjekker for brugere der har været inaktive siden: ${oneYearAgo.toISOString()}`);
+
+    // Find brugere der skal slettes
+    const usersToDelete = await client.query(`
+      SELECT id, email, last_activity 
+      FROM users 
+      WHERE last_activity < $1
+    `, [oneYearAgo]);
+
+    if (usersToDelete.rowCount > 0) {
+      console.log(`Fundet ${usersToDelete.rowCount} inaktive brugere til sletning:`);
+      
+      // Log brugere der skal slettes
+      usersToDelete.rows.forEach(user => {
+        console.log(`- Bruger ID: ${user.id}, Email: ${user.email}, Sidste aktivitet: ${user.last_activity}`);
+      });
+
+      // Slet relaterede data først (foreign key-begrænsninger)
+      const userIds = usersToDelete.rows.map(user => user.id);
+      
+      // Slet aftaler
+      await client.query(`
+        DELETE FROM appointments 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet logs
+      await client.query(`
+        DELETE FROM logs 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet brugere
+      const deleteResult = await client.query(`
+        DELETE FROM users 
+        WHERE id = ANY($1) 
+        RETURNING id, email
+      `, [userIds]);
+
+      console.log(`Slettet ${deleteResult.rowCount} inaktive brugere og deres data`);
+    } else {
+      console.log('Ingen inaktive brugere fundet til sletning');
+    }
+  } catch (error) {
+    console.error('Fejl ved håndtering af inaktive brugere:', error);
+  }
+});
+
+// Get all appointments with their logs
+app.get('/appointments-with-logs', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        a.*,
+        COALESCE(json_agg(
+          CASE WHEN l.id IS NOT NULL THEN
+            json_build_object(
+              'id', l.id,
+              'title', l.title,
+              'description', l.description,
+              'date', l.date
+            )
+          END
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') as logs
+      FROM appointments a
+      LEFT JOIN logs l ON a.appointment_id = l.appointment_id
+      GROUP BY a.id
+      ORDER BY a.date DESC, a.start_time ASC;
+    `);
+    
+    console.log('Appointments with logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching appointments with logs:', err);
+    res.status(500).json({ error: 'Error fetching appointments with logs' });
+  }
+});
+
+// Get all logs with appointment info
+app.get('/admin/logs-view', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.*,
+        a.title as appointment_title,
+        a.description as appointment_description,
+        a.start_time as appointment_start_time,
+        a.end_time as appointment_end_time,
+        CASE 
+          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
+          ELSE 'Ingen aftale'
+        END as appointment_reference
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs with appointments:', err);
+    res.status(500).json({ error: 'Error fetching logs with appointments' });
+  }
+});
+
+// Get all logs
+app.get('/logs', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
+    console.log('Sending logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Get a specific log
+app.get('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      SELECT * FROM logs
+      WHERE id = $1 AND user_id = $2
+    `, [logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Sending log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching log:', err);
+    res.status(500).json({ error: 'Error fetching log' });
+  }
+});
+
+// Create a new log
+app.post('/logs', async (req, res) => {
+  try {
+    console.log('Received log data:', req.body);
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      INSERT INTO logs (title, description, date, appointment_id, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [title, description, date, appointment_id, userId]);
+
+    console.log('Created log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating log:', err);
+    res.status(500).json({ error: 'Error creating log' });
+  }
+});
+
+// Update a log
+app.put('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      UPDATE logs
+      SET title = $1, 
+          description = $2, 
+          date = $3,
+          appointment_id = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [title, description, date, appointment_id, logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Updated log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating log:', err);
+    res.status(500).json({ error: 'Error updating log' });
+  }
+});
+
+// Get all logs with their appointment_id
+app.get('/logs-with-appointments', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.id as log_id,
+        l.title as log_title,
+        l.description as log_description,
+        l.date as log_date,
+        l.appointment_id,
+        a.title as appointment_title
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointment IDs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Endpoint til at gemme push tokens
+app.post('/push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    
+    // Tjek om token allerede eksisterer
+    const existingToken = await client.query(
+      'SELECT * FROM push_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (existingToken.rows.length === 0) {
+      // Indsæt nyt token
+      await client.query(
+        'INSERT INTO push_tokens (token, platform) VALUES ($1, $2)',
+        [token, platform]
+      );
+    }
+
+    res.json({ message: 'Token gemt' });
+  } catch (error) {
+    console.error('Fejl ved gemning af push token:', error);
+    res.status(500).json({ error: 'Intern serverfejl' });
+  }
+});
+
+// Route til at registrere push token
+app.post('/api/register-push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    const userId = req.user.id;
+
+    await client.query(
+      'SELECT upsert_push_token($1, $2, $3)',
+      [userId, token, platform]
+    );
+
+    res.status(200).json({ message: 'Push token registreret' });
+  } catch (error) {
+    console.error('Fejl ved registrering af push token:', error);
+    res.status(500).json({ error: 'Kunne ikke registrere push token' });
+  }
+});
+
+// Route til at gemme notifikation
+app.post('/api/schedule-notification', async (req, res) => {
+  try {
+    const { appointmentId, title, body, scheduledFor } = req.body;
+    const userId = req.user.id;
+
+    const result = await client.query(
+      'SELECT schedule_notification($1, $2, $3, $4, $5)',
+      [userId, appointmentId, title, body, scheduledFor]
+    );
+
+    res.status(200).json({ 
+      message: 'Notifikation planlagt',
+      notificationId: result.rows[0].schedule_notification
+    });
+  } catch (error) {
+    console.error('Fejl ved planlægning af notifikation:', error);
+    res.status(500).json({ error: 'Kunne ikke planlægge notifikation' });
+  }
+});
+
+// Funktion til at sende planlagte notifikationer
+async function sendScheduledNotifications() {
+  try {
+    const result = await client.query(`
+      SELECT n.*, pt.token 
+      FROM notifications n
+      JOIN push_tokens pt ON n.user_id = pt.user_id
+      WHERE n.sent = false 
+      AND n.scheduled_for BETWEEN NOW() AND NOW() + INTERVAL '30 minutes'
+      AND pt.platform = 'ios'
+    `);
+
+    for (const notification of result.rows) {
+      // Send push notifikation via Expo
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: notification.token,
+          title: notification.title,
+          body: notification.body,
+          sound: 'default',
+          badge: 1,
+          priority: 'high'
+        })
+      });
+
+      // Marker notifikationen som sendt
+      await client.query(
+        'UPDATE notifications SET sent = true, sent_at = NOW() WHERE id = $1',
+        [notification.id]
+      );
+    }
+  } catch (error) {
+    console.error('Fejl ved afsendelse af planlagte notifikationer:', error);
+  }
+}
+
+// Kør check for planlagte notifikationer hvert minut
+setInterval(sendScheduledNotifications, 60000);
+
+// Planlæg cron job til at køre hver nat kl. 00:00 for at tjekke inaktive brugere
+cron.schedule('0 0 * * *', async () => {
+  console.log('Kører cron job for at tjekke inaktive brugere...');
+  try {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    console.log(`Tjekker for brugere der har været inaktive siden: ${oneYearAgo.toISOString()}`);
+
+    // Find brugere der skal slettes
+    const usersToDelete = await client.query(`
+      SELECT id, email, last_activity 
+      FROM users 
+      WHERE last_activity < $1
+    `, [oneYearAgo]);
+
+    if (usersToDelete.rowCount > 0) {
+      console.log(`Fundet ${usersToDelete.rowCount} inaktive brugere til sletning:`);
+      
+      // Log brugere der skal slettes
+      usersToDelete.rows.forEach(user => {
+        console.log(`- Bruger ID: ${user.id}, Email: ${user.email}, Sidste aktivitet: ${user.last_activity}`);
+      });
+
+      // Slet relaterede data først (foreign key-begrænsninger)
+      const userIds = usersToDelete.rows.map(user => user.id);
+      
+      // Slet aftaler
+      await client.query(`
+        DELETE FROM appointments 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet logs
+      await client.query(`
+        DELETE FROM logs 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet brugere
+      const deleteResult = await client.query(`
+        DELETE FROM users 
+        WHERE id = ANY($1) 
+        RETURNING id, email
+      `, [userIds]);
+
+      console.log(`Slettet ${deleteResult.rowCount} inaktive brugere og deres data`);
+    } else {
+      console.log('Ingen inaktive brugere fundet til sletning');
+    }
+  } catch (error) {
+    console.error('Fejl ved håndtering af inaktive brugere:', error);
+  }
+});
+
+// Get all appointments with their logs
+app.get('/appointments-with-logs', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        a.*,
+        COALESCE(json_agg(
+          CASE WHEN l.id IS NOT NULL THEN
+            json_build_object(
+              'id', l.id,
+              'title', l.title,
+              'description', l.description,
+              'date', l.date
+            )
+          END
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') as logs
+      FROM appointments a
+      LEFT JOIN logs l ON a.appointment_id = l.appointment_id
+      GROUP BY a.id
+      ORDER BY a.date DESC, a.start_time ASC;
+    `);
+    
+    console.log('Appointments with logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching appointments with logs:', err);
+    res.status(500).json({ error: 'Error fetching appointments with logs' });
+  }
+});
+
+// Get all logs with appointment info
+app.get('/admin/logs-view', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.*,
+        a.title as appointment_title,
+        a.description as appointment_description,
+        a.start_time as appointment_start_time,
+        a.end_time as appointment_end_time,
+        CASE 
+          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
+          ELSE 'Ingen aftale'
+        END as appointment_reference
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs with appointments:', err);
+    res.status(500).json({ error: 'Error fetching logs with appointments' });
+  }
+});
+
+// Get all logs
+app.get('/logs', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
+    console.log('Sending logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Get a specific log
+app.get('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      SELECT * FROM logs
+      WHERE id = $1 AND user_id = $2
+    `, [logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Sending log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching log:', err);
+    res.status(500).json({ error: 'Error fetching log' });
+  }
+});
+
+// Create a new log
+app.post('/logs', async (req, res) => {
+  try {
+    console.log('Received log data:', req.body);
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      INSERT INTO logs (title, description, date, appointment_id, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [title, description, date, appointment_id, userId]);
+
+    console.log('Created log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating log:', err);
+    res.status(500).json({ error: 'Error creating log' });
+  }
+});
+
+// Update a log
+app.put('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      UPDATE logs
+      SET title = $1, 
+          description = $2, 
+          date = $3,
+          appointment_id = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [title, description, date, appointment_id, logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Updated log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating log:', err);
+    res.status(500).json({ error: 'Error updating log' });
+  }
+});
+
+// Get all logs with their appointment_id
+app.get('/logs-with-appointments', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.id as log_id,
+        l.title as log_title,
+        l.description as log_description,
+        l.date as log_date,
+        l.appointment_id,
+        a.title as appointment_title
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointment IDs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Endpoint til at gemme push tokens
+app.post('/push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    
+    // Tjek om token allerede eksisterer
+    const existingToken = await client.query(
+      'SELECT * FROM push_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (existingToken.rows.length === 0) {
+      // Indsæt nyt token
+      await client.query(
+        'INSERT INTO push_tokens (token, platform) VALUES ($1, $2)',
+        [token, platform]
+      );
+    }
+
+    res.json({ message: 'Token gemt' });
+  } catch (error) {
+    console.error('Fejl ved gemning af push token:', error);
+    res.status(500).json({ error: 'Intern serverfejl' });
+  }
+});
+
+// Route til at registrere push token
+app.post('/api/register-push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    const userId = req.user.id;
+
+    await client.query(
+      'SELECT upsert_push_token($1, $2, $3)',
+      [userId, token, platform]
+    );
+
+    res.status(200).json({ message: 'Push token registreret' });
+  } catch (error) {
+    console.error('Fejl ved registrering af push token:', error);
+    res.status(500).json({ error: 'Kunne ikke registrere push token' });
+  }
+});
+
+// Route til at gemme notifikation
+app.post('/api/schedule-notification', async (req, res) => {
+  try {
+    const { appointmentId, title, body, scheduledFor } = req.body;
+    const userId = req.user.id;
+
+    const result = await client.query(
+      'SELECT schedule_notification($1, $2, $3, $4, $5)',
+      [userId, appointmentId, title, body, scheduledFor]
+    );
+
+    res.status(200).json({ 
+      message: 'Notifikation planlagt',
+      notificationId: result.rows[0].schedule_notification
+    });
+  } catch (error) {
+    console.error('Fejl ved planlægning af notifikation:', error);
+    res.status(500).json({ error: 'Kunne ikke planlægge notifikation' });
+  }
+});
+
+// Funktion til at sende planlagte notifikationer
+async function sendScheduledNotifications() {
+  try {
+    const result = await client.query(`
+      SELECT n.*, pt.token 
+      FROM notifications n
+      JOIN push_tokens pt ON n.user_id = pt.user_id
+      WHERE n.sent = false 
+      AND n.scheduled_for BETWEEN NOW() AND NOW() + INTERVAL '30 minutes'
+      AND pt.platform = 'ios'
+    `);
+
+    for (const notification of result.rows) {
+      // Send push notifikation via Expo
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: notification.token,
+          title: notification.title,
+          body: notification.body,
+          sound: 'default',
+          badge: 1,
+          priority: 'high'
+        })
+      });
+
+      // Marker notifikationen som sendt
+      await client.query(
+        'UPDATE notifications SET sent = true, sent_at = NOW() WHERE id = $1',
+        [notification.id]
+      );
+    }
+  } catch (error) {
+    console.error('Fejl ved afsendelse af planlagte notifikationer:', error);
+  }
+}
+
+// Kør check for planlagte notifikationer hvert minut
+setInterval(sendScheduledNotifications, 60000);
+
+// Planlæg cron job til at køre hver nat kl. 00:00 for at tjekke inaktive brugere
+cron.schedule('0 0 * * *', async () => {
+  console.log('Kører cron job for at tjekke inaktive brugere...');
+  try {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    console.log(`Tjekker for brugere der har været inaktive siden: ${oneYearAgo.toISOString()}`);
+
+    // Find brugere der skal slettes
+    const usersToDelete = await client.query(`
+      SELECT id, email, last_activity 
+      FROM users 
+      WHERE last_activity < $1
+    `, [oneYearAgo]);
+
+    if (usersToDelete.rowCount > 0) {
+      console.log(`Fundet ${usersToDelete.rowCount} inaktive brugere til sletning:`);
+      
+      // Log brugere der skal slettes
+      usersToDelete.rows.forEach(user => {
+        console.log(`- Bruger ID: ${user.id}, Email: ${user.email}, Sidste aktivitet: ${user.last_activity}`);
+      });
+
+      // Slet relaterede data først (foreign key-begrænsninger)
+      const userIds = usersToDelete.rows.map(user => user.id);
+      
+      // Slet aftaler
+      await client.query(`
+        DELETE FROM appointments 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet logs
+      await client.query(`
+        DELETE FROM logs 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet brugere
+      const deleteResult = await client.query(`
+        DELETE FROM users 
+        WHERE id = ANY($1) 
+        RETURNING id, email
+      `, [userIds]);
+
+      console.log(`Slettet ${deleteResult.rowCount} inaktive brugere og deres data`);
+    } else {
+      console.log('Ingen inaktive brugere fundet til sletning');
+    }
+  } catch (error) {
+    console.error('Fejl ved håndtering af inaktive brugere:', error);
+  }
+});
+
+// Get all appointments with their logs
+app.get('/appointments-with-logs', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        a.*,
+        COALESCE(json_agg(
+          CASE WHEN l.id IS NOT NULL THEN
+            json_build_object(
+              'id', l.id,
+              'title', l.title,
+              'description', l.description,
+              'date', l.date
+            )
+          END
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') as logs
+      FROM appointments a
+      LEFT JOIN logs l ON a.appointment_id = l.appointment_id
+      GROUP BY a.id
+      ORDER BY a.date DESC, a.start_time ASC;
+    `);
+    
+    console.log('Appointments with logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching appointments with logs:', err);
+    res.status(500).json({ error: 'Error fetching appointments with logs' });
+  }
+});
+
+// Get all logs with appointment info
+app.get('/admin/logs-view', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.*,
+        a.title as appointment_title,
+        a.description as appointment_description,
+        a.start_time as appointment_start_time,
+        a.end_time as appointment_end_time,
+        CASE 
+          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
+          ELSE 'Ingen aftale'
+        END as appointment_reference
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs with appointments:', err);
+    res.status(500).json({ error: 'Error fetching logs with appointments' });
+  }
+});
+
+// Get all logs
+app.get('/logs', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
+    console.log('Sending logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Get a specific log
+app.get('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      SELECT * FROM logs
+      WHERE id = $1 AND user_id = $2
+    `, [logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Sending log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching log:', err);
+    res.status(500).json({ error: 'Error fetching log' });
+  }
+});
+
+// Create a new log
+app.post('/logs', async (req, res) => {
+  try {
+    console.log('Received log data:', req.body);
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      INSERT INTO logs (title, description, date, appointment_id, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [title, description, date, appointment_id, userId]);
+
+    console.log('Created log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating log:', err);
+    res.status(500).json({ error: 'Error creating log' });
+  }
+});
+
+// Update a log
+app.put('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      UPDATE logs
+      SET title = $1, 
+          description = $2, 
+          date = $3,
+          appointment_id = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [title, description, date, appointment_id, logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Updated log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating log:', err);
+    res.status(500).json({ error: 'Error updating log' });
+  }
+});
+
+// Get all logs with their appointment_id
+app.get('/logs-with-appointments', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.id as log_id,
+        l.title as log_title,
+        l.description as log_description,
+        l.date as log_date,
+        l.appointment_id,
+        a.title as appointment_title
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointment IDs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Endpoint til at gemme push tokens
+app.post('/push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    
+    // Tjek om token allerede eksisterer
+    const existingToken = await client.query(
+      'SELECT * FROM push_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (existingToken.rows.length === 0) {
+      // Indsæt nyt token
+      await client.query(
+        'INSERT INTO push_tokens (token, platform) VALUES ($1, $2)',
+        [token, platform]
+      );
+    }
+
+    res.json({ message: 'Token gemt' });
+  } catch (error) {
+    console.error('Fejl ved gemning af push token:', error);
+    res.status(500).json({ error: 'Intern serverfejl' });
+  }
+});
+
+// Route til at registrere push token
+app.post('/api/register-push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    const userId = req.user.id;
+
+    await client.query(
+      'SELECT upsert_push_token($1, $2, $3)',
+      [userId, token, platform]
+    );
+
+    res.status(200).json({ message: 'Push token registreret' });
+  } catch (error) {
+    console.error('Fejl ved registrering af push token:', error);
+    res.status(500).json({ error: 'Kunne ikke registrere push token' });
+  }
+});
+
+// Route til at gemme notifikation
+app.post('/api/schedule-notification', async (req, res) => {
+  try {
+    const { appointmentId, title, body, scheduledFor } = req.body;
+    const userId = req.user.id;
+
+    const result = await client.query(
+      'SELECT schedule_notification($1, $2, $3, $4, $5)',
+      [userId, appointmentId, title, body, scheduledFor]
+    );
+
+    res.status(200).json({ 
+      message: 'Notifikation planlagt',
+      notificationId: result.rows[0].schedule_notification
+    });
+  } catch (error) {
+    console.error('Fejl ved planlægning af notifikation:', error);
+    res.status(500).json({ error: 'Kunne ikke planlægge notifikation' });
+  }
+});
+
+// Funktion til at sende planlagte notifikationer
+async function sendScheduledNotifications() {
+  try {
+    const result = await client.query(`
+      SELECT n.*, pt.token 
+      FROM notifications n
+      JOIN push_tokens pt ON n.user_id = pt.user_id
+      WHERE n.sent = false 
+      AND n.scheduled_for BETWEEN NOW() AND NOW() + INTERVAL '30 minutes'
+      AND pt.platform = 'ios'
+    `);
+
+    for (const notification of result.rows) {
+      // Send push notifikation via Expo
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: notification.token,
+          title: notification.title,
+          body: notification.body,
+          sound: 'default',
+          badge: 1,
+          priority: 'high'
+        })
+      });
+
+      // Marker notifikationen som sendt
+      await client.query(
+        'UPDATE notifications SET sent = true, sent_at = NOW() WHERE id = $1',
+        [notification.id]
+      );
+    }
+  } catch (error) {
+    console.error('Fejl ved afsendelse af planlagte notifikationer:', error);
+  }
+}
+
+// Kør check for planlagte notifikationer hvert minut
+setInterval(sendScheduledNotifications, 60000);
+
+// Planlæg cron job til at køre hver nat kl. 00:00 for at tjekke inaktive brugere
+cron.schedule('0 0 * * *', async () => {
+  console.log('Kører cron job for at tjekke inaktive brugere...');
+  try {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    console.log(`Tjekker for brugere der har været inaktive siden: ${oneYearAgo.toISOString()}`);
+
+    // Find brugere der skal slettes
+    const usersToDelete = await client.query(`
+      SELECT id, email, last_activity 
+      FROM users 
+      WHERE last_activity < $1
+    `, [oneYearAgo]);
+
+    if (usersToDelete.rowCount > 0) {
+      console.log(`Fundet ${usersToDelete.rowCount} inaktive brugere til sletning:`);
+      
+      // Log brugere der skal slettes
+      usersToDelete.rows.forEach(user => {
+        console.log(`- Bruger ID: ${user.id}, Email: ${user.email}, Sidste aktivitet: ${user.last_activity}`);
+      });
+
+      // Slet relaterede data først (foreign key-begrænsninger)
+      const userIds = usersToDelete.rows.map(user => user.id);
+      
+      // Slet aftaler
+      await client.query(`
+        DELETE FROM appointments 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet logs
+      await client.query(`
+        DELETE FROM logs 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet brugere
+      const deleteResult = await client.query(`
+        DELETE FROM users 
+        WHERE id = ANY($1) 
+        RETURNING id, email
+      `, [userIds]);
+
+      console.log(`Slettet ${deleteResult.rowCount} inaktive brugere og deres data`);
+    } else {
+      console.log('Ingen inaktive brugere fundet til sletning');
+    }
+  } catch (error) {
+    console.error('Fejl ved håndtering af inaktive brugere:', error);
+  }
+});
+
+// Get all appointments with their logs
+app.get('/appointments-with-logs', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        a.*,
+        COALESCE(json_agg(
+          CASE WHEN l.id IS NOT NULL THEN
+            json_build_object(
+              'id', l.id,
+              'title', l.title,
+              'description', l.description,
+              'date', l.date
+            )
+          END
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') as logs
+      FROM appointments a
+      LEFT JOIN logs l ON a.appointment_id = l.appointment_id
+      GROUP BY a.id
+      ORDER BY a.date DESC, a.start_time ASC;
+    `);
+    
+    console.log('Appointments with logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching appointments with logs:', err);
+    res.status(500).json({ error: 'Error fetching appointments with logs' });
+  }
+});
+
+// Get all logs with appointment info
+app.get('/admin/logs-view', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.*,
+        a.title as appointment_title,
+        a.description as appointment_description,
+        a.start_time as appointment_start_time,
+        a.end_time as appointment_end_time,
+        CASE 
+          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
+          ELSE 'Ingen aftale'
+        END as appointment_reference
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs with appointments:', err);
+    res.status(500).json({ error: 'Error fetching logs with appointments' });
+  }
+});
+
+// Get all logs
+app.get('/logs', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
+    console.log('Sending logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Get a specific log
+app.get('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      SELECT * FROM logs
+      WHERE id = $1 AND user_id = $2
+    `, [logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Sending log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching log:', err);
+    res.status(500).json({ error: 'Error fetching log' });
+  }
+});
+
+// Create a new log
+app.post('/logs', async (req, res) => {
+  try {
+    console.log('Received log data:', req.body);
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      INSERT INTO logs (title, description, date, appointment_id, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [title, description, date, appointment_id, userId]);
+
+    console.log('Created log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating log:', err);
+    res.status(500).json({ error: 'Error creating log' });
+  }
+});
+
+// Update a log
+app.put('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      UPDATE logs
+      SET title = $1, 
+          description = $2, 
+          date = $3,
+          appointment_id = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [title, description, date, appointment_id, logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Updated log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating log:', err);
+    res.status(500).json({ error: 'Error updating log' });
+  }
+});
+
+// Get all logs with their appointment_id
+app.get('/logs-with-appointments', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.id as log_id,
+        l.title as log_title,
+        l.description as log_description,
+        l.date as log_date,
+        l.appointment_id,
+        a.title as appointment_title
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointment IDs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Endpoint til at gemme push tokens
+app.post('/push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    
+    // Tjek om token allerede eksisterer
+    const existingToken = await client.query(
+      'SELECT * FROM push_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (existingToken.rows.length === 0) {
+      // Indsæt nyt token
+      await client.query(
+        'INSERT INTO push_tokens (token, platform) VALUES ($1, $2)',
+        [token, platform]
+      );
+    }
+
+    res.json({ message: 'Token gemt' });
+  } catch (error) {
+    console.error('Fejl ved gemning af push token:', error);
+    res.status(500).json({ error: 'Intern serverfejl' });
+  }
+});
+
+// Route til at registrere push token
+app.post('/api/register-push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    const userId = req.user.id;
+
+    await client.query(
+      'SELECT upsert_push_token($1, $2, $3)',
+      [userId, token, platform]
+    );
+
+    res.status(200).json({ message: 'Push token registreret' });
+  } catch (error) {
+    console.error('Fejl ved registrering af push token:', error);
+    res.status(500).json({ error: 'Kunne ikke registrere push token' });
+  }
+});
+
+// Route til at gemme notifikation
+app.post('/api/schedule-notification', async (req, res) => {
+  try {
+    const { appointmentId, title, body, scheduledFor } = req.body;
+    const userId = req.user.id;
+
+    const result = await client.query(
+      'SELECT schedule_notification($1, $2, $3, $4, $5)',
+      [userId, appointmentId, title, body, scheduledFor]
+    );
+
+    res.status(200).json({ 
+      message: 'Notifikation planlagt',
+      notificationId: result.rows[0].schedule_notification
+    });
+  } catch (error) {
+    console.error('Fejl ved planlægning af notifikation:', error);
+    res.status(500).json({ error: 'Kunne ikke planlægge notifikation' });
+  }
+});
+
+// Funktion til at sende planlagte notifikationer
+async function sendScheduledNotifications() {
+  try {
+    const result = await client.query(`
+      SELECT n.*, pt.token 
+      FROM notifications n
+      JOIN push_tokens pt ON n.user_id = pt.user_id
+      WHERE n.sent = false 
+      AND n.scheduled_for BETWEEN NOW() AND NOW() + INTERVAL '30 minutes'
+      AND pt.platform = 'ios'
+    `);
+
+    for (const notification of result.rows) {
+      // Send push notifikation via Expo
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: notification.token,
+          title: notification.title,
+          body: notification.body,
+          sound: 'default',
+          badge: 1,
+          priority: 'high'
+        })
+      });
+
+      // Marker notifikationen som sendt
+      await client.query(
+        'UPDATE notifications SET sent = true, sent_at = NOW() WHERE id = $1',
+        [notification.id]
+      );
+    }
+  } catch (error) {
+    console.error('Fejl ved afsendelse af planlagte notifikationer:', error);
+  }
+}
+
+// Kør check for planlagte notifikationer hvert minut
+setInterval(sendScheduledNotifications, 60000);
+
+// Planlæg cron job til at køre hver nat kl. 00:00 for at tjekke inaktive brugere
+cron.schedule('0 0 * * *', async () => {
+  console.log('Kører cron job for at tjekke inaktive brugere...');
+  try {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    console.log(`Tjekker for brugere der har været inaktive siden: ${oneYearAgo.toISOString()}`);
+
+    // Find brugere der skal slettes
+    const usersToDelete = await client.query(`
+      SELECT id, email, last_activity 
+      FROM users 
+      WHERE last_activity < $1
+    `, [oneYearAgo]);
+
+    if (usersToDelete.rowCount > 0) {
+      console.log(`Fundet ${usersToDelete.rowCount} inaktive brugere til sletning:`);
+      
+      // Log brugere der skal slettes
+      usersToDelete.rows.forEach(user => {
+        console.log(`- Bruger ID: ${user.id}, Email: ${user.email}, Sidste aktivitet: ${user.last_activity}`);
+      });
+
+      // Slet relaterede data først (foreign key-begrænsninger)
+      const userIds = usersToDelete.rows.map(user => user.id);
+      
+      // Slet aftaler
+      await client.query(`
+        DELETE FROM appointments 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet logs
+      await client.query(`
+        DELETE FROM logs 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet brugere
+      const deleteResult = await client.query(`
+        DELETE FROM users 
+        WHERE id = ANY($1) 
+        RETURNING id, email
+      `, [userIds]);
+
+      console.log(`Slettet ${deleteResult.rowCount} inaktive brugere og deres data`);
+    } else {
+      console.log('Ingen inaktive brugere fundet til sletning');
+    }
+  } catch (error) {
+    console.error('Fejl ved håndtering af inaktive brugere:', error);
+  }
+});
+
+// Get all appointments with their logs
+app.get('/appointments-with-logs', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        a.*,
+        COALESCE(json_agg(
+          CASE WHEN l.id IS NOT NULL THEN
+            json_build_object(
+              'id', l.id,
+              'title', l.title,
+              'description', l.description,
+              'date', l.date
+            )
+          END
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') as logs
+      FROM appointments a
+      LEFT JOIN logs l ON a.appointment_id = l.appointment_id
+      GROUP BY a.id
+      ORDER BY a.date DESC, a.start_time ASC;
+    `);
+    
+    console.log('Appointments with logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching appointments with logs:', err);
+    res.status(500).json({ error: 'Error fetching appointments with logs' });
+  }
+});
+
+// Get all logs with appointment info
+app.get('/admin/logs-view', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.*,
+        a.title as appointment_title,
+        a.description as appointment_description,
+        a.start_time as appointment_start_time,
+        a.end_time as appointment_end_time,
+        CASE 
+          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
+          ELSE 'Ingen aftale'
+        END as appointment_reference
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs with appointments:', err);
+    res.status(500).json({ error: 'Error fetching logs with appointments' });
+  }
+});
+
+// Get all logs
+app.get('/logs', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
+    console.log('Sending logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Get a specific log
+app.get('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      SELECT * FROM logs
+      WHERE id = $1 AND user_id = $2
+    `, [logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Sending log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching log:', err);
+    res.status(500).json({ error: 'Error fetching log' });
+  }
+});
+
+// Create a new log
+app.post('/logs', async (req, res) => {
+  try {
+    console.log('Received log data:', req.body);
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      INSERT INTO logs (title, description, date, appointment_id, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [title, description, date, appointment_id, userId]);
+
+    console.log('Created log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating log:', err);
+    res.status(500).json({ error: 'Error creating log' });
+  }
+});
+
+// Update a log
+app.put('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      UPDATE logs
+      SET title = $1, 
+          description = $2, 
+          date = $3,
+          appointment_id = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [title, description, date, appointment_id, logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Updated log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating log:', err);
+    res.status(500).json({ error: 'Error updating log' });
+  }
+});
+
+// Get all logs with their appointment_id
+app.get('/logs-with-appointments', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.id as log_id,
+        l.title as log_title,
+        l.description as log_description,
+        l.date as log_date,
+        l.appointment_id,
+        a.title as appointment_title
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointment IDs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Endpoint til at gemme push tokens
+app.post('/push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    
+    // Tjek om token allerede eksisterer
+    const existingToken = await client.query(
+      'SELECT * FROM push_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (existingToken.rows.length === 0) {
+      // Indsæt nyt token
+      await client.query(
+        'INSERT INTO push_tokens (token, platform) VALUES ($1, $2)',
+        [token, platform]
+      );
+    }
+
+    res.json({ message: 'Token gemt' });
+  } catch (error) {
+    console.error('Fejl ved gemning af push token:', error);
+    res.status(500).json({ error: 'Intern serverfejl' });
+  }
+});
+
+// Route til at registrere push token
+app.post('/api/register-push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    const userId = req.user.id;
+
+    await client.query(
+      'SELECT upsert_push_token($1, $2, $3)',
+      [userId, token, platform]
+    );
+
+    res.status(200).json({ message: 'Push token registreret' });
+  } catch (error) {
+    console.error('Fejl ved registrering af push token:', error);
+    res.status(500).json({ error: 'Kunne ikke registrere push token' });
+  }
+});
+
+// Route til at gemme notifikation
+app.post('/api/schedule-notification', async (req, res) => {
+  try {
+    const { appointmentId, title, body, scheduledFor } = req.body;
+    const userId = req.user.id;
+
+    const result = await client.query(
+      'SELECT schedule_notification($1, $2, $3, $4, $5)',
+      [userId, appointmentId, title, body, scheduledFor]
+    );
+
+    res.status(200).json({ 
+      message: 'Notifikation planlagt',
+      notificationId: result.rows[0].schedule_notification
+    });
+  } catch (error) {
+    console.error('Fejl ved planlægning af notifikation:', error);
+    res.status(500).json({ error: 'Kunne ikke planlægge notifikation' });
+  }
+});
+
+// Funktion til at sende planlagte notifikationer
+async function sendScheduledNotifications() {
+  try {
+    const result = await client.query(`
+      SELECT n.*, pt.token 
+      FROM notifications n
+      JOIN push_tokens pt ON n.user_id = pt.user_id
+      WHERE n.sent = false 
+      AND n.scheduled_for BETWEEN NOW() AND NOW() + INTERVAL '30 minutes'
+      AND pt.platform = 'ios'
+    `);
+
+    for (const notification of result.rows) {
+      // Send push notifikation via Expo
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: notification.token,
+          title: notification.title,
+          body: notification.body,
+          sound: 'default',
+          badge: 1,
+          priority: 'high'
+        })
+      });
+
+      // Marker notifikationen som sendt
+      await client.query(
+        'UPDATE notifications SET sent = true, sent_at = NOW() WHERE id = $1',
+        [notification.id]
+      );
+    }
+  } catch (error) {
+    console.error('Fejl ved afsendelse af planlagte notifikationer:', error);
+  }
+}
+
+// Kør check for planlagte notifikationer hvert minut
+setInterval(sendScheduledNotifications, 60000);
+
+// Planlæg cron job til at køre hver nat kl. 00:00 for at tjekke inaktive brugere
+cron.schedule('0 0 * * *', async () => {
+  console.log('Kører cron job for at tjekke inaktive brugere...');
+  try {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    console.log(`Tjekker for brugere der har været inaktive siden: ${oneYearAgo.toISOString()}`);
+
+    // Find brugere der skal slettes
+    const usersToDelete = await client.query(`
+      SELECT id, email, last_activity 
+      FROM users 
+      WHERE last_activity < $1
+    `, [oneYearAgo]);
+
+    if (usersToDelete.rowCount > 0) {
+      console.log(`Fundet ${usersToDelete.rowCount} inaktive brugere til sletning:`);
+      
+      // Log brugere der skal slettes
+      usersToDelete.rows.forEach(user => {
+        console.log(`- Bruger ID: ${user.id}, Email: ${user.email}, Sidste aktivitet: ${user.last_activity}`);
+      });
+
+      // Slet relaterede data først (foreign key-begrænsninger)
+      const userIds = usersToDelete.rows.map(user => user.id);
+      
+      // Slet aftaler
+      await client.query(`
+        DELETE FROM appointments 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet logs
+      await client.query(`
+        DELETE FROM logs 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet brugere
+      const deleteResult = await client.query(`
+        DELETE FROM users 
+        WHERE id = ANY($1) 
+        RETURNING id, email
+      `, [userIds]);
+
+      console.log(`Slettet ${deleteResult.rowCount} inaktive brugere og deres data`);
+    } else {
+      console.log('Ingen inaktive brugere fundet til sletning');
+    }
+  } catch (error) {
+    console.error('Fejl ved håndtering af inaktive brugere:', error);
+  }
+});
+
+// Get all appointments with their logs
+app.get('/appointments-with-logs', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        a.*,
+        COALESCE(json_agg(
+          CASE WHEN l.id IS NOT NULL THEN
+            json_build_object(
+              'id', l.id,
+              'title', l.title,
+              'description', l.description,
+              'date', l.date
+            )
+          END
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') as logs
+      FROM appointments a
+      LEFT JOIN logs l ON a.appointment_id = l.appointment_id
+      GROUP BY a.id
+      ORDER BY a.date DESC, a.start_time ASC;
+    `);
+    
+    console.log('Appointments with logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching appointments with logs:', err);
+    res.status(500).json({ error: 'Error fetching appointments with logs' });
+  }
+});
+
+// Get all logs with appointment info
+app.get('/admin/logs-view', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.*,
+        a.title as appointment_title,
+        a.description as appointment_description,
+        a.start_time as appointment_start_time,
+        a.end_time as appointment_end_time,
+        CASE 
+          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
+          ELSE 'Ingen aftale'
+        END as appointment_reference
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs with appointments:', err);
+    res.status(500).json({ error: 'Error fetching logs with appointments' });
+  }
+});
+
+// Get all logs
+app.get('/logs', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
+    console.log('Sending logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Get a specific log
+app.get('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      SELECT * FROM logs
+      WHERE id = $1 AND user_id = $2
+    `, [logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Sending log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching log:', err);
+    res.status(500).json({ error: 'Error fetching log' });
+  }
+});
+
+// Create a new log
+app.post('/logs', async (req, res) => {
+  try {
+    console.log('Received log data:', req.body);
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      INSERT INTO logs (title, description, date, appointment_id, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [title, description, date, appointment_id, userId]);
+
+    console.log('Created log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating log:', err);
+    res.status(500).json({ error: 'Error creating log' });
+  }
+});
+
+// Update a log
+app.put('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      UPDATE logs
+      SET title = $1, 
+          description = $2, 
+          date = $3,
+          appointment_id = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [title, description, date, appointment_id, logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Updated log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating log:', err);
+    res.status(500).json({ error: 'Error updating log' });
+  }
+});
+
+// Get all logs with their appointment_id
+app.get('/logs-with-appointments', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.id as log_id,
+        l.title as log_title,
+        l.description as log_description,
+        l.date as log_date,
+        l.appointment_id,
+        a.title as appointment_title
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointment IDs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Endpoint til at gemme push tokens
+app.post('/push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    
+    // Tjek om token allerede eksisterer
+    const existingToken = await client.query(
+      'SELECT * FROM push_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (existingToken.rows.length === 0) {
+      // Indsæt nyt token
+      await client.query(
+        'INSERT INTO push_tokens (token, platform) VALUES ($1, $2)',
+        [token, platform]
+      );
+    }
+
+    res.json({ message: 'Token gemt' });
+  } catch (error) {
+    console.error('Fejl ved gemning af push token:', error);
+    res.status(500).json({ error: 'Intern serverfejl' });
+  }
+});
+
+// Route til at registrere push token
+app.post('/api/register-push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    const userId = req.user.id;
+
+    await client.query(
+      'SELECT upsert_push_token($1, $2, $3)',
+      [userId, token, platform]
+    );
+
+    res.status(200).json({ message: 'Push token registreret' });
+  } catch (error) {
+    console.error('Fejl ved registrering af push token:', error);
+    res.status(500).json({ error: 'Kunne ikke registrere push token' });
+  }
+});
+
+// Route til at gemme notifikation
+app.post('/api/schedule-notification', async (req, res) => {
+  try {
+    const { appointmentId, title, body, scheduledFor } = req.body;
+    const userId = req.user.id;
+
+    const result = await client.query(
+      'SELECT schedule_notification($1, $2, $3, $4, $5)',
+      [userId, appointmentId, title, body, scheduledFor]
+    );
+
+    res.status(200).json({ 
+      message: 'Notifikation planlagt',
+      notificationId: result.rows[0].schedule_notification
+    });
+  } catch (error) {
+    console.error('Fejl ved planlægning af notifikation:', error);
+    res.status(500).json({ error: 'Kunne ikke planlægge notifikation' });
+  }
+});
+
+// Funktion til at sende planlagte notifikationer
+async function sendScheduledNotifications() {
+  try {
+    const result = await client.query(`
+      SELECT n.*, pt.token 
+      FROM notifications n
+      JOIN push_tokens pt ON n.user_id = pt.user_id
+      WHERE n.sent = false 
+      AND n.scheduled_for BETWEEN NOW() AND NOW() + INTERVAL '30 minutes'
+      AND pt.platform = 'ios'
+    `);
+
+    for (const notification of result.rows) {
+      // Send push notifikation via Expo
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: notification.token,
+          title: notification.title,
+          body: notification.body,
+          sound: 'default',
+          badge: 1,
+          priority: 'high'
+        })
+      });
+
+      // Marker notifikationen som sendt
+      await client.query(
+        'UPDATE notifications SET sent = true, sent_at = NOW() WHERE id = $1',
+        [notification.id]
+      );
+    }
+  } catch (error) {
+    console.error('Fejl ved afsendelse af planlagte notifikationer:', error);
+  }
+}
+
+// Kør check for planlagte notifikationer hvert minut
+setInterval(sendScheduledNotifications, 60000);
+
+// Planlæg cron job til at køre hver nat kl. 00:00 for at tjekke inaktive brugere
+cron.schedule('0 0 * * *', async () => {
+  console.log('Kører cron job for at tjekke inaktive brugere...');
+  try {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    console.log(`Tjekker for brugere der har været inaktive siden: ${oneYearAgo.toISOString()}`);
+
+    // Find brugere der skal slettes
+    const usersToDelete = await client.query(`
+      SELECT id, email, last_activity 
+      FROM users 
+      WHERE last_activity < $1
+    `, [oneYearAgo]);
+
+    if (usersToDelete.rowCount > 0) {
+      console.log(`Fundet ${usersToDelete.rowCount} inaktive brugere til sletning:`);
+      
+      // Log brugere der skal slettes
+      usersToDelete.rows.forEach(user => {
+        console.log(`- Bruger ID: ${user.id}, Email: ${user.email}, Sidste aktivitet: ${user.last_activity}`);
+      });
+
+      // Slet relaterede data først (foreign key-begrænsninger)
+      const userIds = usersToDelete.rows.map(user => user.id);
+      
+      // Slet aftaler
+      await client.query(`
+        DELETE FROM appointments 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet logs
+      await client.query(`
+        DELETE FROM logs 
+        WHERE user_id = ANY($1)
+      `, [userIds]);
+
+      // Slet brugere
+      const deleteResult = await client.query(`
+        DELETE FROM users 
+        WHERE id = ANY($1) 
+        RETURNING id, email
+      `, [userIds]);
+
+      console.log(`Slettet ${deleteResult.rowCount} inaktive brugere og deres data`);
+    } else {
+      console.log('Ingen inaktive brugere fundet til sletning');
+    }
+  } catch (error) {
+    console.error('Fejl ved håndtering af inaktive brugere:', error);
+  }
+});
+
+// Get all appointments with their logs
+app.get('/appointments-with-logs', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        a.*,
+        COALESCE(json_agg(
+          CASE WHEN l.id IS NOT NULL THEN
+            json_build_object(
+              'id', l.id,
+              'title', l.title,
+              'description', l.description,
+              'date', l.date
+            )
+          END
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') as logs
+      FROM appointments a
+      LEFT JOIN logs l ON a.appointment_id = l.appointment_id
+      GROUP BY a.id
+      ORDER BY a.date DESC, a.start_time ASC;
+    `);
+    
+    console.log('Appointments with logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching appointments with logs:', err);
+    res.status(500).json({ error: 'Error fetching appointments with logs' });
+  }
+});
+
+// Get all logs with appointment info
+app.get('/admin/logs-view', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.*,
+        a.title as appointment_title,
+        a.description as appointment_description,
+        a.start_time as appointment_start_time,
+        a.end_time as appointment_end_time,
+        CASE 
+          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
+          ELSE 'Ingen aftale'
+        END as appointment_reference
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointments:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs with appointments:', err);
+    res.status(500).json({ error: 'Error fetching logs with appointments' });
+  }
+});
+
+// Get all logs
+app.get('/logs', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
+    console.log('Sending logs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
+  }
+});
+
+// Get a specific log
+app.get('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      SELECT * FROM logs
+      WHERE id = $1 AND user_id = $2
+    `, [logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Sending log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching log:', err);
+    res.status(500).json({ error: 'Error fetching log' });
+  }
+});
+
+// Create a new log
+app.post('/logs', async (req, res) => {
+  try {
+    console.log('Received log data:', req.body);
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      INSERT INTO logs (title, description, date, appointment_id, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [title, description, date, appointment_id, userId]);
+
+    console.log('Created log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating log:', err);
+    res.status(500).json({ error: 'Error creating log' });
+  }
+});
+
+// Update a log
+app.put('/logs/:id', async (req, res) => {
+  try {
+    const logId = req.params.id;
+    const { title, description, date, appointment_id } = req.body;
+    
+    // For now, we'll use the test user's ID (1)
+    const userId = 1;
+
+    const result = await client.query(`
+      UPDATE logs
+      SET title = $1, 
+          description = $2, 
+          date = $3,
+          appointment_id = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [title, description, date, appointment_id, logId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    console.log('Updated log:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating log:', err);
+    res.status(500).json({ error: 'Error updating log' });
+  }
+});
+
+// Get all logs with their appointment_id
+app.get('/logs-with-appointments', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT 
+        l.id as log_id,
+        l.title as log_title,
+        l.description as log_description,
+        l.date as log_date,
+        l.appointment_id,
+        a.title as appointment_title
+      FROM logs l
+      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
+      ORDER BY l.date DESC;
+    `);
+    
+    console.log('Logs with appointment IDs:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Error fetching logs' });
   }
 });
 
