@@ -1,61 +1,160 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Image, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function Login() {
-    const navigation = useNavigation();
+    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleLogin = async () => {
         // Implementer login-logik her
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Login</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Indtast din e-mail"
-                value={email}
-                onChangeText={setEmail}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Indtast din adgangskode"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-            />
-            <TouchableOpacity onPress={handleLogin}>
-                <Text style={styles.buttonText}>Log ind</Text>
-            </TouchableOpacity>
-        </View>
+        <ImageBackground
+            source={require('../../assets/images/baggrund-1.png')} // Sørg for at stien er korrekt
+            style={styles.background}
+            resizeMode="cover"
+        >
+            <View style={styles.overlay} />
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.keyboardAvoidingView}
+            >
+                <ScrollView contentContainerStyle={styles.scrollViewContent}>
+                    <View style={styles.topContainer}>
+                        <Image
+                            source={require('../../assets/images/aldra_logo.png')} // Sørg for at stien er korrekt
+                            style={styles.logo}
+                        />
+                    </View>
+                    <View style={styles.centeredContentContainer}>
+                        <TextInput
+                            style={styles.emailInput}
+                            placeholder="Email"
+                            placeholderTextColor="#A9A9A9"
+                            value={email}
+                            onChangeText={setEmail}
+                        />
+                        <View style={styles.passwordContainer}>
+                            <TextInput
+                                style={styles.passwordInput}
+                                placeholder="Adgangskode"
+                                placeholderTextColor="#A9A9A9"
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry={!showPassword}
+                            />
+                            <TouchableOpacity
+                                onPress={() => setShowPassword(!showPassword)}
+                                style={styles.eyeIcon}
+                            >
+                                <Icon
+                                    name={showPassword ? "eye-off" : "eye"}
+                                    size={20}
+                                    color="#A9A9A9"
+                                />
+                            </TouchableOpacity>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={handleLogin}
+                        >
+                            <Text style={styles.buttonText}>Log ind</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => { /* Glemt adgangskode logik */ }}>
+                            <Text style={styles.forgotPassword}>Glemt adgangskode?</Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    background: {
+        flex: 1,
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(70, 109, 82, 0.8)',
+    },
+    keyboardAvoidingView: {
+        flex: 1,
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+    },
+    topContainer: {
         flex: 1,
         justifyContent: 'center',
-        padding: 20,
+        alignItems: 'center',
     },
-    title: {
-        fontSize: 24,
-        marginBottom: 20,
+    centeredContentContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
     },
-    input: {
-        height: 40,
-        borderColor: '#ccc',
-        borderWidth: 1,
-        marginBottom: 20,
-        paddingHorizontal: 10,
+    logo: {
+        width: 250,
+        height: 50,
+        marginTop: 19,
+    },
+    emailInput: {
+        width: '100%',
+        height: 55,
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 8,
+        borderTopRightRadius: 8,
+        borderBottomWidth: 0.2,
+        borderBottomColor: '#A9A9A9',
+        paddingHorizontal: 15,
+        color: '#000000',
+        fontSize: 16,
+    },
+    passwordContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+    },
+    passwordInput: {
+        width: '100%',
+        height: 55,
+        backgroundColor: '#FFFFFF',
+        borderBottomLeftRadius: 8,
+        borderBottomRightRadius: 8,
+        paddingHorizontal: 15,
+        color: '#000000',
+        fontSize: 16,
+    },
+    eyeIcon: {
+        position: 'absolute',
+        right: 15,
+    },
+    button: {
+        backgroundColor: '#42865F',
+        borderRadius: 8,
+        paddingVertical: 18,
+        paddingHorizontal: 24,
+        width: '100%',
+        alignItems: 'center',
+        marginTop: 20,
     },
     buttonText: {
-        color: '#42865F',
+        color: '#FFFFFF',
+        fontSize: 18,
+        fontFamily: 'RedHatDisplay_700Bold',
+    },
+    forgotPassword: {
+        color: '#FFFFFF',
         textAlign: 'center',
-        padding: 10,
-        backgroundColor: '#fff',
-        borderRadius: 5,
+        marginTop: 20,
+        textDecorationLine: 'underline',
+        fontSize: 16,
     },
 });
