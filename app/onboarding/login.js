@@ -11,7 +11,7 @@ export default function Login() {
 
     const handleLogin = async () => {
         try {
-            const response = await fetch('http://192.168.0.234:5001/login', { // Opdater URL
+            const response = await fetch('http://192.168.0.234:5001/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -19,25 +19,34 @@ export default function Login() {
                 body: JSON.stringify({ email, password }),
             });
     
-            const responseText = await response.text(); // Hent svaret som tekst først
-            console.log('Server response:', responseText); // Debugging
+            const responseText = await response.text(); // Hent responsen som tekst først
+            console.log('Server response:', responseText); // Debugging af serverens svar
     
             let data;
             try {
                 data = JSON.parse(responseText); // Prøv at parse JSON
             } catch (error) {
                 console.error('JSON Parse Error:', error, 'Response:', responseText);
-                throw new Error('Ugyldigt svar fra serveren'); // Hvis det ikke er JSON
+                throw new Error('Ugyldigt svar fra serveren');
             }
     
             if (response.ok) {
-                console.log('User logged in:', data);
+                console.log('Bruger logget ind:', data);
+    
+                // Tjek om router eksisterer
+                if (!router || typeof router.push !== 'function') {
+                    console.error('Router er ikke tilgængelig!');
+                    return;
+                }
+    
                 router.push({
                     pathname: '/(tabs)/oversigt',
                     params: { userName: data.name }
                 });
+    
             } else {
-                Alert.alert('Login Fejl', data.message || 'Forkert email eller adgangskode');
+                console.error('Login fejlede:', data);
+                Alert.alert('Login Fejl', data.error || 'Forkert email eller adgangskode');
             }
         } catch (error) {
             console.error('Fejl under login:', error);

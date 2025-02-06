@@ -188,8 +188,6 @@ app.post('/upload-profile-image', upload.single('profileImage'), async (req, res
 
 
 // Root endpoint for health check
-const bcrypt = require('bcrypt');
-
 app.post('/register', async (req, res) => {
     console.log('Received registration request with body:', req.body);
 
@@ -242,32 +240,52 @@ app.post('/register', async (req, res) => {
         }
     }
 
+
+    const app = express();
+    app.use(express.json()); // Gør det muligt at parse JSON
+    
+    const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+    });
+    
+    client.connect();
+    
+    // Login-rute
     app.post('/login', async (req, res) => {
-      console.log('Login request received:', req.body);
-  
-      const { email, password } = req.body;
-  
-      try {
-          const user = await client.query('SELECT * FROM users WHERE email = $1', [email]);
-  
-          if (user.rows.length === 0) {
-              return res.status(401).json({ error: 'Forkert email eller adgangskode' });
-          }
-  
-          const validPassword = await bcrypt.compare(password, user.rows[0].password);
-          if (!validPassword) {
-              return res.status(401).json({ error: 'Forkert email eller adgangskode' });
-          }
-  
-          res.status(200).json({
-              message: 'Login successful',
-              user: { id: user.rows[0].id, email: user.rows[0].email }
-          });
-      } catch (error) {
-          console.error('Login error:', error);
-          res.status(500).json({ error: 'Serverfejl ved login' });
-      }
-  });
+        console.log('POST /login');
+        console.log('Body:', req.body);
+    
+        const { email, password } = req.body;
+    
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
+        }
+    
+        try {
+            const userResult = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    
+            if (userResult.rows.length === 0) {
+                return res.status(401).json({ error: 'Ugyldig email eller adgangskode' });
+            }
+    
+            const user = userResult.rows[0];
+            const isMatch = await bcrypt.compare(password, user.password);
+    
+            if (!isMatch) {
+                return res.status(401).json({ error: 'Ugyldig email eller adgangskode' });
+            }
+    
+            res.status(200).json({
+                id: user.id,
+                name: user.name,
+                email: user.email
+            });
+    
+        } catch (error) {
+            console.error('Fejl ved login:', error);
+            res.status(500).json({ error: 'Serverfejl under login' });
+        }
+    });
   
 });
 
