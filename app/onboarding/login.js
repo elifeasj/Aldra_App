@@ -10,8 +10,41 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
 
     const handleLogin = async () => {
-        // Implementer login-logik her
+        try {
+            const response = await fetch('http://192.168.0.234:5001/login', { // Opdater URL
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+    
+            const responseText = await response.text(); // Hent svaret som tekst først
+            console.log('Server response:', responseText); // Debugging
+    
+            let data;
+            try {
+                data = JSON.parse(responseText); // Prøv at parse JSON
+            } catch (error) {
+                console.error('JSON Parse Error:', error, 'Response:', responseText);
+                throw new Error('Ugyldigt svar fra serveren'); // Hvis det ikke er JSON
+            }
+    
+            if (response.ok) {
+                console.log('User logged in:', data);
+                router.push({
+                    pathname: '/(tabs)/oversigt',
+                    params: { userName: data.name }
+                });
+            } else {
+                Alert.alert('Login Fejl', data.message || 'Forkert email eller adgangskode');
+            }
+        } catch (error) {
+            console.error('Fejl under login:', error);
+            Alert.alert('Fejl', 'Noget gik galt. Prøv venligst igen.');
+        }
     };
+    
 
     return (
         <ImageBackground

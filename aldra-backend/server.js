@@ -188,175 +188,89 @@ app.post('/upload-profile-image', upload.single('profileImage'), async (req, res
 
 
 // Root endpoint for health check
-app.get('/', (req, res) => {
-  res.json({ status: 'ok' });
-});
+const bcrypt = require('bcrypt');
 
-// Tilføj en GET-rute til /register for test
-app.get('/register', (req, res) => {
-  res.send('This is the register endpoint. Use POST to register a user.');
-});
-
-// Register a new user
 app.post('/register', async (req, res) => {
-  console.log('Received registration request with body:', req.body);
+    console.log('Received registration request with body:', req.body);
+
+    const { name, email, password, relationToDementiaPerson, termsAccepted } = req.body;
+
+    // Validate input
+    if (!name || !email || !password || !relationToDementiaPerson || termsAccepted === undefined) {
+        console.error('Missing required fields:', { name, email, password, relationToDementiaPerson, termsAccepted });
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    try {
+        // Check if user already exists
+        const existingUser = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+
+        if (existingUser.rows.length > 0) {
+            console.error('User already exists:', email);
+            return res.status(409).json({ error: 'User already exists' });
+        }
+
+        // Hash adgangskoden før gemning
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Indsæt bruger i databasen
+        const result = await client.query(
+            'INSERT INTO users (name, email, password, relation_to_dementia_person, termsAccepted) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
+            [name, email, hashedPassword, relationToDementiaPerson, termsAccepted]
+        );
+
+        const newUser = result.rows[0];
+        console.log('User registered successfully:', newUser);
+
+        res.status(201).json({
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            relationToDementiaPerson: newUser.relation_to_dementia_person
+        });
+    } catch (error) {
+        console.error('Detailed error registering user:', {
+            error: error.message,
+            stack: error.stack,
+            code: error.code
+        });
+
+        if (error.code === '23505') { // Unique constraint violation
+            res.status(409).json({ error: 'Email already registered' });
+        } else {
+            res.status(500).json({ error: 'Error registering user', message: error.message });
+        }
+    }
+
+    app.post('/login', async (req, res) => {
+      console.log('Login request received:', req.body);
   
-  const { name, email, password, relationToDementiaPerson, termsAccepted } = req.body;
-
-  // Validate input
-  if (!name || !email || !password || !relationToDementiaPerson || termsAccepted === undefined) {
-    console.error('Missing required fields:', { name, email, password, relationToDementiaPerson, termsAccepted });
-    return res.status(400).json({ error: 'All fields are required' });
-  }
-
-  try {
-    // Check if user already exists
-    const existingUser = await client.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
-
-    if (existingUser.rows.length > 0) {
-      console.error('User already exists:', email);
-      return res.status(409).json({ error: 'User already exists' });
-    }
-
-    // Indsæt bruger i databasen og returnér data
-    const result = await client.query(
-      'INSERT INTO users (name, email, password, relation_to_dementia_person, termsAccepted) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [name, email, password, relationToDementiaPerson, termsAccepted]
-    );
-    
-    const newUser = result.rows[0];
-    console.log('User registered successfully:', newUser);
-    
-    // Send only necessary user data back
-    res.status(200).json({
-      id: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
-      relationToDementiaPerson: newUser.relation_to_dementia_person
-    });
-  } catch (error) {
-    console.error('Detailed error registering user:', {
-      error: error.message,
-      stack: error.stack,
-      code: error.code
-    });
-    
-    if (error.code === '23505') { // Unique violation
-      res.status(409).json({ error: 'Email already registered' });
-    } else {
-      res.status(500).json({ 
-        error: 'Error registering user',
-        message: error.message
-      });
-    }
-  }
+      const { email, password } = req.body;
+  
+      try {
+          const user = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+  
+          if (user.rows.length === 0) {
+              return res.status(401).json({ error: 'Forkert email eller adgangskode' });
+          }
+  
+          const validPassword = await bcrypt.compare(password, user.rows[0].password);
+          if (!validPassword) {
+              return res.status(401).json({ error: 'Forkert email eller adgangskode' });
+          }
+  
+          res.status(200).json({
+              message: 'Login successful',
+              user: { id: user.rows[0].id, email: user.rows[0].email }
+          });
+      } catch (error) {
+          console.error('Login error:', error);
+          res.status(500).json({ error: 'Serverfejl ved login' });
+      }
+  });
+  
 });
 
-// Get all dates that have appointments
-app.get('/appointments/dates/all', async (req, res) => {
-  try {
-    console.log('Fetching all appointment dates');
-    const result = await client.query(
-      `SELECT DISTINCT date::date as date
-       FROM appointments 
-       ORDER BY date`
-    );
-
-    console.log('Raw dates from database:', result.rows);
-
-    // Format all dates
-    const dates = result.rows.map(row => formatDateForComparison(row.date));
-    console.log('Final formatted dates:', dates);
-    res.json(dates);
-  } catch (error) {
-    console.error('Error fetching appointment dates:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message 
-    });
-  }
-});
-
-// Get appointments for a specific date
-app.get('/appointments/:date', async (req, res) => {
-  try {
-    const { date } = req.params;
-    console.log('Fetching appointments for date:', date);
-    
-    // Format the date for comparison
-    const formattedDate = formatDateForComparison(date);
-    console.log('Formatted date for query:', formattedDate);
-
-    const result = await client.query(
-      `SELECT * FROM appointments 
-       WHERE date::date = $1::date
-       ORDER BY start_time ASC`,
-      [formattedDate]
-    );
-
-    // Format the time strings
-    const formattedAppointments = result.rows.map(appointment => ({
-      ...appointment,
-      date: formatDateForComparison(appointment.date),
-      start_time: appointment.start_time.substring(0, 5),
-      end_time: appointment.end_time.substring(0, 5)
-    }));
-
-    console.log('Returning appointments:', formattedAppointments);
-    res.json(formattedAppointments);
-  } catch (error) {
-    console.error('Error fetching appointments:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message 
-    });
-  }
-});
-
-// Get all appointments
-app.get('/appointments', async (req, res) => {
-  try {
-    const result = await client.query('SELECT * FROM appointments ORDER BY date DESC, start_time ASC');
-    console.log('Sending appointments:', result.rows);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Error fetching appointments:', err);
-    res.status(500).json({ error: 'Error fetching appointments' });
-  }
-});
-
-// Create new appointment
-app.post('/appointments', async (req, res) => {
-  try {
-    console.log('Received appointment data:', req.body);
-    const { title, description, date, start_time, end_time, reminder, user_id } = req.body;
-    
-    // Valider at alle nødvendige felter er der
-    if (!title || !description || !date || !start_time || !end_time) {
-      console.error('Missing required fields:', { title, description, date, start_time, end_time });
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    // Indsæt appointment
-    const result = await client.query(
-      'INSERT INTO appointments (title, description, date, start_time, end_time, reminder, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [title, description, date, start_time, end_time, reminder, user_id]
-    );
-    
-    console.log('Created appointment:', result.rows[0]);
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Detailed error creating appointment:', {
-      error: error.message,
-      stack: error.stack,
-      body: req.body
-    });
-    res.status(500).json({ error: 'Failed to create appointment', details: error.message });
-  }
-});
 
 // PUT update appointment
 app.put('/appointments/:id', async (req, res) => {
