@@ -170,7 +170,7 @@ app.post('/upload-profile-image', upload.single('profileImage'), async (req, res
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const imageUrl = `http://localhost:5001/uploads/${req.file.filename}`;
+    const imageUrl = `http://192.168.1.2:5001/uploads/${req.file.filename}`;
     console.log('Image URL:', imageUrl);  // Log the image URL before saving
     const { userId } = req.body;
     if (userId) {

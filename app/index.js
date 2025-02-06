@@ -39,6 +39,10 @@ export default function IntroScreen() {
                         <Icon name="chevron-forward-outline" size={25} color="#42865F" />
                     </View>
                 </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/onboarding/login')}>
+                    <Text style={{ color: '#ffff', textAlign: 'center', marginTop: 30, fontSize: 16, }}>Har du allerede en konto?{' '} <Text style={{ fontWeight: 'bold', textDecorationLine: 'underline', fontSize: 16, }} onPress={() => router.push('/onboarding/login')}>Login</Text>
+                    </Text>
+                </TouchableOpacity>
             </View>
         </ImageBackground>
     );

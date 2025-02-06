@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 
 
-const API_URL = 'http://localhost:5001'; // Erstat med din faktiske API URL
+const API_URL = 'http://192.168.1.2:5001'; // Erstat med din faktiske API URL
 
 interface UserData {
   id?: number; // Tilføjet id, hvis det modtages
@@ -30,11 +30,13 @@ const Profil = () => {
       const storedUserData = await AsyncStorage.getItem('userData');
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
+        console.log('Loaded user data:', parsedData); // Log hele brugerdata
         setUserData({
           id: parsedData.id, // Hvis id er gemt
           name: parsedData.name,
           relationToDementiaPerson: parsedData.relationToDementiaPerson
         });
+        console.log('User ID:', parsedData.id); // Log userId for debugging
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -74,7 +76,7 @@ const Profil = () => {
     }
     
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'], // Brug en streng i stedet for MediaType
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
@@ -86,12 +88,12 @@ const Profil = () => {
         const asset = result.assets[0];
         setProfileImage(asset.uri);
         // Send også brugerens id med, hvis det findes
+        console.log('User ID before upload:', userData.id); // Log userId for debugging
         uploadProfileImage({ uri: asset.uri, type: 'image/jpeg', fileName: 'photo.jpg' }, userData.id);
       }
     }
   };
   
-  // Ændret til at modtage en ekstra parameter "userId" og tilføje den i formData
   const uploadProfileImage = async (
     asset: { uri?: string; type?: string; fileName?: string },
     userId?: number
@@ -114,6 +116,9 @@ const Profil = () => {
     if (userId) {
       formData.append('userId', String(userId));
     }
+  
+    // Flyt logningen her, så den kommer efter formData er oprettet
+    console.log('User ID:', userId);
   
     try {
       const response = await fetch(`${API_URL}/upload-profile-image`, {
