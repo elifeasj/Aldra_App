@@ -252,40 +252,39 @@ app.post('/register', async (req, res) => {
     
     // Login-rute
     app.post('/login', async (req, res) => {
-        console.log('POST /login');
-        console.log('Body:', req.body);
-    
-        const { email, password } = req.body;
-    
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
-        }
-    
-        try {
-            const userResult = await client.query('SELECT * FROM users WHERE email = $1', [email]);
-    
-            if (userResult.rows.length === 0) {
-                return res.status(401).json({ error: 'Ugyldig email eller adgangskode' });
-            }
-    
-            const user = userResult.rows[0];
-            const isMatch = await bcrypt.compare(password, user.password);
-    
-            if (!isMatch) {
-                return res.status(401).json({ error: 'Ugyldig email eller adgangskode' });
-            }
-    
-            res.status(200).json({
-                id: user.id,
-                name: user.name,
-                email: user.email
-            });
-    
-        } catch (error) {
-            console.error('Fejl ved login:', error);
-            res.status(500).json({ error: 'Serverfejl under login' });
-        }
-    });
+      console.log('POST /login');
+      console.log('Body:', req.body);
+  
+      const { email, password } = req.body;
+  
+      if (!email || !password) {
+          return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
+      }
+  
+      try {
+          const userResult = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+  
+          if (userResult.rows.length === 0) {
+              return res.status(401).json({ error: 'Ugyldig email eller adgangskode' });
+          }
+  
+          const user = userResult.rows[0];
+          const isMatch = await bcrypt.compare(password, user.password);
+  
+          if (!isMatch) {
+              return res.status(401).json({ error: 'Ugyldig email eller adgangskode' });
+          }
+  
+          res.status(200).json({
+              id: user.id,
+              name: user.name,
+              email: user.email
+          });
+      } catch (error) {
+          console.error('Fejl ved login:', error);
+          res.status(500).json({ error: 'Serverfejl under login' });
+      }
+  });
   
 });
 

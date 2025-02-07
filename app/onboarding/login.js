@@ -19,8 +19,8 @@ export default function Login() {
                 body: JSON.stringify({ email, password }),
             });
     
-            const responseText = await response.text(); // Hent responsen som tekst først
-            console.log('Server response:', responseText); // Debugging af serverens svar
+            const responseText = await response.text(); // Hent svaret som tekst først
+            console.log('Server response:', responseText); // Debugging
     
             let data;
             try {
@@ -32,25 +32,16 @@ export default function Login() {
     
             if (response.ok) {
                 console.log('Bruger logget ind:', data);
-    
-                // Tjek om router eksisterer
-                if (!router || typeof router.push !== 'function') {
-                    console.error('Router er ikke tilgængelig!');
-                    return;
-                }
-    
                 router.push({
                     pathname: '/(tabs)/oversigt',
                     params: { userName: data.name }
                 });
-    
             } else {
-                console.error('Login fejlede:', data);
                 Alert.alert('Login Fejl', data.error || 'Forkert email eller adgangskode');
             }
         } catch (error) {
             console.error('Fejl under login:', error);
-            Alert.alert('Fejl', 'Noget gik galt. Prøv venligst igen.');
+            Alert.alert('Fejl', error.message || 'Noget gik galt. Prøv venligst igen.');
         }
     };
     
