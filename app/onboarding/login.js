@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Image, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Image, TextInput, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -11,7 +12,7 @@ export default function Login() {
 
     const handleLogin = async () => {
         try {
-            const response = await fetch('http://192.168.0.234:5001/login', {
+            const response = await fetch('http://192.168.0.215:8081/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -32,6 +33,19 @@ export default function Login() {
     
             if (response.ok) {
                 console.log('Bruger logget ind:', data);
+                // Gem brugerdata i AsyncStorage
+                // Gem alle brugerdata i AsyncStorage
+                const userData = {
+                    id: data.id,
+                    name: data.name,
+                    email: data.email,
+                    relationToDementiaPerson: data.relationToDementiaPerson,
+                    profileImage: data.profile_image // Gem profilbillede URL
+                };
+                
+                console.log('Gemmer brugerdata:', userData);
+                await AsyncStorage.setItem('userData', JSON.stringify(userData));
+                
                 router.push({
                     pathname: '/(tabs)/oversigt',
                     params: { userName: data.name }

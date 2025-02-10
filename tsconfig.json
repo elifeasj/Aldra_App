@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
-    "jsx": "react-native", 
+    "jsx": "react-native",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -13,9 +13,15 @@
     "allowJs": true,
     "baseUrl": "./",
     "paths": {
-      "@/*": ["app/*"],
-      "@/hooks/*": ["hooks/*"],
-      "@/components/*": ["components/*"]
+      "@/*": [
+        "app/*"
+      ],
+      "@/hooks/*": [
+        "hooks/*"
+      ],
+      "@/components/*": [
+        "components/*"
+      ]
     }
   },
   "include": [
@@ -27,5 +33,5 @@
   "exclude": [
     "node_modules"
   ],
-  "extends": "expo/tsconfig.base"
+  "extends": "@tsconfig/react-native/tsconfig.json"
 }

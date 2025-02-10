@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 
-
-const API_URL = 'http://192.168.1.2:5001'; // Erstat med din faktiske API URL
+const API_URL = 'http://192.168.0.215:8081'; // Server API URL
 
 interface UserData {
   id?: number; // Tilføjet id, hvis det modtages
@@ -14,12 +14,43 @@ interface UserData {
 }
 
 const Profil = () => {
+  const router = useRouter();
   const [userData, setUserData] = useState<UserData>({
     name: '',
     relationToDementiaPerson: ''
   });
 
+  const handleLogout = async () => {
+    try {
+      // Clear user data from AsyncStorage
+      await AsyncStorage.removeItem('userData');
+      // Redirect to index.js
+      router.replace('/');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
   const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  // Indlæs profilbillede når brugerdata indlæses
+  useEffect(() => {
+    const loadProfileImage = async () => {
+      try {
+        const storedUserData = await AsyncStorage.getItem('userData');
+        if (storedUserData) {
+          const parsedData = JSON.parse(storedUserData);
+          if (parsedData.profileImage) {
+            setProfileImage(parsedData.profileImage);
+          }
+        }
+      } catch (error) {
+        console.error('Fejl ved indlæsning af profilbillede:', error);
+      }
+    };
+    
+    loadProfileImage();
+  }, []);
 
   useEffect(() => {
     loadUserData();
@@ -71,7 +102,7 @@ const Profil = () => {
     // Anmod om tilladelse til at få adgang til fotobiblioteket
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      alert("Tilladelse til fotobibliotek kræves!");
+      Alert.alert("Tilladelse krævet", "Tilladelse til fotobibliotek kræves!");
       return;
     }
     
@@ -117,20 +148,23 @@ const Profil = () => {
       formData.append('userId', String(userId));
     }
   
-    // Flyt logningen her, så den kommer efter formData er oprettet
-    console.log('User ID:', userId);
+    console.log('Uploader billede for bruger:', userId);
   
     try {
       const response = await fetch(`${API_URL}/upload-profile-image`, {
         method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+        },
         body: formData,
       });
   
       const text = await response.text();
-      console.log('Response text:', text);
+      console.log('Server svar:', text);
   
       if (!response.ok) {
-        console.error('Server responded with an error:', response.status);
+        Alert.alert('Fejl', 'Der skete en fejl under upload af billedet');
+        console.error('Server fejl:', response.status);
         return;
       }
   
@@ -139,14 +173,27 @@ const Profil = () => {
         data = JSON.parse(text);
         console.log('Upload success:', data);
         if (data.imageUrl) {
+          // Opdater brugerdata i AsyncStorage med nyt profilbillede
+          const storedUserData = await AsyncStorage.getItem('userData');
+          if (storedUserData) {
+            const parsedData = JSON.parse(storedUserData);
+            const updatedUserData = {
+              ...parsedData,
+              profileImage: data.imageUrl
+            };
+            await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
+          }
+          
           setProfileImage(data.imageUrl);
         }
       } catch (jsonError) {
-        console.error('Error parsing JSON:', jsonError);
+        console.error('Fejl ved parsing af JSON:', jsonError);
+        Alert.alert('Fejl', 'Der skete en fejl ved behandling af server-svaret');
       }
   
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('Fejl ved upload:', error);
+      Alert.alert('Fejl', 'Kunne ikke uploade billedet. Tjek din internetforbindelse.');
     }
   };
   
@@ -163,7 +210,11 @@ const Profil = () => {
         <View style={styles.profileContainer}>
           <View style={styles.imageContainer}>
             {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              <Image 
+                source={{ uri: profileImage }} 
+                style={styles.profileImage}
+                resizeMode="cover"
+              />
             ) : (
               <View
                 style={[
@@ -286,7 +337,7 @@ const Profil = () => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.logoutButton}>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Log ud</Text>
       </TouchableOpacity>
 
@@ -330,6 +381,7 @@ const styles = StyleSheet.create({
     borderRadius: 55,
     borderWidth: 5,
     borderColor: '#42865F',
+    backgroundColor: '#f0f0f0',  // Fallback baggrundsfarve
   },
   imageContainer: {
     position: 'relative', // Gør det muligt at positionere overlay absolut i forhold til containeren

@@ -41,7 +41,7 @@ export default function Register() {
             
             // Tjek om serveren er tilgængelig først
             try {
-                const serverCheck = await fetch('http://192.168.0.234:5001/');
+                const serverCheck = await fetch('http://192.168.0.215:8081/');
                 if (!serverCheck.ok) {
                     throw new Error('Server ikke tilgængelig');
                 }
@@ -51,7 +51,7 @@ export default function Register() {
                 return;
             }
 
-            const response = await fetch('http://192.168.0.234:5001/register', {
+            const response = await fetch('http://192.168.0.215:8081/register', {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',

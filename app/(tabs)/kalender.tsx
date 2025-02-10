@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Switch, Platform, Animated, KeyboardAvoidingView, ViewStyle, TextStyle, Alert, LayoutChangeEvent, Button, TouchableWithoutFeedback } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -27,7 +28,7 @@ interface MarkedDates {
 }
 
 // API base URL
-const API_URL = 'http://192.168.0.234:5001';
+const API_URL = 'http://192.168.0.215:8081';
 
 const dayNames = {
     'mon': 'man',
@@ -97,7 +98,15 @@ export default function Kalender() {
     // Funktion til at tjekke logs for appointments
     const checkLogsForAppointments = async (appointments: Appointment[]) => {
         try {
-            const response = await fetch(`${API_URL}/logs`);
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (!userDataString) {
+                console.error('No user data found');
+                return;
+            }
+            const userData = JSON.parse(userDataString);
+            const user_id = userData.id;
+
+            const response = await fetch(`${API_URL}/logs?user_id=${user_id}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch logs');
             }
@@ -289,8 +298,16 @@ export default function Kalender() {
     // Fetch appointments for selected date
     const fetchAppointments = async (date: string) => {
         try {
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (!userDataString) {
+                console.error('No user data found');
+                return;
+            }
+            const userData = JSON.parse(userDataString);
+            const user_id = userData.id;
+
             console.log('Fetching appointments for date:', date);
-            const response = await fetch(`${API_URL}/appointments/${date}`);
+            const response = await fetch(`${API_URL}/appointments/${date}?user_id=${user_id}`);
             
             if (!response.ok) {
                 const errorText = await response.text();
@@ -309,8 +326,16 @@ export default function Kalender() {
     // Fetch all dates with appointments
     const fetchDatesWithAppointments = async () => {
         try {
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (!userDataString) {
+                console.error('No user data found');
+                return;
+            }
+            const userData = JSON.parse(userDataString);
+            const user_id = userData.id;
+
             console.log('Fetching all dates with appointments');
-            const response = await fetch(`${API_URL}/appointments/dates/all`);
+            const response = await fetch(`${API_URL}/appointments/dates/all?user_id=${user_id}`);
             
             if (!response.ok) {
                 const errorText = await response.text();
@@ -495,6 +520,14 @@ export default function Kalender() {
                 reminder: newAppointment.reminder
             });
 
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (!userDataString) {
+                console.error('No user data found');
+                return;
+            }
+            const userData = JSON.parse(userDataString);
+            const user_id = userData.id;
+
             const response = await fetch(`${API_URL}/appointments`, {
                 method: 'POST',
                 headers: {
@@ -506,7 +539,8 @@ export default function Kalender() {
                   date: newAppointment.date,
                   start_time: newAppointment.start_time,
                   end_time: newAppointment.end_time,     
-                  reminder: newAppointment.reminder
+                  reminder: newAppointment.reminder,
+                  user_id: user_id
                 }),
               });
               
