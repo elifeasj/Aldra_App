@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +15,22 @@ export default function Oversigt() {
             .join(' ');
     };
 
-    const displayName = userName ? formatName(userName as string) : 'Bruger';
+    const [displayName, setDisplayName] = useState('Bruger');
+
+    useEffect(() => {
+        const getUserName = async () => {
+            try {
+                const userData = await AsyncStorage.getItem('userData');
+                if (userData) {
+                    const { name } = JSON.parse(userData);
+                    setDisplayName(formatName(name));
+                }
+            } catch (error) {
+                console.error('Error getting user name:', error);
+            }
+        };
+        getUserName();
+    }, []);
 
     return (
         <ScrollView style={styles.container}>

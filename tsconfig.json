@@ -12,16 +12,11 @@
     "noEmit": true,
     "allowJs": true,
     "baseUrl": "./",
+    "types": ["react", "react-native", "jest", "@types/jest"],
     "paths": {
-      "@/*": [
-        "app/*"
-      ],
-      "@/hooks/*": [
-        "hooks/*"
-      ],
-      "@/components/*": [
-        "components/*"
-      ]
+      "@/*": ["app/*"],
+      "@/hooks/*": ["hooks/*"],
+      "@/components/*": ["components/*"]
     }
   },
   "include": [

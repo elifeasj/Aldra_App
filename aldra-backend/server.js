@@ -54,9 +54,15 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS family_links (
         id SERIAL PRIMARY KEY,
         creator_user_id INTEGER NOT NULL,
-        unique_code VARCHAR(10) UNIQUE NOT NULL,
+        family_id INTEGER,
+        unique_code VARCHAR(255) UNIQUE NOT NULL,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (creator_user_id) REFERENCES users(id)
+        last_used_at TIMESTAMPTZ,
+        member_count INTEGER DEFAULT 0,
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+        FOREIGN KEY (creator_user_id) REFERENCES users(id),
+        FOREIGN KEY (family_id) REFERENCES family_links(id),
+        CONSTRAINT valid_member_count CHECK (member_count >= 0)
       );
     `);
     console.log('Family links table created successfully');
@@ -358,13 +364,28 @@ app.post('/family-link/generate', async (req, res) => {
   }
 });
 
-// Validate a family code
+// Validate and use a family code
 app.get('/family-link/validate/:code', async (req, res) => {
   try {
     const { code } = req.params;
-
+    
+    // Get the family link and update last_used_at and member count
     const result = await client.query(
-      'SELECT creator_user_id FROM family_links WHERE unique_code = $1',
+      `UPDATE family_links 
+       SET last_used_at = CURRENT_TIMESTAMP,
+           member_count = member_count + 1
+       WHERE unique_code = $1 AND status = 'active' 
+       RETURNING id, creator_user_id, member_count`,
+      [code]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invalid or inactive family link' });
+    }
+
+    // Get creator info
+    const creatorResult = await client.query(
+      'SELECT id, name FROM users WHERE id = $1',
       [code]
     );
 
@@ -444,6 +465,35 @@ app.post('/login', async (req, res) => {
 });
 
 // Root endpoint for health check
+// Update family link status
+app.put('/family-link/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['active', 'inactive'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be either "active" or "inactive"' });
+    }
+
+    const result = await client.query(
+      `UPDATE family_links
+       SET status = $1
+       WHERE id = $2
+       RETURNING id, unique_code, status, member_count, last_used_at`,
+      [status, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Family link not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating family link status:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.post('/register', async (req, res) => {
     const { name, email, password, relationToDementiaPerson, termsAccepted, familyCode } = req.body;
     console.log('=== START REGISTRATION ===');

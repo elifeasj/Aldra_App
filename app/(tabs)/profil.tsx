@@ -12,6 +12,7 @@ interface UserData {
   name: string;
   relationToDementiaPerson: string;
   familyId?: number;
+  profileImage?: string;
 }
 
 const Profil = () => {
@@ -309,15 +310,23 @@ const Profil = () => {
       <View style={styles.familySection}>
         <Text style={styles.sectionTitle}>Familien</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.familyScroll}>
-          {['Peter', 'Lena', 'Claus', 'Pia'].map((name, index) => (
-            <View key={index} style={styles.familyMemberCard}>
+          {familyMembers.map((member: UserData, index: number) => (
+            <View key={member.id || index} style={styles.familyMemberCard}>
               <View style={styles.familyImageContainer}>
-                <Image
-                  source={require('../../assets/images/frame_1.png')}
-                  style={styles.familyImage}
-                />
+                {member.profileImage ? (
+                  <Image
+                    source={{ uri: member.profileImage }}
+                    style={styles.familyImage}
+                  />
+                ) : (
+                  <View style={[styles.familyImage, styles.initialsContainer]}>
+                    <Text style={styles.initials}>
+                      {member.name.split(' ').map((n: string) => n[0]).join('')}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <Text style={styles.familyName}>{name}</Text>
+              <Text style={styles.familyName}>{member.name.split(' ')[0]}</Text>
             </View>
           ))}
           <TouchableOpacity style={styles.addFamilyButton}>
@@ -361,7 +370,7 @@ const Profil = () => {
         {familyMembers.length > 0 && (
           <View style={styles.familyList}>
             <Text style={styles.subtitle}>Familiemedlemmer:</Text>
-            {familyMembers.map((member, index) => (
+            {familyMembers.map((member: UserData, index: number) => (
               <View key={index} style={styles.familyListItem}>
                 <Text style={styles.familyListName}>{member.name}</Text>
                 <Text style={styles.familyListRelation}>{member.relationToDementiaPerson}</Text>
@@ -371,41 +380,49 @@ const Profil = () => {
         )}
       </View>
 
+      <Text style={styles.sectionTitle}>Indstillinger</Text>
       <View style={styles.settingsSection}>
-        <Text style={styles.sectionTitle}>Indstillinger</Text>
-
         <TouchableOpacity style={styles.settingsItem}>
-          <Ionicons name="person-outline" size={24} color="#000" />
+          <View style={styles.settingsIcon}>
+            <Ionicons name="person-outline" size={24} color="#000" />
+          </View>
           <Text style={styles.settingsText}>Personlige information</Text>
-          <Ionicons name="chevron-forward" size={24} color="#000" />
+          <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingsItem}>
-          <Ionicons name="key-outline" size={24} color="#000" />
+          <View style={styles.settingsIcon}>
+            <Ionicons name="settings-outline" size={24} color="#000" />
+          </View>
           <Text style={styles.settingsText}>Tilgængelighed</Text>
-          <Ionicons name="chevron-forward" size={24} color="#000" />
+          <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingsItem}>
-          <Ionicons name="notifications-outline" size={24} color="#000" />
+          <View style={styles.settingsIcon}>
+            <Ionicons name="notifications-outline" size={24} color="#000" />
+          </View>
           <Text style={styles.settingsText}>Notifikationer</Text>
-          <Ionicons name="chevron-forward" size={24} color="#000" />
+          <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.legalSection}>
-        <Text style={styles.sectionTitle}>Juridisk</Text>
-
+      <Text style={styles.sectionTitle}>Juridisk</Text>
+      <View style={styles.settingsSection}>
         <TouchableOpacity style={styles.settingsItem}>
-          <Ionicons name="chatbubble-outline" size={24} color="#000" />
+          <View style={styles.settingsIcon}>
+            <Ionicons name="create-outline" size={24} color="#000" />
+          </View>
           <Text style={styles.settingsText}>Giv os feedback</Text>
-          <Ionicons name="chevron-forward" size={24} color="#000" />
+          <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingsItem}>
-          <Ionicons name="document-text-outline" size={24} color="#000" />
+          <View style={styles.settingsIcon}>
+            <Ionicons name="document-text-outline" size={24} color="#000" />
+          </View>
           <Text style={styles.settingsText}>Vilkår og betingelser</Text>
-          <Ionicons name="chevron-forward" size={24} color="#000" />
+          <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
       </View>
 
@@ -419,55 +436,6 @@ const Profil = () => {
 };
 
 const styles = StyleSheet.create({
-  section: {
-    padding: 20,
-    backgroundColor: '#fff',
-    marginBottom: 10,
-    borderRadius: 10,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#42865F',
-  },
-  button: {
-    backgroundColor: '#42865F',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  familyList: {
-    marginTop: 15,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#333',
-  },
-  familyListItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  familyListName: {
-    fontSize: 16,
-    color: '#333',
-  },
-  familyListRelation: {
-    fontSize: 14,
-    color: '#666',
-  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -502,19 +470,19 @@ const styles = StyleSheet.create({
     borderRadius: 55,
     borderWidth: 5,
     borderColor: '#42865F',
-    backgroundColor: '#f0f0f0',  // Fallback baggrundsfarve
+    backgroundColor: '#f0f0f0',
   },
   imageContainer: {
-    position: 'relative', // Gør det muligt at positionere overlay absolut i forhold til containeren
+    position: 'relative',
   },
   uploadOverlay: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Halvt gennemsigtig sort baggrund
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     width: 30,
     height: 30,
-    borderRadius: 15, // Gør det cirkulært
+    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -530,6 +498,145 @@ const styles = StyleSheet.create({
     fontFamily: 'RedHatDisplay_400Regular',
     fontStyle: 'italic',
   },
+  section: {
+    padding: 20,
+    backgroundColor: '#fff',
+    marginBottom: 10,
+    borderRadius: 10,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontFamily: 'RedHatDisplay_700Bold',
+    marginBottom: 15,
+    marginHorizontal: 16,
+    color: '#42865F',
+  },
+  button: {
+    backgroundColor: '#42865F',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  familySection: {
+    padding: 20,
+  },
+  familyScroll: {
+    flexGrow: 0,
+  },
+  familyMemberCard: {
+    alignItems: 'center',
+    marginRight: 16,
+    width: 80,
+  },
+  familyImageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    overflow: 'hidden',
+    marginBottom: 8,
+    backgroundColor: '#F5F5F5',
+  },
+  familyImage: {
+    width: '100%',
+    height: '100%',
+  },
+  initialsContainer: {
+    backgroundColor: '#42865F',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initials: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  familyName: {
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+  },
+  addFamilyButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  familyList: {
+    marginTop: 15,
+  },
+  familyListItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  familyListName: {
+    fontSize: 16,
+    color: '#333',
+  },
+  familyListRelation: {
+    fontSize: 14,
+    color: '#666',
+  },
+  settingsSection: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginBottom: 20,
+    marginHorizontal: 16,
+    paddingVertical: 8,
+  },
+  settingsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  settingsIcon: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  settingsText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    fontFamily: 'RedHatDisplay_400Regular',
+  },
+  logoutButton: {
+    backgroundColor: '#42865F',
+    padding: 16,
+    borderRadius: 10,
+    marginTop: 32,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  versionText: {
+    textAlign: 'center',
+    color: '#999',
+    marginBottom: 20,
+  },
+
   linkSection: {
     padding: 20,
   },
@@ -556,132 +663,58 @@ const styles = StyleSheet.create({
     color: '#42865F',
     fontFamily: 'RedHatDisplay_500Medium',
   },
-  shareButton: {
-    padding: 5,
-  },
-  familySection: {
-    padding: 20,
-  },
-  familyScroll: {
-    marginTop: 10,
-  },
-  familyMemberCard: {
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  familyImageContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 5,
-    overflow: 'hidden',
-  },
-  familyImage: {
-    width: '100%',
-    height: '100%',
-  },
-  familyName: {
-    fontSize: 14,
-    fontFamily: 'RedHatDisplay_400Regular',
-  },
-  addFamilyButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   logSection: {
-    padding: 20,
+    marginTop: 20,
+    paddingHorizontal: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   viewAllText: {
     color: '#42865F',
-    fontFamily: 'RedHatDisplay_500Medium',
+    fontSize: 14,
   },
   logItem: {
     backgroundColor: '#F5F5F5',
-    borderRadius: 12,
     padding: 15,
+    borderRadius: 10,
     marginBottom: 10,
   },
   logTitle: {
     fontSize: 16,
-    fontFamily: 'RedHatDisplay_700Bold',
+    fontWeight: 'bold',
     marginBottom: 5,
   },
   logDate: {
-    fontSize: 14,
     color: '#666',
-    fontFamily: 'RedHatDisplay_400Regular',
+    fontSize: 14,
     marginBottom: 10,
   },
   viewLogButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 6,
+    backgroundColor: '#42865F',
+    padding: 8,
+    borderRadius: 5,
+    alignItems: 'center',
   },
   viewLogText: {
-    color: '#42865F',
-    fontFamily: 'RedHatDisplay_500Medium',
+    color: '#fff',
+    fontSize: 14,
   },
-  settingsSection: {
-    padding: 20,
-  },
-  settingsItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  settingsText: {
-    flex: 1,
-    marginLeft: 15,
+  subtitle: {
     fontSize: 16,
-    fontFamily: 'RedHatDisplay_400Regular',
+    fontWeight: '500',
+    marginBottom: 10,
+    color: '#333',
   },
   legalSection: {
-    padding: 20,
+    marginTop: 20,
+    paddingHorizontal: 0,
   },
-  logoutButton: {
-    marginHorizontal: 20,
-    marginVertical: 10,
-    paddingVertical: 15,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: '#000',
-    fontSize: 16,
-    fontFamily: 'RedHatDisplay_500Medium',
-  },
-  versionText: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 12,
-    fontFamily: 'RedHatDisplay_400Regular',
-    marginVertical: 20,
-  },
-  uploadButton: {
-    backgroundColor: '#42865F',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 6,
-    marginLeft: 15,
-  },
-  uploadButtonText: {
-    color: '#fff',
-    fontFamily: 'RedHatDisplay_500Medium',
+  shareButton: {
+    padding: 5,
   },
 });
 
