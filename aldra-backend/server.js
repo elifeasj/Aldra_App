@@ -61,19 +61,18 @@ async function initializeDatabase() {
         member_count INTEGER DEFAULT 0,
         status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
         FOREIGN KEY (creator_user_id) REFERENCES users(id),
-        FOREIGN KEY (family_id) REFERENCES family_links(id),
         CONSTRAINT valid_member_count CHECK (member_count >= 0)
       );
     `);
     console.log('Family links table created successfully');
 
-    // Add family_id column to users table if it doesn't exist
+    // Remove family_id column from users table if it exists
     await client.query(`
       DO $$ 
       BEGIN 
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                      WHERE table_name = 'users' AND column_name = 'family_id') THEN
-          ALTER TABLE users ADD COLUMN family_id INTEGER REFERENCES users(id);
+        IF EXISTS (SELECT 1 FROM information_schema.columns 
+                  WHERE table_name = 'users' AND column_name = 'family_id') THEN
+          ALTER TABLE users DROP COLUMN family_id;
         END IF;
       END $$;
     `);
@@ -522,23 +521,10 @@ app.post('/register', async (req, res) => {
         // Hash adgangskoden før gemning
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        let family_id = null;
-        if (familyCode) {
-            // Validate family code and get creator_user_id
-            const familyResult = await client.query(
-                'SELECT creator_user_id FROM family_links WHERE unique_code = $1',
-                [familyCode]
-            );
-
-            if (familyResult.rows.length > 0) {
-                family_id = familyResult.rows[0].creator_user_id;
-            }
-        }
-
         // Indsæt bruger i databasen
         const result = await client.query(
-            'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, termsAccepted, family_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, email, relation_to_dementia_person, family_id',
-            [name, email, hashedPassword, relationToDementiaPerson, termsAccepted, family_id]
+            'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, termsAccepted) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
+            [name, email, hashedPassword, relationToDementiaPerson, termsAccepted]
         );
 
         await client.query('COMMIT');
@@ -780,6 +766,36 @@ app.post('/api/update-activity', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating user activity:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get or create unique family link code
+app.get('/api/family-link/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Check if user already has a family link
+    let familyLink = await client.query(
+      'SELECT * FROM family_links WHERE creator_user_id = $1',
+      [userId]
+    );
+
+    if (familyLink.rows.length > 0) {
+      return res.status(200).json({ unique_code: familyLink.rows[0].unique_code });
+    }
+
+    // If no family link exists, create one
+    const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    const result = await client.query(
+      'INSERT INTO family_links (creator_user_id, unique_code, member_count, status) VALUES ($1, $2, 1, $3) RETURNING unique_code',
+      [userId, uniqueCode, 'active']
+    );
+
+    res.status(200).json({ unique_code: result.rows[0].unique_code });
+  } catch (error) {
+    console.error('Error getting/creating family link:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

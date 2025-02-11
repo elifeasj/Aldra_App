@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert, Share } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -34,34 +35,8 @@ const Profil = () => {
   };
 
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [familyLink, setFamilyLink] = useState<string | null>(null);
   const [familyMembers, setFamilyMembers] = useState<UserData[]>([]);
 
-  // Indlæs profilbillede når brugerdata indlæses
-  const generateFamilyLink = async () => {
-    try {
-      const userDataString = await AsyncStorage.getItem('userData');
-      if (!userDataString) return;
-
-      const userData = JSON.parse(userDataString);
-      const response = await fetch(`${API_URL}/family-link/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_id: userData.id }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate family link');
-
-      const data = await response.json();
-      setFamilyLink(data.shareLink);
-      Alert.alert('Link genereret', 'Del dette link med dine familiemedlemmer for at invitere dem til Aldra.');
-    } catch (error) {
-      console.error('Error generating family link:', error);
-      Alert.alert('Fejl', 'Der opstod en fejl ved generering af familie-link');
-    }
-  };
 
   const loadFamilyMembers = async () => {
     try {
@@ -135,13 +110,34 @@ const Profil = () => {
     return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
   };
 
-  // Funktion til at generere et unikt Aldra-link
-  const getUniqueAldraLink = () => {
+  const [uniqueCode, setUniqueCode] = useState<string>('');
+
+  // Funktion til at hente eller oprette et unikt Aldra-link
+  const getUniqueAldraLink = async () => {
     if (userData.id) {
-      return `aldra.dk/link/${userData.id}`;
+      try {
+        const response = await fetch(`${API_URL}/api/family-link/${userData.id}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const text = await response.text();
+        try {
+          const data = JSON.parse(text);
+          if (data.unique_code) {
+            setUniqueCode(`aldra.dk/invite/${data.unique_code}`);
+          }
+        } catch (parseError) {
+          console.error('Error parsing response:', text, parseError);
+        }
+      } catch (error) {
+        console.error('Error fetching unique code:', error);
+      }
     }
-    return `aldra.dk/link/${userData.name.replace(/\s/g, '').toLowerCase() || 'default'}`;
   };
+
+  useEffect(() => {
+    getUniqueAldraLink();
+  }, [userData.id]);
 
   const formatRelation = (relation: string) => {
     if (relation === 'Barn') {
@@ -294,50 +290,78 @@ const Profil = () => {
         </View>
       </View>
 
+      <Text style={styles.sectionTitle}>Dit personlige Aldra-link</Text>
       <View style={styles.linkSection}>
-        <Text style={styles.sectionTitle}>Dit personlige Aldra-link</Text>
-        <View style={styles.linkContainer}>
-          <Text style={styles.linkText}>{getUniqueAldraLink()}</Text>
-          <TouchableOpacity style={styles.copyButton}>
-            <Text style={styles.copyButtonText}>Kopiér</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.shareButton}>
-            <Ionicons name="share-outline" size={20} color="#000" />
+        <View style={styles.linkSectionContent}>
+          <View style={styles.linkContainer}>
+            <Text style={styles.linkText}>{uniqueCode || 'Indlæser...'}</Text>
+            <TouchableOpacity 
+              style={styles.copyButton}
+              onPress={async () => {
+                await Clipboard.setStringAsync(uniqueCode);
+                Alert.alert('Kopieret', 'Linket er kopieret til udklipsholderen', [
+                  { text: 'OK', onPress: () => console.log('Link copied') }
+                ]);
+              }}
+            >
+              <Text style={styles.copyButtonText}>Kopiér</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity 
+            style={styles.shareButton}
+            onPress={async () => {
+              try {
+                await Share.share({
+                  message: uniqueCode,
+                  url: `https://${uniqueCode}`,
+                });
+              } catch (error) {
+                console.error('Error sharing:', error);
+              }
+            }}
+          >
+            <Text style={styles.shareButtonText}>Del</Text>
+            <Ionicons name="paper-plane-outline" size={16} color="#42865F" />
           </TouchableOpacity>
         </View>
       </View>
 
+      <Text style={styles.sectionTitle}>Familien</Text>
       <View style={styles.familySection}>
-        <Text style={styles.sectionTitle}>Familien</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.familyScroll}>
-          {familyMembers.map((member: UserData, index: number) => (
-            <View key={member.id || index} style={styles.familyMemberCard}>
-              <View style={styles.familyImageContainer}>
-                {member.profileImage ? (
-                  <Image
-                    source={{ uri: member.profileImage }}
-                    style={styles.familyImage}
-                  />
+          {[...familyMembers, ...Array(4 - familyMembers.length).fill(null)].map((member: UserData | null, index: number) => (
+
+            <View key={member?.id || index} style={styles.familyMemberCard}>
+              <View style={[styles.familyImageContainer, !member && styles.emptyFamilyContainer]}>
+                {member ? (
+                  member.profileImage ? (
+                    <Image
+                      source={{ uri: member.profileImage }}
+                      style={styles.familyImage}
+                    />
+                  ) : (
+                    <View style={[styles.familyImage, styles.initialsContainer]}>
+                      <Text style={styles.initials}>
+                        {member.name.split(' ').map((n: string) => n[0]).join('')}
+                      </Text>
+                    </View>
+                  )
                 ) : (
-                  <View style={[styles.familyImage, styles.initialsContainer]}>
-                    <Text style={styles.initials}>
-                      {member.name.split(' ').map((n: string) => n[0]).join('')}
-                    </Text>
+                  <View style={styles.emptyFamilyIcon}>
+                    <Ionicons name="person-add-outline" size={24} color="#42865F" />
                   </View>
                 )}
               </View>
-              <Text style={styles.familyName}>{member.name.split(' ')[0]}</Text>
+              <Text style={[styles.familyName, !member && styles.emptyFamilyName]}>{member ? member.name.split(' ')[0] : 'Tilføj'}</Text>
             </View>
           ))}
-          <TouchableOpacity style={styles.addFamilyButton}>
-            <Ionicons name="add" size={24} color="#42865F" />
-          </TouchableOpacity>
+
         </ScrollView>
       </View>
 
+      <Text style={styles.sectionTitle}>Seneste log</Text>
       <View style={styles.logSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Seneste log</Text>
           <TouchableOpacity>
             <Text style={styles.viewAllText}>Vis alle</Text>
           </TouchableOpacity>
@@ -362,11 +386,6 @@ const Profil = () => {
 
       {/* Familie sektion */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Familie</Text>
-        <TouchableOpacity style={styles.button} onPress={generateFamilyLink}>
-          <Text style={styles.buttonText}>Generer familie-link</Text>
-        </TouchableOpacity>
-
         {familyMembers.length > 0 && (
           <View style={styles.familyList}>
             <Text style={styles.subtitle}>Familiemedlemmer:</Text>
@@ -380,8 +399,8 @@ const Profil = () => {
         )}
       </View>
 
-      <Text style={styles.sectionTitle}>Indstillinger</Text>
       <View style={styles.settingsSection}>
+      <Text style={styles.sectionTitle}>Indstillinger</Text>
         <TouchableOpacity style={styles.settingsItem}>
           <View style={styles.settingsIcon}>
             <Ionicons name="person-outline" size={24} color="#000" />
@@ -456,6 +475,7 @@ const styles = StyleSheet.create({
   profileSection: {
     paddingVertical: 20,
     paddingHorizontal: 20,
+    marginBottom: 10,
   },
   profileContainer: {
     flexDirection: 'row',
@@ -506,10 +526,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontFamily: 'RedHatDisplay_700Bold',
+    fontFamily: 'RedHatDisplay_500Medium',
     marginBottom: 15,
-    marginHorizontal: 16,
-    color: '#42865F',
+    marginHorizontal: 20,
+    color: '#000000',
   },
   button: {
     backgroundColor: '#42865F',
@@ -524,7 +544,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   familySection: {
-    padding: 20,
+    marginBottom: 30,
+    marginHorizontal: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+
   },
   familyScroll: {
     flexGrow: 0,
@@ -532,15 +559,33 @@ const styles = StyleSheet.create({
   familyMemberCard: {
     alignItems: 'center',
     marginRight: 16,
-    width: 80,
+    width: 70,
   },
   familyImageContainer: {
     width: 60,
     height: 60,
     borderRadius: 30,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: 0,
     backgroundColor: '#F5F5F5',
+    borderWidth: 2,
+    borderColor: '#42865F',
+  },
+  emptyFamilyContainer: {
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyFamilyIcon: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyFamilyName: {
+    marginTop: 5,
+    color: '#42865F',
+    fontFamily: 'RedHatDisplay_500Medium',
   },
   familyImage: {
     width: '100%',
@@ -571,7 +616,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   familyList: {
-    marginTop: 15,
+    marginTop: 0,
   },
   familyListItem: {
     flexDirection: 'row',
@@ -593,14 +638,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10,
     marginBottom: 20,
-    marginHorizontal: 16,
     paddingVertical: 8,
   },
   settingsItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 16,
+    marginHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
@@ -618,18 +662,18 @@ const styles = StyleSheet.create({
     fontFamily: 'RedHatDisplay_400Regular',
   },
   logoutButton: {
-    backgroundColor: '#42865F',
+    backgroundColor: '#EEEEEE',
     padding: 16,
     borderRadius: 10,
     marginTop: 32,
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginBottom: 8,
     alignItems: 'center',
   },
   logoutText: {
-    color: '#fff',
+    color: '#000000',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: 'medium',
   },
   versionText: {
     textAlign: 'center',
@@ -638,44 +682,59 @@ const styles = StyleSheet.create({
   },
 
   linkSection: {
-    padding: 20,
+    backgroundColor: '#42865F',
+    marginHorizontal: 16,
+    marginBottom: 30,
+    borderRadius: 12,
+    padding: 18,
+  },
+  linkSectionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
 
   linkContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     borderRadius: 8,
-    padding: 12,
+    padding: 16,
+    marginHorizontal: 0,
+    marginBottom: 0,
   },
   linkText: {
     flex: 1,
-    fontFamily: 'RedHatDisplay_400Regular',
+    fontFamily: 'RedHatDisplay_500Medium',
+    fontSize: 16,
+    color: '#ffffff',
   },
   copyButton: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 6,
-    marginRight: 10,
+    paddingHorizontal: 1,
+    paddingVertical: 0,
+    marginRight: 0,
   },
   copyButtonText: {
-    color: '#42865F',
+    fontSize: 16,
+    color: '#ffffff',
     fontFamily: 'RedHatDisplay_500Medium',
   },
   logSection: {
-    marginTop: 20,
-    paddingHorizontal: 20,
+    marginTop: 10,
+    marginHorizontal: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
+    marginHorizontal: 0,
   },
   viewAllText: {
     color: '#42865F',
     fontSize: 14,
+    marginRight: 20,
   },
   logItem: {
     backgroundColor: '#F5F5F5',
@@ -714,7 +773,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   shareButton: {
-    padding: 5,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  shareButtonText: {
+    color: '#42865F',
+    fontSize: 16,
+    fontFamily: 'RedHatDisplay_500Medium',
+    marginRight: 0,
+    paddingLeft: 4,
+    paddingRight: 4,
+    paddingVertical: 8,
   },
 });
 
