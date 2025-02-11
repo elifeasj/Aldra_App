@@ -9,17 +9,28 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
 const app = express();
+// CORS konfiguration
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept']
 }));
 app.use(bodyParser.json());
+
+// Funktion til at maskere følsomme data
+function maskSensitiveData(obj) {
+    if (!obj) return obj;
+    const masked = { ...obj };
+    if (masked.password) masked.password = '****';
+    if (masked.adgangskode) masked.adgangskode = '****';
+    return masked;
+}
 
 // Log alle indkommende anmodninger (for fejlfinding)
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.url}`);
-    console.log('Body:', req.body);
+    const maskedBody = maskSensitiveData(req.body);
+    console.log('Body:', maskedBody);
     next();
 });
 
@@ -170,7 +181,7 @@ app.post('/upload-profile-image', upload.single('profileImage'), async (req, res
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const imageUrl = `http://192.168.1.2:5001/uploads/${req.file.filename}`;
+    const imageUrl = `http://localhost:8081/uploads/${req.file.filename}`;
     console.log('Image URL:', imageUrl);  // Log the image URL before saving
     const { userId } = req.body;
     if (userId) {
@@ -187,15 +198,55 @@ app.post('/upload-profile-image', upload.single('profileImage'), async (req, res
 });
 
 
+// Login endpoint
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    const maskedData = maskSensitiveData({ email, password });
+    console.log('Login attempt:', maskedData);
+
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
+    }
+
+    try {
+        const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Forkert email eller adgangskode' });
+        }
+
+        const user = result.rows[0];
+        const isPasswordValid = await bcrypt.compare(password, user.hashed_password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Forkert email eller adgangskode' });
+        }
+
+        // Send brugerdata tilbage (uden adgangskode)
+        res.json({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            relationToDementiaPerson: user.relation_to_dementia_person,
+            profile_image: user.profile_image
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Der opstod en fejl under login' });
+    }
+});
+
 // Root endpoint for health check
 app.post('/register', async (req, res) => {
-    console.log('Received registration request with body:', req.body);
-
     const { name, email, password, relationToDementiaPerson, termsAccepted } = req.body;
+    console.log('=== START REGISTRATION ===');
+    const maskedData = maskSensitiveData({ name, email, password, relationToDementiaPerson, termsAccepted });
+    console.log('Registration attempt:', maskedData);
+    console.log('=== END REGISTRATION ===');
 
     // Validate input
     if (!name || !email || !password || !relationToDementiaPerson || termsAccepted === undefined) {
-        console.error('Missing required fields:', { name, email, password, relationToDementiaPerson, termsAccepted });
+        console.error('Missing required fields for user:', email);
         return res.status(400).json({ error: 'All fields are required' });
     }
 
@@ -213,7 +264,7 @@ app.post('/register', async (req, res) => {
 
         // Indsæt bruger i databasen
         const result = await client.query(
-            'INSERT INTO users (name, email, password, relation_to_dementia_person, termsAccepted) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
+            'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, termsAccepted) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
             [name, email, hashedPassword, relationToDementiaPerson, termsAccepted]
         );
 
@@ -241,50 +292,7 @@ app.post('/register', async (req, res) => {
     }
 
 
-    const app = express();
-    app.use(express.json()); // Gør det muligt at parse JSON
-    
-    const client = new Client({
-        connectionString: process.env.DATABASE_URL,
-    });
-    
-    client.connect();
-    
-    // Login-rute
-    app.post('/login', async (req, res) => {
-      console.log('POST /login');
-      console.log('Body:', req.body);
-  
-      const { email, password } = req.body;
-  
-      if (!email || !password) {
-          return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
-      }
-  
-      try {
-          const userResult = await client.query('SELECT * FROM users WHERE email = $1', [email]);
-  
-          if (userResult.rows.length === 0) {
-              return res.status(401).json({ error: 'Ugyldig email eller adgangskode' });
-          }
-  
-          const user = userResult.rows[0];
-          const isMatch = await bcrypt.compare(password, user.password);
-  
-          if (!isMatch) {
-              return res.status(401).json({ error: 'Ugyldig email eller adgangskode' });
-          }
-  
-          res.status(200).json({
-              id: user.id,
-              name: user.name,
-              email: user.email
-          });
-      } catch (error) {
-          console.error('Fejl ved login:', error);
-          res.status(500).json({ error: 'Serverfejl under login' });
-      }
-  });
+
   
 });
 
@@ -3518,9 +3526,53 @@ app.get('/logs-with-appointments', async (req, res) => {
   }
 });
 
+// Login endpoint
+app.post('/login', async (req, res) => {
+    console.log('POST /login');
+    console.log('Body:', req.body);
+
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
+    }
+
+    try {
+        const userResult = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(401).json({ error: 'Ugyldig email eller adgangskode' });
+        }
+
+        const user = userResult.rows[0];
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Ugyldig email eller adgangskode' });
+        }
+
+        // Send alle nødvendige brugerdata tilbage
+        res.status(200).json({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            relationToDementiaPerson: user.relation_to_dementia_person,
+            profile_image: user.profile_image
+        });
+    } catch (error) {
+        console.error('Fejl ved login:', error);
+        res.status(500).json({ error: 'Serverfejl under login' });
+    }
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+    res.json({ message: 'Aldra Server is running' });
+});
+
 // Start server
 const PORT = 5001;
-const HOST = '192.168.0.234';
+const HOST = '0.0.0.0';  // Lyt på alle IP-adresser
 
 app.listen(PORT, HOST, () => {
     console.log(`Server kørende på http://${HOST}:${PORT}/`);

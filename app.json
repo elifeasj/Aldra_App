@@ -1,5 +1,9 @@
 {
   "expo": {
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "http://192.168.0.215:5001"
+    },
     "name": "aldraapp",
     "slug": "aldraapp",
     "version": "1.0.0",
