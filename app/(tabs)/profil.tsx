@@ -11,6 +11,7 @@ interface UserData {
   id?: number; // Tilføjet id, hvis det modtages
   name: string;
   relationToDementiaPerson: string;
+  familyId?: number;
 }
 
 const Profil = () => {
@@ -32,8 +33,51 @@ const Profil = () => {
   };
 
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [familyLink, setFamilyLink] = useState<string | null>(null);
+  const [familyMembers, setFamilyMembers] = useState<UserData[]>([]);
 
   // Indlæs profilbillede når brugerdata indlæses
+  const generateFamilyLink = async () => {
+    try {
+      const userDataString = await AsyncStorage.getItem('userData');
+      if (!userDataString) return;
+
+      const userData = JSON.parse(userDataString);
+      const response = await fetch(`${API_URL}/family-link/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_id: userData.id }),
+      });
+
+      if (!response.ok) throw new Error('Failed to generate family link');
+
+      const data = await response.json();
+      setFamilyLink(data.shareLink);
+      Alert.alert('Link genereret', 'Del dette link med dine familiemedlemmer for at invitere dem til Aldra.');
+    } catch (error) {
+      console.error('Error generating family link:', error);
+      Alert.alert('Fejl', 'Der opstod en fejl ved generering af familie-link');
+    }
+  };
+
+  const loadFamilyMembers = async () => {
+    try {
+      const userDataString = await AsyncStorage.getItem('userData');
+      if (!userDataString) return;
+
+      const userData = JSON.parse(userDataString);
+      const response = await fetch(`${API_URL}/users/family/${userData.id}`);
+      if (!response.ok) throw new Error('Failed to fetch family members');
+
+      const data = await response.json();
+      setFamilyMembers(data);
+    } catch (error) {
+      console.error('Error fetching family members:', error);
+    }
+  };
+
   useEffect(() => {
     const loadProfileImage = async () => {
       try {
@@ -242,7 +286,7 @@ const Profil = () => {
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.name}>{formatName(userData.name)}</Text>
-            <Text style={styles.subtitle}>
+            <Text style={styles.profileSubtitle}>
               {formatRelation(userData.relationToDementiaPerson)} til person med demens
             </Text>
           </View>
@@ -266,7 +310,7 @@ const Profil = () => {
         <Text style={styles.sectionTitle}>Familien</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.familyScroll}>
           {['Peter', 'Lena', 'Claus', 'Pia'].map((name, index) => (
-            <View key={index} style={styles.familyMember}>
+            <View key={index} style={styles.familyMemberCard}>
               <View style={styles.familyImageContainer}>
                 <Image
                   source={require('../../assets/images/frame_1.png')}
@@ -305,6 +349,26 @@ const Profil = () => {
             <Text style={styles.viewLogText}>Se log</Text>
           </TouchableOpacity>
         </TouchableOpacity>
+      </View>
+
+      {/* Familie sektion */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Familie</Text>
+        <TouchableOpacity style={styles.button} onPress={generateFamilyLink}>
+          <Text style={styles.buttonText}>Generer familie-link</Text>
+        </TouchableOpacity>
+
+        {familyMembers.length > 0 && (
+          <View style={styles.familyList}>
+            <Text style={styles.subtitle}>Familiemedlemmer:</Text>
+            {familyMembers.map((member, index) => (
+              <View key={index} style={styles.familyListItem}>
+                <Text style={styles.familyListName}>{member.name}</Text>
+                <Text style={styles.familyListRelation}>{member.relationToDementiaPerson}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       <View style={styles.settingsSection}>
@@ -355,6 +419,55 @@ const Profil = () => {
 };
 
 const styles = StyleSheet.create({
+  section: {
+    padding: 20,
+    backgroundColor: '#fff',
+    marginBottom: 10,
+    borderRadius: 10,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#42865F',
+  },
+  button: {
+    backgroundColor: '#42865F',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  familyList: {
+    marginTop: 15,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+    color: '#333',
+  },
+  familyListItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  familyListName: {
+    fontSize: 16,
+    color: '#333',
+  },
+  familyListRelation: {
+    fontSize: 14,
+    color: '#666',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -411,7 +524,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     color: '#42865F',
   },
-  subtitle: {
+  profileSubtitle: {
     fontSize: 16,
     color: '#666',
     fontFamily: 'RedHatDisplay_400Regular',
@@ -420,11 +533,7 @@ const styles = StyleSheet.create({
   linkSection: {
     padding: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'RedHatDisplay_700Bold',
-    marginBottom: 10,
-  },
+
   linkContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -456,7 +565,7 @@ const styles = StyleSheet.create({
   familyScroll: {
     marginTop: 10,
   },
-  familyMember: {
+  familyMemberCard: {
     alignItems: 'center',
     marginRight: 15,
   },

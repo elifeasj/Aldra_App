@@ -49,6 +49,30 @@ const client = new Client({
 // Initialize database
 async function initializeDatabase() {
   try {
+    // Create family_links table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS family_links (
+        id SERIAL PRIMARY KEY,
+        creator_user_id INTEGER NOT NULL,
+        unique_code VARCHAR(10) UNIQUE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (creator_user_id) REFERENCES users(id)
+      );
+    `);
+    console.log('Family links table created successfully');
+
+    // Add family_id column to users table if it doesn't exist
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name = 'users' AND column_name = 'family_id') THEN
+          ALTER TABLE users ADD COLUMN family_id INTEGER REFERENCES users(id);
+        END IF;
+      END $$;
+    `);
+    console.log('Family ID column added to users table if it did not exist');
+
     // Drop appointments_and_logs table if it exists
     await client.query('DROP TABLE IF EXISTS appointments_and_logs CASCADE');
 
@@ -306,6 +330,74 @@ app.put('/logs/:id', async (req, res) => {
   }
 });
 
+// Generate a unique family link
+app.post('/family-link/generate', async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    // Generate a random 10-character code
+    const uniqueCode = Math.random().toString(36).substring(2, 12).toUpperCase();
+
+    // Save the link in the database
+    const result = await client.query(
+      'INSERT INTO family_links (creator_user_id, unique_code) VALUES ($1, $2) RETURNING *',
+      [user_id, uniqueCode]
+    );
+
+    res.json({
+      code: uniqueCode,
+      shareLink: `aldra://register?familyCode=${uniqueCode}`
+    });
+  } catch (error) {
+    console.error('Error generating family link:', error);
+    res.status(500).json({ error: 'Error generating family link' });
+  }
+});
+
+// Validate a family code
+app.get('/family-link/validate/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+
+    const result = await client.query(
+      'SELECT creator_user_id FROM family_links WHERE unique_code = $1',
+      [code]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invalid family code' });
+    }
+
+    res.json({ creator_user_id: result.rows[0].creator_user_id });
+  } catch (error) {
+    console.error('Error validating family code:', error);
+    res.status(500).json({ error: 'Error validating family code' });
+  }
+});
+
+// Get family members
+app.get('/users/family/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Hent alle brugere der har den givne bruger som deres family_id
+    const result = await client.query(`
+      SELECT id, name, relation_to_dementia_person
+      FROM users
+      WHERE family_id = $1
+    `, [userId]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching family members:', error);
+    res.status(500).json({ error: 'Error fetching family members' });
+  }
+});
+
 // Start server
 const PORT = 5001;
 app.listen(PORT, '0.0.0.0', () => {
@@ -353,9 +445,9 @@ app.post('/login', async (req, res) => {
 
 // Root endpoint for health check
 app.post('/register', async (req, res) => {
-    const { name, email, password, relationToDementiaPerson, termsAccepted } = req.body;
+    const { name, email, password, relationToDementiaPerson, termsAccepted, familyCode } = req.body;
     console.log('=== START REGISTRATION ===');
-    const maskedData = maskSensitiveData({ name, email, password, relationToDementiaPerson, termsAccepted });
+    const maskedData = maskSensitiveData({ name, email, password, relationToDementiaPerson, termsAccepted, familyCode });
     console.log('Registration attempt:', maskedData);
     console.log('=== END REGISTRATION ===');
 
@@ -374,14 +466,32 @@ app.post('/register', async (req, res) => {
             return res.status(409).json({ error: 'User already exists' });
         }
 
+        // Start a transaction
+        await client.query('BEGIN');
+
         // Hash adgangskoden før gemning
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        let family_id = null;
+        if (familyCode) {
+            // Validate family code and get creator_user_id
+            const familyResult = await client.query(
+                'SELECT creator_user_id FROM family_links WHERE unique_code = $1',
+                [familyCode]
+            );
+
+            if (familyResult.rows.length > 0) {
+                family_id = familyResult.rows[0].creator_user_id;
+            }
+        }
+
         // Indsæt bruger i databasen
         const result = await client.query(
-            'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, termsAccepted) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
-            [name, email, hashedPassword, relationToDementiaPerson, termsAccepted]
+            'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, termsAccepted, family_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, email, relation_to_dementia_person, family_id',
+            [name, email, hashedPassword, relationToDementiaPerson, termsAccepted, family_id]
         );
+
+        await client.query('COMMIT');
 
         const newUser = result.rows[0];
         console.log('User registered successfully:', newUser);
@@ -390,9 +500,11 @@ app.post('/register', async (req, res) => {
             id: newUser.id,
             name: newUser.name,
             email: newUser.email,
-            relationToDementiaPerson: newUser.relation_to_dementia_person
+            relationToDementiaPerson: newUser.relation_to_dementia_person,
+            familyId: newUser.family_id
         });
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Detailed error registering user:', {
             error: error.message,
             stack: error.stack,

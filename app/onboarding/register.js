@@ -13,8 +13,18 @@ export default function Register() {
     const [relation, setRelation] = useState('');
     const [showRelationPicker, setShowRelationPicker] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
+    const [familyCode, setFamilyCode] = useState('');
 
     const relations = ["Ægtefælle/Partner", "Barn", "Søskende", "Forældre", "Andet"];
+
+    // Check for family code in URL when component mounts
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('familyCode');
+        if (code) {
+            setFamilyCode(code);
+        }
+    }, []);
 
     const registerUser = async () => {
         if (!name || !email || !password || !relation || !termsAccepted) {
@@ -28,6 +38,7 @@ export default function Register() {
             password,
             relationToDementiaPerson: relation,
             termsAccepted,
+            familyCode: familyCode || undefined // Only include if present
         };
 
         try {
