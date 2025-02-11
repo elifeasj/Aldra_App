@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 
-const API_URL = 'http://192.168.0.215:8081'; // Server API URL
+const API_URL = 'http://192.168.0.215:5001'; // Server API URL
 
 interface UserData {
   id?: number; // Tilføjet id, hvis det modtages
@@ -72,6 +72,14 @@ const Profil = () => {
     } catch (error) {
       console.error('Error loading user data:', error);
     }
+  };
+
+  // Funktion til at formatere navn med stort første bogstav
+  const formatName = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   };
 
   // Funktion til at beregne initialer ud fra brugerens navn
@@ -233,7 +241,7 @@ const Profil = () => {
             </TouchableOpacity>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.name}>{userData.name}</Text>
+            <Text style={styles.name}>{formatName(userData.name)}</Text>
             <Text style={styles.subtitle}>
               {formatRelation(userData.relationToDementiaPerson)} til person med demens
             </Text>

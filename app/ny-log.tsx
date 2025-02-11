@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = 'http://192.168.0.234:5001';
+const API_URL = 'http://192.168.0.215:5001';
 
 export default function NyLog() {
     const params = useLocalSearchParams();
@@ -20,14 +21,31 @@ export default function NyLog() {
 
     useEffect(() => {
         const fetchExistingLog = async () => {
+            console.log('Log ID from params:', logId);
             if (logId) {
                 try {
-                    const response = await fetch(`${API_URL}/logs/${logId}`);
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch log');
+                    const userDataString = await AsyncStorage.getItem('userData');
+                    if (!userDataString) {
+                        console.error('No user data found');
+                        return;
                     }
-                    const log = await response.json();
-                    console.log('Fetched existing log:', log);
+                    const userData = JSON.parse(userDataString);
+                    const user_id = userData.id;
+                    console.log('User ID:', user_id);
+
+                    const url = `${API_URL}/logs/${logId}?user_id=${user_id}`;
+                    console.log('Fetching log from URL:', url);
+
+                    const response = await fetch(url);
+                    const responseText = await response.text();
+                    console.log('Raw server response:', responseText);
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch log: ${responseText}`);
+                    }
+
+                    const log = JSON.parse(responseText);
+                    console.log('Parsed log data:', log);
                     
                     // Opdater form med eksisterende data
                     setTitle(log.title || '');
@@ -42,17 +60,22 @@ export default function NyLog() {
     }, [logId]);
 
     const handleSubmit = async () => {
+        if (!title.trim() || !description.trim()) {
+            return;
+        }
+
         try {
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (!userDataString) {
+                console.error('No user data found');
+                return;
+            }
+            const userData = JSON.parse(userDataString);
+            const user_id = userData.id;
+
             const method = logId ? 'PUT' : 'POST';
             const url = logId ? `${API_URL}/logs/${logId}` : `${API_URL}/logs`;
             
-            console.log('Sending log with data:', {
-                title,
-                description,
-                date,
-                appointment_id
-            });
-
             const response = await fetch(url, {
                 method,
                 headers: {
@@ -62,17 +85,18 @@ export default function NyLog() {
                     title,
                     description,
                     date,
-                    appointment_id
+                    appointment_id,
+                    user_id
                 }),
             });
 
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                console.error('Server error:', await response.text());
+                return;
             }
 
             const result = await response.json();
             console.log('Server response:', result);
-
             router.back();
         } catch (error) {
             console.error('Error saving log:', error);

@@ -5,7 +5,16 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function Oversigt() {
     const { userName } = useLocalSearchParams();
-    const displayName = userName || 'Bruger';
+
+    // Funktion til at formatere navn med stort første bogstav
+    const formatName = (name: string) => {
+        return name
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    };
+
+    const displayName = userName ? formatName(userName as string) : 'Bruger';
 
     return (
         <ScrollView style={styles.container}>
