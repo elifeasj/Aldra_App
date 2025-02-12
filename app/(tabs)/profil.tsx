@@ -338,7 +338,9 @@ const Profil = () => {
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Dit personlige Aldra-link</Text>
+      <View style={styles.sectionTitleContainer}>
+        <Text style={styles.sectionTitle}>Dit personlige Aldra-link</Text>
+      </View>
       <View style={styles.linkSection}>
         <View style={styles.linkSectionContent}>
           <View style={styles.linkContainer}>
@@ -374,7 +376,9 @@ const Profil = () => {
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Familien</Text>
+      <View style={styles.sectionTitleContainer}>
+        <Text style={styles.sectionTitle}>Familien</Text>
+      </View>
       <View style={styles.familySection}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.familyScroll}>
           {[...familyMembers, ...Array(4 - familyMembers.length).fill(null)].map((member: UserData | null, index: number) => (
@@ -408,11 +412,13 @@ const Profil = () => {
       </View>
 
       <View style={styles.logSection}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Seneste log</Text>
-          <TouchableOpacity>
-            <Text style={styles.viewAllText}>Vis alle</Text>
-          </TouchableOpacity>
+        <View style={styles.sectionTitleContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Seneste log</Text>
+            <TouchableOpacity>
+              <Text style={styles.viewAllText}>Vis alle</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {userLogs.map((log: LogData) => (
@@ -420,14 +426,16 @@ const Profil = () => {
             <View style={styles.titleRow}>
               <View style={styles.titleAndDescription}>
                 <Text style={styles.logTitle} numberOfLines={1}>{log.title}</Text>
-                <Text style={styles.timeText} numberOfLines={1}>
+                <Text style={styles.dateText} numberOfLines={1}>
                   {`${new Date(log.created_at).getDate()}. ${new Date(log.created_at).toLocaleString('da-DK', { month: 'long' })} ${new Date(log.created_at).getFullYear()}`}
                 </Text>
               </View>
-              <TouchableOpacity style={styles.viewLogButton} onPress={() => handleViewLog(log)}>
-                <Ionicons name="eye-outline" size={16} color="#ffffff" />
-                <Text style={styles.viewLogText}>Se log</Text>
-              </TouchableOpacity>
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity style={styles.viewLogButton} onPress={() => handleViewLog(log)}>
+                  <Ionicons name="eye-outline" size={16} color="#ffffff" />
+                  <Text style={styles.viewLogText}>Se log</Text>
+                </TouchableOpacity>
+              </View>
             </View>
                       </View>
         ))}
@@ -452,8 +460,10 @@ const Profil = () => {
         )}
       </View>
 
+      <View style={styles.sectionTitleContainer}>
+        <Text style={styles.sectionTitle}>Indstillinger</Text>
+      </View>
       <View style={styles.settingsSection}>
-      <Text style={styles.sectionTitle}>Indstillinger</Text>
         <TouchableOpacity style={styles.settingsItem}>
           <View style={styles.settingsIcon}>
             <Ionicons name="person-outline" size={24} color="#000" />
@@ -479,7 +489,9 @@ const Profil = () => {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Juridisk</Text>
+      <View style={styles.sectionTitleContainer}>
+        <Text style={styles.sectionTitle}>Juridisk</Text>
+      </View>
       <View style={styles.settingsSection}>
         <TouchableOpacity style={styles.settingsItem}>
           <View style={styles.settingsIcon}>
@@ -498,11 +510,12 @@ const Profil = () => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Log ud</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.versionText}>Version nummer 00.01</Text>
+      <View style={styles.bottomContainer}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Log ud</Text>
+        </TouchableOpacity>
+        <Text style={styles.versionText}>Version nummer 00.01</Text>
+      </View>
     </ScrollView>
   );
 };
@@ -511,29 +524,37 @@ const styles = StyleSheet.create({
   logItem: {
     backgroundColor: '#fff',
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: '#E5E5E5',
-    borderRadius: 8,
+    borderRadius: 12,
+    marginTop: 10,
   },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   titleAndDescription: {
     flex: 1,
-    marginRight: 16,
+    marginRight: 14,
+  },
+  buttonContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
   },
   logTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '500',
     color: '#000',
-    marginBottom: 4,
+    marginBottom: 8,
+    fontFamily: 'RedHatDisplay',
   },
-  timeText: {
+  dateText: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'RedHatDisplay_400Regular',
   },
   viewLogButton: {
     flexDirection: 'row',
@@ -550,6 +571,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'RedHatDisplay_700Bold',
   },
   bottomBorder: {
     height: 1,
@@ -557,8 +579,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   logSection: {
-    padding: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     backgroundColor: '#fff',
+    marginBottom: 8,
   },
   logDate: {
     fontSize: 14,
@@ -570,13 +594,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
-    marginLeft: -20,
-    paddingRight: -20,
+    marginLeft: -16,
+    paddingRight: -16,
   },
   viewAllText: {
     color: '#42865F',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
+    fontFamily: 'RedHatDisplay_500Medium',
   },
   noLogsText: {
     textAlign: 'center',
@@ -680,17 +705,36 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   section: {
-    padding: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     backgroundColor: '#fff',
-    marginBottom: 10,
+    marginBottom: 8,
     borderRadius: 10,
+  },
+  settingsSection: {
+    backgroundColor: '#fff',
+    marginBottom: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+  },
+  sectionTitleContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
   },
   sectionTitle: {
     fontSize: 20,
     fontFamily: 'RedHatDisplay_500Medium',
-    marginBottom: 15,
-    marginHorizontal: 20,
     color: '#000000',
+  },
+  bottomContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 30,
+    marginBottom: 30,
+    backgroundColor: '#fff',
   },
   button: {
     backgroundColor: '#42865F',
@@ -709,10 +753,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderWidth: 1,
     borderColor: '#E5E5E5',
-
+    marginTop: 16,
   },
   familyScroll: {
     flexGrow: 0,
@@ -723,13 +768,13 @@ const styles = StyleSheet.create({
     width: 70,
   },
   familyImageContainer: {
-    width: 60,
-    height: 60,
+    width: 55,
+    height: 55,
     borderRadius: 30,
     overflow: 'hidden',
     marginBottom: 0,
     backgroundColor: '#F5F5F5',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#42865F',
   },
   emptyFamilyContainer: {
@@ -768,8 +813,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   addFamilyButton: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     borderRadius: 30,
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
@@ -795,17 +840,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  settingsSection: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    marginBottom: 20,
-    paddingVertical: 8,
-  },
   settingsItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    marginHorizontal: 20,
+    marginHorizontal: 0,
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
@@ -824,22 +863,25 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: '#EEEEEE',
-    padding: 16,
+    paddingTop: 15,
+    paddingBottom: 15,
+    paddingRight: 22,
+    paddingLeft: 22,
     borderRadius: 10,
-    marginTop: 32,
     marginHorizontal: 20,
-    marginBottom: 8,
     alignItems: 'center',
   },
   logoutText: {
     color: '#000000',
     fontSize: 16,
+    fontFamily: 'RedHatDisplay_400Regular',
     fontWeight: 'medium',
   },
   versionText: {
     textAlign: 'center',
     color: '#999',
-    marginBottom: 20,
+    marginBottom: 0,
+    paddingRight: 20,
   },
 
   linkSection: {
@@ -847,7 +889,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 30,
     borderRadius: 12,
-    padding: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginTop: 16,
   },
   linkSectionContent: {
     flexDirection: 'row',
@@ -863,7 +907,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     marginHorizontal: 0,
-    marginBottom: 0,
   },
   linkText: {
     flex: 1,

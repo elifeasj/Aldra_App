@@ -26,6 +26,7 @@
     "@react-navigation/core": "^7.3.1",
     "@react-navigation/native": "^7.0.14",
     "cors": "^2.8.5",
+    "expo-clipboard": "~7.0.1",
     "expo-font": "~13.0.3",
     "expo-image-picker": "~16.0.6",
     "expo-linking": "~7.0.5",
@@ -45,8 +46,7 @@
     "react-native-image-picker": "^8.0.0",
     "react-native-modal-dropdown": "^1.0.2",
     "react-native-select-dropdown": "^4.0.1",
-    "react-native-web": "~0.19.13",
-    "expo-clipboard": "~7.0.1"
+    "react-native-web": "~0.19.13"
   },
   "expo": {
     "doctor": {
@@ -65,8 +65,7 @@
     "@types/jest": "^29.5.14",
     "@types/pg": "^8.11.11",
     "@types/react": "^18.3.18",
-    "@types/react-native": "^0.72.8",
-    "expo": "~52.0.32",
+    "expo": "52.0.33",
     "typescript": "^5.7.3"
   }
 }
