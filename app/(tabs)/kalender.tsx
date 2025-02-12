@@ -28,7 +28,7 @@ interface MarkedDates {
 }
 
 // API base URL
-const API_URL = 'http://192.168.0.215:5001';
+import { API_URL } from '../../config';
 
 const dayNames = {
     'mon': 'man',
@@ -217,7 +217,7 @@ export default function Kalender() {
             }
             
             if (finalStatus !== 'granted') {
-                alert('Du skal give tilladelse til notifikationer for at modtage påmindelser!');
+                Alert.alert('Du skal give tilladelse til notifikationer for at modtage påmindelser!');
                 return;
             }
 
@@ -497,7 +497,7 @@ export default function Kalender() {
     const handleCreateAppointment = async () => {
         console.log('Værdier før oprettelse af aftale:', newAppointment); // Tilføj logbesked
         if (!newAppointment.title || !newAppointment.date || !newAppointment.start_time || !newAppointment.end_time) {
-            alert('Udfyld venligst alle påkrævede felter');
+            Alert.alert('Udfyld venligst alle påkrævede felter');
             return;
         }
 
@@ -557,7 +557,7 @@ export default function Kalender() {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('Server error:', errorText);
-                alert('Der opstod en fejl: ' + (errorText || 'Ukendt fejl'));
+                Alert.alert('Der opstod en fejl', errorText || 'Ukendt fejl');
                 return;
             }
 
@@ -598,7 +598,7 @@ export default function Kalender() {
             }
         } catch (error) {
             console.error('Error adding appointment:', error);
-            alert('Der opstod en fejl ved oprettelse af aftalen');
+            Alert.alert('Der opstod en fejl ved oprettelse af aftalen');
         }
     };
 
@@ -629,7 +629,7 @@ export default function Kalender() {
             fetchDatesWithAppointments();
         } catch (error) {
             console.error('Error deleting appointment:', error);
-            alert('Der opstod en fejl ved sletning af aftalen');
+            Alert.alert('Der opstod en fejl ved sletning af aftalen');
         }
     };
 

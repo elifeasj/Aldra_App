@@ -5,8 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-
-const API_URL = 'http://192.168.0.215:5001'; // Server API URL
+import { API_URL } from '../../config';
 
 interface UserData {
   id?: number; // Tilføjet id, hvis det modtages
@@ -14,6 +13,14 @@ interface UserData {
   relationToDementiaPerson: string;
   familyId?: number;
   profileImage?: string;
+}
+
+interface LogData {
+  id: number;
+  title: string;
+  description: string;
+  date: string;
+  created_at: string;
 }
 
 const Profil = () => {
@@ -36,7 +43,17 @@ const Profil = () => {
 
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [familyMembers, setFamilyMembers] = useState<UserData[]>([]);
+  const [userLogs, setUserLogs] = useState<LogData[]>([]);
 
+  const handleViewLog = (log: LogData) => {
+    router.push({
+      pathname: '/ny-log',
+      params: { 
+        date: log.created_at,
+        logId: log.id
+      }
+    });
+  };
 
   const loadFamilyMembers = async () => {
     try {
@@ -51,6 +68,32 @@ const Profil = () => {
       setFamilyMembers(data);
     } catch (error) {
       console.error('Error fetching family members:', error);
+    }
+  };
+
+  const loadUserLogs = async () => {
+    try {
+      console.log('Loading user logs...');
+      const userDataString = await AsyncStorage.getItem('userData');
+      if (!userDataString) {
+        console.log('No user data found');
+        return;
+      }
+
+      const userData = JSON.parse(userDataString);
+      console.log('User ID:', userData.id);
+      
+      const response = await fetch(`${API_URL}/user-logs/${userData.id}`);
+      if (!response.ok) {
+        console.error('Failed to fetch logs:', response.status);
+        throw new Error('Failed to fetch user logs');
+      }
+
+      const data = await response.json();
+      console.log('Fetched logs:', data);
+      setUserLogs(data);
+    } catch (error) {
+      console.error('Error fetching user logs:', error);
     }
   };
 
@@ -73,7 +116,12 @@ const Profil = () => {
   }, []);
 
   useEffect(() => {
-    loadUserData();
+    const initializeData = async () => {
+      await loadUserData();
+      await loadFamilyMembers();
+      await loadUserLogs();
+    };
+    initializeData();
   }, []);
 
   const loadUserData = async () => {
@@ -359,29 +407,34 @@ const Profil = () => {
         </ScrollView>
       </View>
 
-      <Text style={styles.sectionTitle}>Seneste log</Text>
       <View style={styles.logSection}>
         <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Seneste log</Text>
           <TouchableOpacity>
             <Text style={styles.viewAllText}>Vis alle</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.logItem}>
-          <Text style={styles.logTitle}>Besøg mor</Text>
-          <Text style={styles.logDate}>22. november 2024</Text>
-          <TouchableOpacity style={styles.viewLogButton}>
-            <Text style={styles.viewLogText}>Se log</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
+        {userLogs.map((log: LogData) => (
+          <View key={log.id} style={styles.logItem}>
+            <View style={styles.titleRow}>
+              <View style={styles.titleAndDescription}>
+                <Text style={styles.logTitle} numberOfLines={1}>{log.title}</Text>
+                <Text style={styles.timeText} numberOfLines={1}>
+                  {`${new Date(log.created_at).getDate()}. ${new Date(log.created_at).toLocaleString('da-DK', { month: 'long' })} ${new Date(log.created_at).getFullYear()}`}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.viewLogButton} onPress={() => handleViewLog(log)}>
+                <Ionicons name="eye-outline" size={16} color="#42865F" />
+                <Text style={styles.viewLogText}>Se log</Text>
+              </TouchableOpacity>
+            </View>
+                      </View>
+        ))}
 
-        <TouchableOpacity style={styles.logItem}>
-          <Text style={styles.logTitle}>Snak med overlæge</Text>
-          <Text style={styles.logDate}>29. november 2024</Text>
-          <TouchableOpacity style={styles.viewLogButton}>
-            <Text style={styles.viewLogText}>Se log</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
+        {userLogs.length === 0 && (
+          <Text style={styles.noLogsText}>Ingen logs at vise</Text>
+        )}
       </View>
 
       {/* Familie sektion */}
@@ -455,6 +508,114 @@ const Profil = () => {
 };
 
 const styles = StyleSheet.create({
+  logItem: {
+    backgroundColor: '#fff',
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  titleAndDescription: {
+    flex: 1,
+    marginRight: 16,
+  },
+  logTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
+  },
+  timeText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  viewLogButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#42865F',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    gap: 4,
+  },
+  viewLogText: {
+    color: '#42865F',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bottomBorder: {
+    height: 1,
+    backgroundColor: '#E5E5E5',
+    marginTop: 16,
+  },
+  logSection: {
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  logDate: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    marginLeft: -20,
+    paddingRight: -20,
+  },
+  viewAllText: {
+    color: '#42865F',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  noLogsText: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 10,
+    fontStyle: 'italic',
+  },
+  logHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logUserName: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  userLogs: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    width: '100%',
+  },
+  logEntry: {
+    marginBottom: 4,
+    padding: 4,
+    backgroundColor: '#fff',
+    borderRadius: 4,
+  },
+  logEntryTitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#333',
+  },
+  logEntryDate: {
+    fontSize: 10,
+    color: '#666',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -719,48 +880,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ffffff',
     fontFamily: 'RedHatDisplay_500Medium',
-  },
-  logSection: {
-    marginTop: 10,
-    marginHorizontal: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    marginHorizontal: 0,
-  },
-  viewAllText: {
-    color: '#42865F',
-    fontSize: 14,
-    marginRight: 20,
-  },
-  logItem: {
-    backgroundColor: '#F5F5F5',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  logTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  logDate: {
-    color: '#666',
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  viewLogButton: {
-    backgroundColor: '#42865F',
-    padding: 8,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  viewLogText: {
-    color: '#fff',
-    fontSize: 14,
   },
   subtitle: {
     fontSize: 16,

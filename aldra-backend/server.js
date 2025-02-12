@@ -749,6 +749,24 @@ app.delete('/appointments/:id', async (req, res) => {
 });
 
 // Endpoint to update user's last activity
+// Get latest logs for a user
+app.get('/user-logs/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const result = await client.query(
+      `SELECT * FROM logs 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC 
+       LIMIT 3`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching user logs:', error);
+    res.status(500).json({ error: 'Error fetching user logs' });
+  }
+});
+
 app.post('/api/update-activity', async (req, res) => {
   try {
     const { userId } = req.body;

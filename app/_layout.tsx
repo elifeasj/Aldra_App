@@ -1,7 +1,8 @@
+import React from 'react';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View, StatusBar, Appearance } from 'react-native';
 import { 
     useFonts,
     RedHatDisplay_400Regular,
@@ -19,6 +20,16 @@ export default function Layout() {
         RedHatDisplay_700Bold,
     });
 
+    const [isDarkMode, setIsDarkMode] = React.useState(Appearance.getColorScheme() === 'dark');
+
+    useEffect(() => {
+        const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+            setIsDarkMode(colorScheme === 'dark');
+        });
+
+        return () => subscription.remove();
+    }, []);
+
     useEffect(() => {
         if (fontsLoaded) {
             // Skjul splash screen når fonts er loaded
@@ -31,7 +42,12 @@ export default function Layout() {
     }
 
     return (
-        <Stack screenOptions={{
+        <>
+            <StatusBar
+                barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+                backgroundColor={isDarkMode ? '#000000' : '#FFFFFF'}
+            />
+            <Stack screenOptions={{
             headerShown: false,
         }}>
             <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -42,5 +58,6 @@ export default function Layout() {
             <Stack.Screen name="onboarding/onboarding_5" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding/register" options={{ headerShown: false }} />
         </Stack>
+        </>
     );
 }

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Image, TextI
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { endpoints } from '../../config';
 
 export default function Login() {
     const router = useRouter();
@@ -12,7 +13,7 @@ export default function Login() {
 
     const handleLogin = async () => {
         try {
-            const response = await fetch('http://192.168.0.215:5001/login', {
+            const response = await fetch(endpoints.login, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
