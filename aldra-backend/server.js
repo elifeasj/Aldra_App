@@ -750,6 +750,101 @@ app.delete('/appointments/:id', async (req, res) => {
 
 // Endpoint to update user's last activity
 // Get latest logs for a user
+// Update user data
+app.put('/users/:userId', async (req, res) => {
+  console.log('Received update request for user:', req.params.userId);
+  console.log('Update data:', req.body);
+  try {
+    const { userId } = req.params;
+    const { name, email, password, birthday } = req.body;
+
+    // Verify that the user exists first
+    const userCheck = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (userCheck.rows.length === 0) {
+      console.log('User not found:', userId);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log('Found user:', userCheck.rows[0]);
+
+    // Start building the update query
+    let updateFields = [];
+    let queryParams = [];
+    let paramCounter = 1;
+
+    if (name) {
+      updateFields.push(`name = $${paramCounter}`);
+      queryParams.push(name);
+      paramCounter++;
+    }
+
+    if (email) {
+      updateFields.push(`email = $${paramCounter}`);
+      queryParams.push(email);
+      paramCounter++;
+    }
+
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateFields.push(`hashed_password = $${paramCounter}`);
+      queryParams.push(hashedPassword);
+      paramCounter++;
+    }
+
+    if (birthday) {
+      updateFields.push(`birthday = $${paramCounter}`);
+      queryParams.push(birthday);
+      paramCounter++;
+    }
+
+    // Add the userId as the last parameter
+    queryParams.push(userId);
+
+    // If there are no fields to update, return early
+    if (updateFields.length === 0) {
+      console.log('No fields to update');
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    console.log('Building update query with fields:', updateFields);
+    console.log('And parameters:', queryParams);
+
+    const query = `
+      UPDATE users
+      SET ${updateFields.join(', ')},
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $${paramCounter}
+      RETURNING id, name, email, birthday, profile_image, relation_to_dementia_person
+    `;
+
+    console.log('Executing query:', query);
+    const result = await client.query(query, queryParams);
+
+    if (result.rows.length === 0) {
+      console.log('No rows updated');
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log('Successfully updated user:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Detailed error:', error);
+    if (error.code === '23505') {
+      // Unique constraint violation
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+    if (error.code === '23502') {
+      // Not null constraint violation
+      return res.status(400).json({ error: 'Required field missing' });
+    }
+    res.status(500).json({ 
+      error: 'Error updating user data',
+      details: error.message,
+      code: error.code
+    });
+  }
+});
+
 app.get('/user-logs/:userId', async (req, res) => {
   try {
     const { userId } = req.params;

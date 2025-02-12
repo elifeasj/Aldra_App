@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Share, Animated, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { API_URL } from '../../config';
 
 interface UserData {
@@ -96,6 +96,24 @@ const Profil = () => {
       console.error('Error fetching user logs:', error);
     }
   };
+
+  const revalidate = useCallback(() => {
+    loadUserData();
+    getUniqueAldraLink();
+    loadFamilyMembers();
+    loadUserLogs();
+  }, []);
+
+  useEffect(() => {
+    revalidate();
+  }, [revalidate]);
+
+  // Opdater data når vi kommer tilbage til denne side
+  useFocusEffect(
+    useCallback(() => {
+      revalidate();
+    }, [revalidate])
+  );
 
   useEffect(() => {
     const loadProfileImage = async () => {
@@ -194,105 +212,7 @@ const Profil = () => {
     return relation;
   };
 
-  // Expo ImagePicker-version af billedvælgelse
-  const pickImage = async () => {
-    // Anmod om tilladelse til at få adgang til fotobiblioteket
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert("Tilladelse krævet", "Tilladelse til fotobibliotek kræves!");
-      return;
-    }
-    
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'], // Brug en streng i stedet for MediaType
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-    
-    // Tjek for aflysning ved at bruge den nye egenskab "canceled"
-    if (!result.canceled) {
-      if (result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        setProfileImage(asset.uri);
-        // Send også brugerens id med, hvis det findes
-        console.log('User ID before upload:', userData.id); // Log userId for debugging
-        uploadProfileImage({ uri: asset.uri, type: 'image/jpeg', fileName: 'photo.jpg' }, userData.id);
-      }
-    }
-  };
-  
-  const uploadProfileImage = async (
-    asset: { uri?: string; type?: string; fileName?: string },
-    userId?: number
-  ) => {
-    if (!asset.uri) {
-      console.error('Ingen uri modtaget for billede');
-      return;
-    }
-  
-    const formData = new FormData();
-    formData.append(
-      'profileImage',
-      {
-        uri: asset.uri,
-        type: asset.type,
-        name: asset.fileName || 'photo.jpg',
-      } as any
-    );
-  
-    if (userId) {
-      formData.append('userId', String(userId));
-    }
-  
-    console.log('Uploader billede for bruger:', userId);
-  
-    try {
-      const response = await fetch(`${API_URL}/upload-profile-image`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-        },
-        body: formData,
-      });
-  
-      const text = await response.text();
-      console.log('Server svar:', text);
-  
-      if (!response.ok) {
-        Alert.alert('Fejl', 'Der skete en fejl under upload af billedet');
-        console.error('Server fejl:', response.status);
-        return;
-      }
-  
-      let data;
-      try {
-        data = JSON.parse(text);
-        console.log('Upload success:', data);
-        if (data.imageUrl) {
-          // Opdater brugerdata i AsyncStorage med nyt profilbillede
-          const storedUserData = await AsyncStorage.getItem('userData');
-          if (storedUserData) {
-            const parsedData = JSON.parse(storedUserData);
-            const updatedUserData = {
-              ...parsedData,
-              profileImage: data.imageUrl
-            };
-            await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
-          }
-          
-          setProfileImage(data.imageUrl);
-        }
-      } catch (jsonError) {
-        console.error('Fejl ved parsing af JSON:', jsonError);
-        Alert.alert('Fejl', 'Der skete en fejl ved behandling af server-svaret');
-      }
-  
-    } catch (error) {
-      console.error('Fejl ved upload:', error);
-      Alert.alert('Fejl', 'Kunne ikke uploade billedet. Tjek din internetforbindelse.');
-    }
-  };
+
   
   return (
     <ScrollView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
@@ -305,7 +225,7 @@ const Profil = () => {
 
       <View style={styles.profileSection}>
         <View style={styles.profileContainer}>
-          <View style={styles.imageContainer}>
+          <TouchableOpacity onPress={() => router.push('/myprofile')}>
             {profileImage ? (
               <Image 
                 source={{ uri: profileImage }} 
@@ -324,15 +244,11 @@ const Profil = () => {
                 </Text>
               </View>
             )}
-            {/* Overlay med plus-ikon placeret i bunden af billedet */}
-            <TouchableOpacity style={styles.uploadOverlay} onPress={pickImage}>
-              <Ionicons name="add" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
           <View style={styles.profileInfo}>
             <Text style={styles.name}>{formatName(userData.name)}</Text>
             <Text style={styles.profileSubtitle}>
-              {formatRelation(userData.relationToDementiaPerson)} til person med demens
+              {formatRelation(userData.relationToDementiaPerson)}
             </Text>
           </View>
         </View>
@@ -381,7 +297,7 @@ const Profil = () => {
       </View>
       <View style={styles.familySection}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.familyScroll}>
-          {[...familyMembers, ...Array(4 - familyMembers.length).fill(null)].map((member: UserData | null, index: number) => (
+          {[...familyMembers, ...Array(6 - familyMembers.length).fill(null)].map((member: UserData | null, index: number) => (
 
             <View key={member?.id || index} style={styles.familyMemberCard}>
               <View style={[styles.familyImageContainer, !member && styles.emptyFamilyContainer]}>
@@ -460,15 +376,19 @@ const Profil = () => {
         )}
       </View>
 
-      <View style={styles.sectionTitleContainer}>
-        <Text style={styles.sectionTitle}>Indstillinger</Text>
-      </View>
-      <View style={styles.settingsSection}>
-        <TouchableOpacity style={styles.settingsItem}>
+      <View style={styles.settingsContainer}>
+        <View style={styles.sectionTitleContainer}>
+          <Text style={styles.sectionTitle}>Indstillinger</Text>
+        </View>
+        <View style={styles.settingsSection}>
+        <TouchableOpacity 
+          style={styles.settingsItem}
+          onPress={() => router.push('../../myprofile')}
+        >
           <View style={styles.settingsIcon}>
             <Ionicons name="person-outline" size={24} color="#000" />
           </View>
-          <Text style={styles.settingsText}>Personlige information</Text>
+          <Text style={styles.settingsText}>Min profil</Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
@@ -489,25 +409,29 @@ const Profil = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.sectionTitleContainer}>
-        <Text style={styles.sectionTitle}>Juridisk</Text>
       </View>
-      <View style={styles.settingsSection}>
-        <TouchableOpacity style={styles.settingsItem}>
-          <View style={styles.settingsIcon}>
-            <Ionicons name="create-outline" size={24} color="#000" />
-          </View>
-          <Text style={styles.settingsText}>Giv os feedback</Text>
-          <Ionicons name="chevron-forward" size={24} color="#999" />
-        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingsItem}>
-          <View style={styles.settingsIcon}>
-            <Ionicons name="document-text-outline" size={24} color="#000" />
-          </View>
-          <Text style={styles.settingsText}>Vilkår og betingelser</Text>
-          <Ionicons name="chevron-forward" size={24} color="#999" />
-        </TouchableOpacity>
+      <View style={styles.legalContainer}>
+        <View style={styles.sectionTitleContainer}>
+          <Text style={styles.sectionTitle}>Juridisk</Text>
+        </View>
+        <View style={styles.settingsSection}>
+          <TouchableOpacity style={styles.settingsItem}>
+            <View style={styles.settingsIcon}>
+              <Ionicons name="create-outline" size={24} color="#000" />
+            </View>
+            <Text style={styles.settingsText}>Giv os feedback</Text>
+            <Ionicons name="chevron-forward" size={24} color="#999" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingsItem}>
+            <View style={styles.settingsIcon}>
+              <Ionicons name="document-text-outline" size={24} color="#000" />
+            </View>
+            <Text style={styles.settingsText}>Vilkår og betingelser</Text>
+            <Ionicons name="chevron-forward" size={24} color="#999" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.bottomContainer}>
@@ -524,7 +448,7 @@ const styles = StyleSheet.create({
   logItem: {
     backgroundColor: '#fff',
     padding: 16,
-    marginBottom: 18,
+    marginBottom: 4,
     borderWidth: 1,
     borderColor: '#E5E5E5',
     borderRadius: 12,
@@ -582,7 +506,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     backgroundColor: '#fff',
-    marginBottom: 8,
+    marginBottom: 0,
   },
   logDate: {
     fontSize: 14,
@@ -727,6 +651,14 @@ const styles = StyleSheet.create({
     fontFamily: 'RedHatDisplay_500Medium',
     color: '#000000',
   },
+  settingsContainer: {
+    backgroundColor: '#fff',
+    marginBottom: 10,
+  },
+  legalContainer: {
+    backgroundColor: '#fff',
+    marginBottom: 8,
+  },
   bottomContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -765,11 +697,11 @@ const styles = StyleSheet.create({
   familyMemberCard: {
     alignItems: 'center',
     marginRight: 16,
-    width: 70,
+    width: 50,
   },
   familyImageContainer: {
-    width: 55,
-    height: 55,
+    width: 45,
+    height: 45,
     borderRadius: 30,
     overflow: 'hidden',
     marginBottom: 0,
@@ -857,7 +789,7 @@ const styles = StyleSheet.create({
   },
   settingsText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 18,
     color: '#333',
     fontFamily: 'RedHatDisplay_400Regular',
   },
