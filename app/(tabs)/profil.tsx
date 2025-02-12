@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Share, Animated, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -295,7 +295,7 @@ const Profil = () => {
   };
   
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Profil</Text>
         <TouchableOpacity>
@@ -425,7 +425,7 @@ const Profil = () => {
                 </Text>
               </View>
               <TouchableOpacity style={styles.viewLogButton} onPress={() => handleViewLog(log)}>
-                <Ionicons name="eye-outline" size={16} color="#42865F" />
+                <Ionicons name="eye-outline" size={16} color="#ffffff" />
                 <Text style={styles.viewLogText}>Se log</Text>
               </TouchableOpacity>
             </View>
@@ -538,17 +538,17 @@ const styles = StyleSheet.create({
   viewLogButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#42865F',
     borderWidth: 1,
     borderColor: '#42865F',
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
     gap: 4,
   },
   viewLogText: {
-    color: '#42865F',
-    fontSize: 14,
+    color: '#ffffff',
+    fontSize: 16,
     fontWeight: '600',
   },
   bottomBorder: {

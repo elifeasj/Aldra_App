@@ -1,4 +1,3 @@
-import React from 'react';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -20,15 +19,8 @@ export default function Layout() {
         RedHatDisplay_700Bold,
     });
 
-    const [isDarkMode, setIsDarkMode] = React.useState(Appearance.getColorScheme() === 'dark');
-
-    useEffect(() => {
-        const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-            setIsDarkMode(colorScheme === 'dark');
-        });
-
-        return () => subscription.remove();
-    }, []);
+    const colorScheme = Appearance.getColorScheme();
+    const isDarkMode = colorScheme === 'dark';
 
     useEffect(() => {
         if (fontsLoaded) {
@@ -61,3 +53,4 @@ export default function Layout() {
         </>
     );
 }
+
