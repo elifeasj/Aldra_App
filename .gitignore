@@ -42,4 +42,11 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+ios/
+android/
+*.xcworkspace
+*.xcodeproj
+Pods/
+node_modules/
+
 # @end expo-cli

@@ -10,6 +10,11 @@ const path = require('path');
 
 const app = express();
 
+app.get('/ping', (req, res) => {
+  res.json({ message: 'pong' });
+});
+
+
 // Health check endpoint
 app.get('/', (req, res) => {
     res.json({ status: 'ok', message: 'Server is running' });
@@ -439,16 +444,6 @@ app.get('/users/family/:userId', async (req, res) => {
     res.status(500).json({ error: 'Error fetching family members' });
   }
 });
-
-// Start server
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log('Environment:', process.env.NODE_ENV);
-    console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
-
-});
-
 
 // Login endpoint
 app.post('/login', async (req, res) => {
@@ -992,5 +987,12 @@ app.get('/logs', async (req, res) => {
     console.error('Error fetching logs:', err);
     res.status(500).json({ error: 'Error fetching logs' });
   }
+});
+
+
+// Start server
+const PORT = process.env.PORT;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on Render, port ${PORT}`);
 });
 

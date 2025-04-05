@@ -4,14 +4,12 @@ services:
     env: node
     region: frankfurt
     plan: free
+    rootDir: aldra-backend
     buildCommand: npm install
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
       - key: DATABASE_URL
         value: postgresql://postgres.qqmhshgabgopbnauuhhk:7NCG4FNBZHp1QQtE@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
     autoDeploy: true
-    rootDir: aldra-backend
