@@ -946,7 +946,7 @@ app.get('/test', (req, res) => {
 // Start server
 const PORT = process.env.PORT || 10000;
 
-app.listen(10000, () => {
+app.listen(PORT, () => {
   console.log(`✅ Server listening on port ${PORT}`);
 });
 
