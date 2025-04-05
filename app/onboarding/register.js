@@ -110,27 +110,30 @@ export default function Register() {
             console.log('Request options:', requestOptions);
 
             console.log('Making request to:', endpoints.register);
-            const response = await fetch(endpoints.register, {
-                ...requestOptions,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                mode: 'cors'
-            });
+            const response = await fetch(endpoints.register, requestOptions);
             console.log('Response:', {
                 status: response.status,
                 statusText: response.statusText,
                 headers: Object.fromEntries(response.headers.entries())
             });
             
+            let responseData;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                responseData = await response.json();
+            } else {
+                const text = await response.text();
+                console.error('Server returned non-JSON response:', text);
+                throw new Error('Serveren returnerede et ugyldigt svar');
+            }
+            
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server error response:', errorText);
-                throw new Error(`Server fejl: ${response.status} - ${errorText}`);
+                const errorMessage = responseData.error || 'Der opstod en fejl';
+                console.error('Server error response:', errorMessage);
+                throw new Error(errorMessage);
             }
 
-            const data = await response.json();
+            const data = responseData;
             console.log('Registration successful:', data);
 
             // Store user data in AsyncStorage

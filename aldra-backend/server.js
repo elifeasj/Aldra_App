@@ -3,7 +3,6 @@ const cors = require('cors');
 const { Client } = require('pg');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
-const registerRoute = require('./register');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
@@ -18,13 +17,21 @@ app.get('/', (req, res) => {
 
 // CORS konfiguration
 app.use(cors({
-  origin: true, // This allows all origins but sends proper CORS headers
+  origin: '*', // This allows all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
   credentials: true,
   maxAge: 86400 // Cache preflight requests for 24 hours
 }));
+
+// Parse JSON bodies
 app.use(bodyParser.json());
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  res.status(500).json({ error: 'Internal server error', message: err.message });
+});
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -439,7 +446,6 @@ app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     console.log('Environment:', process.env.NODE_ENV);
     console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
-    app.use('/', registerRoute);
 
 });
 
@@ -541,10 +547,20 @@ app.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Indsæt bruger i databasen
+        console.log('Attempting to insert user with data:', {
+            name,
+            email,
+            relationToDementiaPerson,
+            termsAccepted,
+            hashedPassword: '[REDACTED]'
+        });
+        
         const result = await client.query(
-            'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, terms_accepted) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
+            'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, "termsAccepted") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
             [name, email, hashedPassword, relationToDementiaPerson, termsAccepted]
         );
+        
+        console.log('SQL query executed successfully');
 
         await client.query('COMMIT');
 
@@ -566,10 +582,11 @@ app.post('/register', async (req, res) => {
             code: error.code
         });
 
+        console.error('Registration error:', error);
         if (error.code === '23505') { // Unique constraint violation
-            res.status(409).json({ error: 'Email already registered' });
+            return res.status(409).json({ error: 'Email already registered' });
         } else {
-            res.status(500).json({ error: 'Error registering user', message: error.message });
+            return res.status(500).json({ error: 'Error registering user', message: error.message });
         }
     }
 
