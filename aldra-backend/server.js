@@ -1,4 +1,3 @@
-const express = require('express');
 const cors = require('cors');
 const { Client } = require('pg');
 const bodyParser = require('body-parser');
@@ -7,18 +6,10 @@ const bcrypt = require('bcrypt');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-
+const express = require('express');
 const app = express();
+app.use(express.json());
 
-app.get('/ping', (req, res) => {
-  res.json({ message: 'pong' });
-});
-
-
-// Health check endpoint
-app.get('/', (req, res) => {
-    res.json({ status: 'ok', message: 'Server is running' });
-});
 
 // CORS konfiguration
 app.use(cors({
@@ -28,6 +19,7 @@ app.use(cors({
   credentials: true,
   maxAge: 86400 // Cache preflight requests for 24 hours
 }));
+
 
 // Parse JSON bodies
 app.use(bodyParser.json());
@@ -71,7 +63,16 @@ client.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
 });
 
-
+// Connect to database and initialize
+client.connect()
+  .then(() => {
+    console.log('Connected to PostgreSQL');
+    return initializeDatabase();
+  })
+  .catch((error) => {
+    console.error('Database connection error:', error);
+    process.exit(1);
+  });
 
 // Initialize database
 async function initializeDatabase() {
@@ -193,17 +194,6 @@ async function initializeDatabase() {
     throw error;
   }
 }
-
-// Connect to database and initialize
-client.connect()
-  .then(() => {
-    console.log('Connected to PostgreSQL');
-    return initializeDatabase();
-  })
-  .catch((error) => {
-    console.error('Error:', error);
-    process.exit(1);
-  });
 
 // Helper function to format time
 function formatTimeForDB(timeStr) {
@@ -547,10 +537,6 @@ app.post('/register', async (req, res) => {
             res.status(500).json({ error: 'Error registering user', message: error.message });
         }
     }
-
-
-
-  
 });
 
 // Get all dates with appointments
@@ -953,8 +939,14 @@ app.get('/logs', async (req, res) => {
 });
 
 
-// Start server
-const PORT = process.env.PORT;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on Render, port ${PORT}`);
+app.get('/test', (req, res) => {
+  res.send('✅ Backend kører');
 });
+
+// Start server
+const PORT = process.env.PORT || 10000;
+
+app.listen(10000, () => {
+  console.log(`✅ Server listening on port ${PORT}`);
+});
+
