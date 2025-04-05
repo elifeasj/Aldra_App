@@ -12,9 +12,11 @@ const app = express();
 
 // CORS konfiguration
 app.use(cors({
-  origin: '*',
+  origin: true, // This allows all origins but sends proper CORS headers
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Accept']
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
+  credentials: true,
+  maxAge: 86400 // Cache preflight requests for 24 hours
 }));
 app.use(bodyParser.json());
 

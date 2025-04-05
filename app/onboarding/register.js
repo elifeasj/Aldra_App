@@ -108,8 +108,20 @@ export default function Register() {
 
             console.log('Request options:', requestOptions);
 
-            const response = await fetch(endpoints.register, requestOptions);
-            console.log('Response status:', response.status);
+            console.log('Making request to:', endpoints.register);
+            const response = await fetch(endpoints.register, {
+                ...requestOptions,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                mode: 'cors'
+            });
+            console.log('Response:', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries())
+            });
             
             if (!response.ok) {
                 const errorText = await response.text();
@@ -136,10 +148,14 @@ export default function Register() {
             console.error('Error name:', error.name);
             console.error('Error message:', error.message);
             
+            console.log('Server URL:', endpoints.register);
             if (error.message.includes('Network request failed')) {
-                alert('Netværksfejl: Kunne ikke forbinde til serveren. Kontroller at:\n\n1. Din enhed er forbundet til internettet\n2. Du er på samme netværk som serveren\n3. Serveren kører på ' + endpoints.register);
+                alert('Netværksfejl: Kunne ikke forbinde til serveren. Kontroller at din enhed er forbundet til internettet.');
+            } else if (error.response) {
+                // Server responded with an error status
+                alert('Server fejl: ' + (error.response.data?.error || error.message));
             } else {
-                alert('Der opstod en fejl under registreringen: ' + error.message);
+                alert('Der opstod en fejl under registreringen. Prøv igen senere.');
             }
         }
     };
