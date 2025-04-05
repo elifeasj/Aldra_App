@@ -939,12 +939,6 @@ app.get('/logs', async (req, res) => {
 });
 
 
-app.post('/register', (req, res) => {
-  console.log("REGISTER route triggered");
-  res.status(200).json({ message: "Modtaget!" });
-});
-
-
 app.get('/test', (req, res) => {
   res.send('✅ Backend kører');
 });
