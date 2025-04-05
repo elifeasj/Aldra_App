@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: aldra-backend
+    env: node
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: postgresql://postgres.qqmhshgabgopbnauuhhk:7NCG4FNBZHp1QQtE@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+    autoDeploy: true

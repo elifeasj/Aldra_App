@@ -38,9 +38,9 @@ app.use((req, res, next) => {
     next();
 });
 
-// Opret forbindelse til Superbase
+// Database connection configuration
 const client = new Client({
-  connectionString: 'postgresql://postgres.zmanqocbqjgswnkgwxgd:AldraSecure2025!@aws-0-eu-north-1.pooler.supabase.com:5432/postgres',
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres.qqmhshgabgopbnauuhhk:7NCG4FNBZHp1QQtE@aws-0-eu-central-1.pooler.supabase.com:5432/postgres',
   ssl: {
     rejectUnauthorized: false
   }
@@ -426,7 +426,7 @@ app.get('/users/family/:userId', async (req, res) => {
 });
 
 // Start server
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on http://0.0.0.0:${PORT}`);
 });
