@@ -445,43 +445,7 @@ app.get('/users/family/:userId', async (req, res) => {
   }
 });
 
-// Login endpoint
-app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    const maskedData = maskSensitiveData({ email, password });
-    console.log('Login attempt:', maskedData);
 
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
-    }
-
-    try {
-        const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
-
-        if (result.rows.length === 0) {
-            return res.status(401).json({ error: 'Forkert email eller adgangskode' });
-        }
-
-        const user = result.rows[0];
-        const isPasswordValid = await bcrypt.compare(password, user.hashed_password);
-
-        if (!isPasswordValid) {
-            return res.status(401).json({ error: 'Forkert email eller adgangskode' });
-        }
-
-        // Send brugerdata tilbage (uden adgangskode)
-        res.json({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            relationToDementiaPerson: user.relation_to_dementia_person,
-            profile_image: user.profile_image
-        });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Der opstod en fejl under login' });
-    }
-});
 
 // Root endpoint for health check
 // Update family link status
@@ -588,7 +552,6 @@ app.post('/register', async (req, res) => {
 
   
 });
-
 
 // Get all dates with appointments
 app.get('/appointments/dates/all', async (req, res) => {
@@ -995,4 +958,3 @@ const PORT = process.env.PORT;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on Render, port ${PORT}`);
 });
-
