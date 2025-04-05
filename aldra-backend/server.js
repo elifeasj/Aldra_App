@@ -7,7 +7,6 @@ const bcrypt = require('bcrypt');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 
@@ -20,11 +19,7 @@ app.use(cors({
 app.use(bodyParser.json());
 
 // Serve uploaded files
-const uploadsPath = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsPath)) {
-    fs.mkdirSync(uploadsPath, { recursive: true });
-}
-app.use('/uploads', express.static(uploadsPath));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Funktion til at maskere følsomme data
 function maskSensitiveData(obj) {
