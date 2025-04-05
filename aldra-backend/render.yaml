@@ -4,7 +4,8 @@ services:
     env: node
     region: frankfurt
     buildCommand: npm install
-    startCommand: node server.js
+    startCommand: node Aldra_App/aldra-backend/server.js
+
     envVars:
       - key: NODE_ENV
         value: production
