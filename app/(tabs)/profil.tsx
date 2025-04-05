@@ -388,24 +388,41 @@ const Profil = () => {
           <View style={styles.settingsIcon}>
             <Ionicons name="person-outline" size={24} color="#000" />
           </View>
-          <Text style={styles.settingsText}>Min profil</Text>
-          <Ionicons name="chevron-forward" size={24} color="#999" />
+          <Text style={styles.settingsText}>Personlige oplysninger</Text>
+          <Ionicons name="chevron-forward" size={24} color="#707070" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingsItem}>
+        <TouchableOpacity 
+          style={styles.settingsItem}
+          onPress={() => router.push('../../..')}
+        >
           <View style={styles.settingsIcon}>
-            <Ionicons name="settings-outline" size={24} color="#000" />
+            <Ionicons name="heart-circle-outline" size={24} color="#000" />
           </View>
-          <Text style={styles.settingsText}>Tilgængelighed</Text>
-          <Ionicons name="chevron-forward" size={24} color="#999" />
+          <Text style={styles.settingsText}>Medlemskab</Text>
+          <Ionicons name="chevron-forward" size={24} color="#707070" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingsItem}>
+        <TouchableOpacity 
+          style={styles.settingsItem}
+          onPress={() => router.push('../../..')}
+        >
+          <View style={styles.settingsIcon}>
+            <Ionicons name="tv-outline" size={24} color="#000" />
+          </View>
+          <Text style={styles.settingsText}>Aldra Display</Text>
+          <Ionicons name="chevron-forward" size={24} color="#707070" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.settingsItem}
+          onPress={() => router.push('../../..')}
+        >
           <View style={styles.settingsIcon}>
             <Ionicons name="notifications-outline" size={24} color="#000" />
           </View>
           <Text style={styles.settingsText}>Notifikationer</Text>
-          <Ionicons name="chevron-forward" size={24} color="#999" />
+          <Ionicons name="chevron-forward" size={24} color="#707070" />
         </TouchableOpacity>
       </View>
 
@@ -416,12 +433,15 @@ const Profil = () => {
           <Text style={styles.sectionTitle}>Juridisk</Text>
         </View>
         <View style={styles.settingsSection}>
-          <TouchableOpacity style={styles.settingsItem}>
-            <View style={styles.settingsIcon}>
-              <Ionicons name="create-outline" size={24} color="#000" />
-            </View>
-            <Text style={styles.settingsText}>Giv os feedback</Text>
-            <Ionicons name="chevron-forward" size={24} color="#999" />
+        <TouchableOpacity 
+          style={styles.settingsItem}
+          onPress={() => router.push('../../..')}
+        >
+          <View style={styles.settingsIcon}>
+            <Ionicons name="create-outline" size={24} color="#000" />
+          </View>
+          <Text style={styles.settingsText}>Giv os feedback</Text>
+          <Ionicons name="chevron-forward" size={24} color="#707070" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.settingsItem}>
@@ -429,7 +449,7 @@ const Profil = () => {
               <Ionicons name="document-text-outline" size={24} color="#000" />
             </View>
             <Text style={styles.settingsText}>Vilkår og betingelser</Text>
-            <Ionicons name="chevron-forward" size={24} color="#999" />
+            <Ionicons name="chevron-forward" size={24} color="#707070" />
           </TouchableOpacity>
         </View>
       </View>
@@ -789,7 +809,7 @@ const styles = StyleSheet.create({
   },
   settingsText: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 19,
     color: '#333',
     fontFamily: 'RedHatDisplay_400Regular',
   },
@@ -805,13 +825,14 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#000000',
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'RedHatDisplay_400Regular',
     fontWeight: 'medium',
   },
   versionText: {
     textAlign: 'center',
     color: '#999',
+    fontSize: 16,
     marginBottom: 0,
     paddingRight: 20,
   },
