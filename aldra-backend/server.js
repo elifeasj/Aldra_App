@@ -27,40 +27,6 @@ app.use(cors({
 // Parse JSON bodies
 app.use(bodyParser.json());
 
-// Register endpoint
-app.post('/register', async (req, res) => {
-  try {
-    const { name, email, password, relationToDementiaPerson, termsAccepted } = req.body;
-    console.log('Register attempt:', { name, email, relationToDementiaPerson, termsAccepted });
-
-    // Validate required fields
-    if (!name || !email || !password || !relationToDementiaPerson || !termsAccepted) {
-      return res.status(400).json({ error: 'Alle felter skal udfyldes' });
-    }
-
-    // Check if user already exists
-    const userExists = await client.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (userExists.rows.length > 0) {
-      return res.status(400).json({ error: 'En bruger med denne email findes allerede' });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insert new user
-    const result = await client.query(
-      'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, terms_accepted) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
-      [name, email, hashedPassword, relationToDementiaPerson, termsAccepted]
-    );
-
-    console.log('User registered successfully:', result.rows[0]);
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Der opstod en fejl under registreringen' });
-  }
-});
-
 // Add error handling middleware
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
@@ -1028,4 +994,3 @@ app.get('/logs', async (req, res) => {
   }
 });
 
-// Get a specific log
