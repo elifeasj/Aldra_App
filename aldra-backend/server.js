@@ -10,6 +10,11 @@ const path = require('path');
 
 const app = express();
 
+// Health check endpoint
+app.get('/', (req, res) => {
+    res.json({ status: 'ok', message: 'Server is running' });
+});
+
 // CORS konfiguration
 app.use(cors({
   origin: true, // This allows all origins but sends proper CORS headers
@@ -96,7 +101,7 @@ async function initializeDatabase() {
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
+        hashed_password VARCHAR(255) NOT NULL,
         relation_to_dementia_person VARCHAR(255),
         profile_image TEXT,  -- Ny kolonne til profilbillede URL
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -428,9 +433,11 @@ app.get('/users/family/:userId', async (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on http://0.0.0.0:${PORT}`);
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
 });
 
 
@@ -532,7 +539,7 @@ app.post('/register', async (req, res) => {
 
         // Indsæt bruger i databasen
         const result = await client.query(
-            'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, termsAccepted) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
+            'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, terms_accepted) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
             [name, email, hashedPassword, relationToDementiaPerson, termsAccepted]
         );
 
