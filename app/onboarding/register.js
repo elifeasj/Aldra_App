@@ -83,8 +83,9 @@ export default function Register() {
 
         // Add Aldra code if registering via Aldra link
         if (isAldraLink && aldraCode) {
-            userData.aldraCode = aldraCode;
+            userData.familyCode = aldraCode; 
         }
+        
 
         try {
             // Gem brugerdata i AsyncStorage
