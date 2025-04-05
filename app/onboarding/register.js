@@ -68,18 +68,25 @@ export default function Register() {
 
     const registerUser = async () => {
         if (!name || !email || !password || !relation || !termsAccepted) {
+            console.log('🚫 Mangler ét eller flere felter');
+            console.log('name:', name);
+            console.log('email:', email);
+            console.log('password:', password);
+            console.log('relation:', relation);
+            console.log('termsAccepted:', termsAccepted);
             alert('Alle felter skal udfyldes.');
             return;
         }
-
-        // Create base user data
+    
+        console.log('📦 FULL URL being used:', endpoints.register);
+    
         const userData = {
             name,
             email,
             password,
             relationToDementiaPerson: relation,
             termsAccepted
-        };
+        };    
 
         // Add Aldra code if registering via Aldra link
         if (isAldraLink && aldraCode) {
