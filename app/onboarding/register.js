@@ -73,7 +73,7 @@ export default function Register() {
             console.log('email:', email);
             console.log('password:', password);
             console.log('relation:', relation);
-            console.log('termsaccepted:', termsaccepted);
+            console.log('termsAccepted:', termsAccepted);
             alert('Alle felter skal udfyldes.');
             return;
         }
