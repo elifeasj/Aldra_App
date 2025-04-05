@@ -3,6 +3,7 @@ const cors = require('cors');
 const { Client } = require('pg');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
+const registerRoute = require('./register');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
@@ -438,6 +439,8 @@ app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     console.log('Environment:', process.env.NODE_ENV);
     console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
+    app.use('/', registerRoute);
+
 });
 
 
