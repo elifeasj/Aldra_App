@@ -207,7 +207,7 @@ const EditProfile = () => {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back-outline" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.title}>Min profil</Text>
+        <Text style={styles.title}>Personlige oplysninger</Text>
       </View>
 
       <View style={styles.profileImageContainer}>
@@ -267,6 +267,43 @@ const EditProfile = () => {
             onChangeText={(text) => setUserData({ ...userData, birthday: text })}
             placeholder="DD/MM/ÅÅÅÅ"
           />
+        </View>
+
+        <View style={styles.settingsContainer}>
+          <View style={styles.settingsSection}>
+            <TouchableOpacity 
+              style={styles.settingsItem}
+              onPress={() => router.push('../../myprofile')}
+            >
+              <View style={styles.settingsIcon}>
+                <Ionicons name="mail-outline" size={24} color="#000" />
+              </View>
+              <Text style={styles.settingsText}>E-mailadresse</Text>
+              <Ionicons name="chevron-forward" size={24} color="#707070" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.settingsItem}
+              onPress={() => router.push('../../..')}
+            >
+              <View style={styles.settingsIcon}>
+                <Ionicons name="key-outline" size={24} color="#000" />
+              </View>
+              <Text style={styles.settingsText}>Adgangskode</Text>
+              <Ionicons name="chevron-forward" size={24} color="#707070" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.settingsItem}
+              onPress={() => router.push('../../..')}
+            >
+              <View style={styles.settingsIcon}>
+                <Ionicons name="trash-outline" size={24} color="#000" />
+              </View>
+              <Text style={styles.settingsText}>Slet min konto</Text>
+              <Ionicons name="chevron-forward" size={24} color="#707070" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -336,9 +373,9 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '500',
-    fontFamily: 'RedHatDisplay_500Medium',
+    fontSize: 28,
+    fontWeight: '400',
+    fontFamily: 'RedHatDisplay_400Regular',
   },
   formContainer: {
     padding: 20,
@@ -347,9 +384,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    fontSize: 16,
+    fontSize: 18,
     marginBottom: 8,
-    color: '#666',
+    color: '#00000',
     fontFamily: 'RedHatDisplay_400Regular',
   },
   input: {
@@ -357,7 +394,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5E5',
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'RedHatDisplay_400Regular',
   },
   saveButton: {
@@ -369,9 +406,34 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '500',
     fontFamily: 'RedHatDisplay_500Medium',
+  },
+  settingsContainer: {
+    marginTop: 0,
+    marginBottom: 16,
+  },
+  settingsSection: {
+    backgroundColor: '#fff',
+  },
+  settingsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    marginBottom: 11,
+  },
+  settingsIcon: {
+    marginRight: 12,
+  },
+  settingsText: {
+    flex: 1,
+    fontSize: 18,
+    color: '#000',
+    fontFamily: 'RedHatDisplay_400Regular',
   },
 });
 
