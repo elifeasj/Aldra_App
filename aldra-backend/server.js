@@ -27,6 +27,40 @@ app.use(cors({
 // Parse JSON bodies
 app.use(bodyParser.json());
 
+// Register endpoint
+app.post('/register', async (req, res) => {
+  try {
+    const { name, email, password, relationToDementiaPerson, termsAccepted } = req.body;
+    console.log('Register attempt:', { name, email, relationToDementiaPerson, termsAccepted });
+
+    // Validate required fields
+    if (!name || !email || !password || !relationToDementiaPerson || !termsAccepted) {
+      return res.status(400).json({ error: 'Alle felter skal udfyldes' });
+    }
+
+    // Check if user already exists
+    const userExists = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userExists.rows.length > 0) {
+      return res.status(400).json({ error: 'En bruger med denne email findes allerede' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert new user
+    const result = await client.query(
+      'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, terms_accepted) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
+      [name, email, hashedPassword, relationToDementiaPerson, termsAccepted]
+    );
+
+    console.log('User registered successfully:', result.rows[0]);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Der opstod en fejl under registreringen' });
+  }
+});
+
 // Add error handling middleware
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
@@ -63,15 +97,7 @@ const client = new Client({
 
 // Add connection error handler
 client.on('error', (err) => {
-  console.error('Database connection error:', err);
-});
-
-client.on('connect', () => {
-  console.log('Successfully connected to database');
-});
-
-client.on('end', () => {
-  console.log('Connection to database ended');
+  console.error('Unexpected error on idle client', err);
 });
 
 
@@ -450,20 +476,12 @@ app.get('/users/family/:userId', async (req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 10000;
-// Connect to database before starting server
-client.connect()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log('Environment:', process.env.NODE_ENV);
-      console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
-      console.log('Server ready to accept connections');
-    });
-  })
-  .catch(err => {
-    console.error('Failed to connect to database:', err);
-    process.exit(1);
-  });
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
+
+});
 
 
 // Login endpoint
@@ -598,11 +616,10 @@ app.post('/register', async (req, res) => {
             code: error.code
         });
 
-        console.error('Registration error:', error);
         if (error.code === '23505') { // Unique constraint violation
-            return res.status(409).json({ error: 'Email already registered' });
+            res.status(409).json({ error: 'Email already registered' });
         } else {
-            return res.status(500).json({ error: 'Error registering user', message: error.message });
+            res.status(500).json({ error: 'Error registering user', message: error.message });
         }
     }
 
