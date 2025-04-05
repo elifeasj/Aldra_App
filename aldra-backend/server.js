@@ -1,6 +1,6 @@
 const express = require('express');
-const { Client } = require('pg');
 const cors = require('cors');
+const { Client } = require('pg');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
 const bcrypt = require('bcrypt');
@@ -9,6 +9,7 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
 const app = express();
+
 // CORS konfiguration
 app.use(cors({
   origin: '*',
@@ -37,14 +38,20 @@ app.use((req, res, next) => {
     next();
 });
 
-// Opret forbindelse til PostgreSQL
+// Opret forbindelse til Superbase
 const client = new Client({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'aldradatabase',
-  password: '1234',
-  port: 5432,
+  connectionString: 'postgresql://postgres.zmanqocbqjgswnkgwxgd:AldraSecure2025!@aws-0-eu-north-1.pooler.supabase.com:5432/postgres',
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
+
+// Add connection error handler
+client.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
+
 
 // Initialize database
 async function initializeDatabase() {
@@ -120,10 +127,10 @@ async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS logs (
         id SERIAL PRIMARY KEY,
-        appointment_id INTEGER UNIQUE,
+        appointment_id INTEGER,
         title VARCHAR(255) NOT NULL,
         description TEXT,
-        date DATE NOT NULL,
+        date TIMESTAMPTZ NOT NULL,
         user_id INTEGER,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -598,7 +605,7 @@ app.get('/logs/:appointment_id', async (req, res) => {
     const result = await client.query(
       `SELECT * FROM logs 
        WHERE appointment_id = $1 AND user_id = $2 
-       ORDER BY log_date DESC`,
+       ORDER BY date DESC`,
       [appointment_id, user_id]
     );
 
@@ -616,14 +623,21 @@ app.post('/logs', async (req, res) => {
     const { appointment_id, user_id, title, description, date } = req.body;
     console.log('Creating log:', { appointment_id, user_id, title, description, date });
 
-    // Verify that the appointment belongs to the user
-    const appointmentCheck = await client.query(
-      'SELECT id FROM appointments WHERE appointment_id = $1 AND user_id = $2',
-      [appointment_id, user_id]
-    );
+    // If appointment_id is provided, verify that it belongs to the user
+    if (appointment_id) {
+      const appointmentCheck = await client.query(
+        'SELECT id FROM appointments WHERE appointment_id = $1 AND user_id = $2',
+        [appointment_id, user_id]
+      );
 
-    if (appointmentCheck.rows.length === 0) {
-      return res.status(403).json({ error: 'Unauthorized: This appointment does not belong to the user' });
+      if (appointmentCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'Unauthorized: This appointment does not belong to the user' });
+      }
+    }
+
+    // Validate required fields
+    if (!user_id || !title || !date) {
+      return res.status(400).json({ error: 'Missing required fields: user_id, title, and date are required' });
     }
 
     const result = await client.query(

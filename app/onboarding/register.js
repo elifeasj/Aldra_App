@@ -95,7 +95,7 @@ export default function Register() {
 
             console.log('Sending request to server with data:', userData);
             
-            console.log('Attempting to connect to:', endpoints.checkServer);
+            console.log('Attempting to connect to:', endpoints.register);
             
             const requestOptions = {
                 method: 'POST',
@@ -137,7 +137,7 @@ export default function Register() {
             console.error('Error message:', error.message);
             
             if (error.message.includes('Network request failed')) {
-                alert('Netværksfejl: Kunne ikke forbinde til serveren. Kontroller at:\n\n1. Din enhed er forbundet til internettet\n2. Du er på samme netværk som serveren\n3. Serveren kører på ' + endpoints.checkServer);
+                alert('Netværksfejl: Kunne ikke forbinde til serveren. Kontroller at:\n\n1. Din enhed er forbundet til internettet\n2. Du er på samme netværk som serveren\n3. Serveren kører på ' + endpoints.register);
             } else {
                 alert('Der opstod en fejl under registreringen: ' + error.message);
             }

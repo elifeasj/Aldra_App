@@ -3,8 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-
-const API_URL = 'http://192.168.0.215:5001';
+import { API_URL, endpoints } from '../config';
 
 export default function NyLog() {
     const params = useLocalSearchParams();
@@ -33,7 +32,7 @@ export default function NyLog() {
                     const user_id = userData.id;
                     console.log('User ID:', user_id);
 
-                    const url = `${API_URL}/logs/${logId}?user_id=${user_id}`;
+                    const url = `${endpoints.logs}/${logId}?user_id=${user_id}`;
                     console.log('Fetching log from URL:', url);
 
                     const response = await fetch(url);
@@ -74,7 +73,7 @@ export default function NyLog() {
             const user_id = userData.id;
 
             const method = logId ? 'PUT' : 'POST';
-            const url = logId ? `${API_URL}/logs/${logId}` : `${API_URL}/logs`;
+            const url = logId ? `${endpoints.logs}/${logId}` : endpoints.savelog;
             
             const response = await fetch(url, {
                 method,
