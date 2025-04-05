@@ -241,6 +241,8 @@ app.post('/login', async (req, res) => {
 
 // Root endpoint for health check
 app.post('/register', async (req, res) => {
+    console.log("=== Register hit ===");
+  console.log("Body:", req.body);
     const { name, email, password, relationToDementiaPerson, termsAccepted } = req.body;
     console.log('=== START REGISTRATION ===');
     const maskedData = maskSensitiveData({ name, email, password, relationToDementiaPerson, termsAccepted });
