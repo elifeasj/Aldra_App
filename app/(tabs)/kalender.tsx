@@ -8,7 +8,7 @@ import * as Notifications from 'expo-notifications';
 import { TimeIntervalTriggerInput, SchedulableTriggerInputTypes } from 'expo-notifications';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import { useIsFocused, useFocusEffect } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 
 interface Appointment {
     id: number;

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Platform } from 'react-native';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, Alert, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { Platform, StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,6 +8,7 @@ import { API_URL } from '../config.js';
 
 interface UserProfileData {
   name: string;
+  fullName: string;
   email: string;
   password?: string;
   birthday: string;
@@ -19,6 +19,7 @@ const EditProfile = () => {
   const router = useRouter();
   const [userData, setUserData] = useState<UserProfileData>({
     name: '',
+    fullName: '',
     email: '',
     password: '',
     birthday: '',
@@ -34,13 +35,15 @@ const EditProfile = () => {
       const storedUserData = await AsyncStorage.getItem('userData');
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
-        setUserData({
+        setUserData(prevData => ({
+          ...prevData,
           name: parsedData.name || '',
+          fullName: parsedData.fullName || '',
           email: parsedData.email || '',
           password: '',
           birthday: parsedData.birthday || '',
-          profileImage: parsedData.profileImage || '',
-        });
+          profileImage: parsedData.profileImage || ''
+        }));
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -120,6 +123,7 @@ const EditProfile = () => {
 
       interface UpdateData {
         name: string;
+        fullName: string;
         email: string;
         birthday: string;
         password?: string;
@@ -127,6 +131,7 @@ const EditProfile = () => {
 
       const updateData: UpdateData = {
         name: userData.name,
+        fullName: userData.fullName,
         email: userData.email,
         birthday: userData.birthday,
       };
@@ -203,6 +208,7 @@ const EditProfile = () => {
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back-outline" size={24} color="#000" />
@@ -225,47 +231,30 @@ const EditProfile = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.formContainer}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Navn</Text>
+      <View style={styles.inputGroup}>
+          <Text style={styles.label}>Fuldenavn</Text>
           <TextInput
             style={styles.input}
-            value={userData.name}
-            onChangeText={(text) => setUserData({ ...userData, name: text })}
-            placeholder="Dit navn"
+            value={userData.fullName}
+            onChangeText={(text) => setUserData({ ...userData, fullName: text })}
+            placeholder="Linda Boe"
           />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={userData.email}
-            onChangeText={(text) => setUserData({ ...userData, email: text })}
-            placeholder="Din email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <Text style={styles.label}>Relation til person med demens</Text>
+          <TouchableOpacity style={styles.input} onPress={() => {/* Add relation picker logic */}}>
+            <Text>Datter</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Ny adgangskode</Text>
-          <TextInput
-            style={styles.input}
-            value={userData.password}
-            onChangeText={(text) => setUserData({ ...userData, password: text })}
-            placeholder="Indtast ny adgangskode"
-            secureTextEntry
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Fødselsdag</Text>
+          <Text style={styles.label}>Fødselsdato</Text>
           <TextInput
             style={styles.input}
             value={userData.birthday}
             onChangeText={(text) => setUserData({ ...userData, birthday: text })}
-            placeholder="DD/MM/ÅÅÅÅ"
+            placeholder="mm/dd/åååå"
           />
         </View>
 
@@ -309,11 +298,11 @@ const EditProfile = () => {
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Gem ændringer</Text>
         </TouchableOpacity>
-      </View>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -323,6 +312,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     backgroundColor: '#fff',
+    paddingVertical: 16,
   },
   profileImageContainer: {
     alignItems: 'center',
@@ -378,7 +368,7 @@ const styles = StyleSheet.create({
     fontFamily: 'RedHatDisplay_400Regular',
   },
   formContainer: {
-    padding: 20,
+    paddingHorizontal: 20,
   },
   inputGroup: {
     marginBottom: 24,
@@ -421,7 +411,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 0,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
     marginBottom: 11,

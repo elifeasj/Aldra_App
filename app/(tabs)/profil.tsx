@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     color: '#42865F',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '500',
     fontFamily: 'RedHatDisplay_500Medium',
   },
@@ -667,8 +667,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontFamily: 'RedHatDisplay_500Medium',
+    fontSize: 22,
+    fontFamily: 'RedHatDisplay_400Regular',
     color: '#000000',
   },
   settingsContainer: {
