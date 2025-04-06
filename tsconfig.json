@@ -12,7 +12,7 @@
     "noEmit": true,
     "allowJs": true,
     "baseUrl": "./",
-    "types": ["react", "react-native", "jest", "@types/jest"],
+    "types": ["react", "react-native", "jest",],
     "paths": {
       "@/*": ["app/*"],
       "@/hooks/*": ["hooks/*"],
@@ -23,10 +23,11 @@
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "app/types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules"
   ],
-  "extends": "@tsconfig/react-native/tsconfig.json"
+  "extends": "./node_modules/@tsconfig/react-native/tsconfig.json"
 }
