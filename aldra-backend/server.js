@@ -11,71 +11,14 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const app = express();
 
-// Function to sanitize sensitive data
-const sanitizeData = (data) => {
-  if (typeof data === 'string') {
-    // Redact anything that looks like a password field
-    return data.replace(/(["']?(?:password|currentPassword|newPassword)["']?\s*[:=]\s*["'])[^"']+(["'])/gi, '$1[REDACTED]$2')
-              .replace(/(Body:\s*{[^}]*password[^}]*})/gi, '[REDACTED REQUEST BODY]')
-              .replace(/(["']?body["']?\s*[:=]\s*{[^}]*password[^}]*})/gi, '"body": "[REDACTED]"');
-  }
-  if (typeof data === 'object' && data !== null) {
-    if (Array.isArray(data)) {
-      return data.map(sanitizeData);
-    }
-    const sanitized = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (key.toLowerCase().includes('password')) {
-        sanitized[key] = '[REDACTED]';
-      } else {
-        sanitized[key] = sanitizeData(value);
-      }
-    }
-    return sanitized;
-  }
-  return data;
-};
-
-// Store original console methods
-const consoleOverrides = {
-  log: console.log,
-  error: console.error,
-  info: console.info,
-  warn: console.warn,
-  debug: console.debug
-};
-
-// Override all console methods
-Object.keys(consoleOverrides).forEach(method => {
-  console[method] = function (...args) {
-    const sanitizedArgs = args.map(arg => {
-      if (typeof arg === 'string') {
-        return sanitizeData(arg);
-      }
-      if (typeof arg === 'object' && arg !== null) {
-        try {
-          const str = JSON.stringify(arg);
-          const sanitized = sanitizeData(str);
-          return JSON.parse(sanitized);
-        } catch (e) {
-          return sanitizeData(arg);
-        }
-      }
-      return arg;
-    });
-    
-    // Call original console method with sanitized args
-    consoleOverrides[method].apply(console, sanitizedArgs);
-  };
-});
-
 // Enable CORS
 app.use(cors());
 
-// Disable all request logging for password-related endpoints
+// Custom request logging middleware
 app.use((req, res, next) => {
-  // Skip logging for password-related endpoints
-  if (!req.path.includes('password')) {
+  if (req.path === '/change-password') {
+    console.log('Processing password change request');
+  } else {
     console.log(`${req.method} ${req.path}`);
   }
   next();
@@ -89,36 +32,21 @@ app.use((req, res, next) => {
     req.on('data', chunk => { data += chunk; });
     req.on('end', () => {
       try {
-        const parsedBody = JSON.parse(data);
-        const originalBody = { ...parsedBody };
-
-        // Sanitize
-        ['password', 'currentPassword', 'newPassword'].forEach(field => {
-          if (parsedBody[field]) parsedBody[field] = '[REDACTED]';
-        });
-
-        // Custom getter
-        req._originalBody = originalBody;
-        Object.defineProperty(req, 'body', {
-          get: function() {
-            return this._originalBody;
-          },
-          set: function(val) {
-            this._originalBody = val;
-          },
-          configurable: true
-        });
-
-      } catch (err) {
-        req.body = {};
+        const body = JSON.parse(data);
+        // Only log non-sensitive information
+        console.log('Processing password change request for user:', body.userId);
+        req.body = body;
+      } catch (e) {
+        console.error('Error parsing request body');
       }
       next();
     });
-  } else {
+  } else if (req.path !== '/upload-avatar') {
     bodyParser.json({ limit: '5mb' })(req, res, next);
+  } else {
+    next();
   }
 });
-
 
 app.use((req, res, next) => {
   if (req.path !== '/upload-avatar') {
@@ -319,18 +247,6 @@ app.post('/user/:id/avatar-url', async (req, res) => {
   console.log('Fetched signed URL:', signedUrlData.signedUrl); 
 
   res.status(200).json({ signedUrl: signedUrlData.signedUrl });
-
-  ['log', 'error', 'info', 'debug', 'warn'].forEach(method => {
-    const original = console[method];
-    console[method] = (...args) => {
-      const filtered = args.map(arg =>
-        typeof arg === 'string'
-          ? arg.replace(/(password\s*[:=]\s*['"]).+?(['"])/gi, '$1[REDACTED]$2')
-          : arg
-      );
-      original.apply(console, filtered);
-    };
-  });
 });
 
 // Funktion til at maskere følsomme data
@@ -524,15 +440,13 @@ if (!fs.existsSync(uploadsPath)) {
 // Change password endpoint
 app.post('/change-password', async (req, res) => {
   try {
-    console.log('Sanitized req.body:', sanitizeLog(req._originalBody));
-
     const { userId, currentPassword, newPassword } = req.body;
 
     if (!userId || !currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Get user from database
+    // Get user from database silently
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('hashed_password')
@@ -543,17 +457,17 @@ app.post('/change-password', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Verify current password
+    // Verify current password silently
     const isValidPassword = await bcrypt.compare(currentPassword, user.hashed_password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
-    // Hash new password
+    // Hash new password silently
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // Update password in database
+    // Update password in database silently
     const { error: updateError } = await supabase
       .from('users')
       .update({ hashed_password: hashedPassword })
