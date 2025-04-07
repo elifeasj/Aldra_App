@@ -1,4 +1,3 @@
-const cors = require('cors');
 const { Client } = require('pg');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
@@ -8,23 +7,194 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
+const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
 const app = express();
-app.use(express.json());
 
+// Enable CORS
+app.use(cors());
 
-// CORS konfiguration
-app.use(cors({
-  origin: '*', // This allows all origins
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
-  credentials: true,
-  maxAge: 86400 // Cache preflight requests for 24 hours
-}));
+// Configure body parser for non-multipart routes
+app.use((req, res, next) => {
+  if (req.path !== '/upload-avatar') {
+    bodyParser.json({ limit: '5mb' })(req, res, next);
+  } else {
+    next();
+  }
+});
 
+app.use((req, res, next) => {
+  if (req.path !== '/upload-avatar') {
+    bodyParser.urlencoded({ extended: true, limit: '5mb' })(req, res, next);
+  } else {
+    next();
+  }
+});
 
-// Configure body parser with reasonable limits
-app.use(bodyParser.json({limit: '2mb'}));
-app.use(bodyParser.urlencoded({limit: '2mb', extended: true}));
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
+
+// Configure multer for handling file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'), false);
+    }
+    cb(null, true);
+  }
+});
+
+// Log all incoming requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  if (req.path === '/upload-avatar') {
+    console.log('Content-Type:', req.headers['content-type']);
+  }
+  next();
+});
+
+// Apply JSON parser only for non-file upload routes
+app.use((req, res, next) => {
+  if (req.path === '/upload-avatar') {
+    return next();
+  }
+  express.json()(req, res, next);
+});
+
+// Apply URL-encoded parser only for non-file upload routes
+app.use((req, res, next) => {
+  if (req.path === '/upload-avatar') {
+    return next();
+  }
+  bodyParser.urlencoded({limit: '5mb', extended: true})(req, res, next);
+});
+
+// Handle profile image upload
+app.post('/upload-avatar', upload.single('image'), async (req, res) => {
+  try {
+    console.log('Processing upload request');
+    console.log('File:', req.file);
+    console.log('Body:', req.body);
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file received' });
+    }
+
+    const userId = req.body.userId;
+    if (!userId) {
+      return res.status(400).json({ error: 'No userId received' });
+    }
+
+    // Generate unique filename
+    const fileExt = path.extname(req.file.originalname) || '.jpg';
+    const filename = `user_${userId}${fileExt}`;
+    const filePath = `avatars/${filename}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('profile-images')
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return res.status(500).json({ error: 'Failed to upload to storage' });
+    }
+
+    // Get signed URL
+    const { data: urlData } = await supabase.storage
+      .from('profile-images')
+      .createSignedUrl(filePath, 3600);
+
+    res.json({ imageUrl: urlData.signedUrl });
+  } catch (error) {
+    console.error('Error handling upload:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Handle profile image upload
+app.post('/upload-avatar', upload.single('image'), async (req, res) => {
+  try {
+    console.log('Received upload request');
+    const userId = req.body.userId;
+
+    if (!req.file || !userId) {
+      console.log('Missing required data:', { hasFile: !!req.file, hasUserId: !!userId });
+      return res.status(400).json({ error: 'Missing required data' });
+    }
+
+    // Generate unique filename
+    const fileExt = path.extname(req.file.originalname) || '.jpg';
+    const filename = `user_${userId}${fileExt}`;
+    const filePath = `avatars/${filename}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('profile-images')
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      });
+
+    if (error) {
+      console.error('Supabase upload failed:', error);
+      return res.status(500).json({ error: 'Failed to upload to storage' });
+    }
+
+    // Generate a signed URL valid for 1 hour
+    const { data: { signedUrl } } = await supabase.storage
+      .from('profile-images')
+      .createSignedUrl(filePath, 3600);
+
+    // Update the database with the image path
+    await client.query(
+      'UPDATE users SET profile_image = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [filePath, userId]
+    );
+
+    res.json({ imageUrl: signedUrl });
+  } catch (error) {
+    console.error('Error handling upload:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get signed URL for profile image
+app.get('/user/:id/avatar-url', async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Get the image path from database
+    const result = await client.query(
+      'SELECT profile_image FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (!result.rows[0]?.profile_image) {
+      return res.json({ imageUrl: null });
+    }
+
+    // Generate a new signed URL
+    const { data: { signedUrl } } = await supabase.storage
+      .from('profile-images')
+      .createSignedUrl(result.rows[0].profile_image, 3600);
+
+    res.json({ imageUrl: signedUrl });
+  } catch (error) {
+    console.error('Error getting avatar URL:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // Log request sizes
 app.use((req, res, next) => {
@@ -248,66 +418,81 @@ app.use('/uploads', express.static(uploadsPath));
 console.log('Serving uploads from:', uploadsPath);
 
 // Endpoint for profile image upload
-app.post('/upload-profile-image', express.json({limit: '5mb'}), async (req, res) => {
+// Handle profile image upload
+app.post('/upload-avatar', upload.single('image'), async (req, res) => {
   try {
     console.log('Received upload request');
-    const { image, userId } = req.body;
+    const userId = req.body.userId;
 
-    if (!image || !userId) {
-      console.log('Missing required data:', { hasImage: !!image, hasUserId: !!userId });
+    if (!req.file || !userId) {
+      console.log('Missing required data:', { hasFile: !!req.file, hasUserId: !!userId });
       return res.status(400).json({ error: 'Missing required data' });
     }
 
-    // Validate and extract base64 data
-    if (!image.startsWith('data:image/')) {
-      return res.status(400).json({ error: 'Invalid image format' });
-    }
-
-    const base64Data = image.split(',')[1];
-    if (!base64Data) {
-      return res.status(400).json({ error: 'Invalid image data' });
-    }
-
-    // Create buffer
-    const buffer = Buffer.from(base64Data, 'base64');
-    if (buffer.length === 0) {
-      return res.status(400).json({ error: 'Empty image' });
-    }
-
     // Generate unique filename
-    const uniqueFilename = `${uuidv4()}.jpg`;
+    const fileExt = path.extname(req.file.originalname) || '.jpg';
+    const filename = `user_${userId}${fileExt}`;
+    const filePath = `avatars/${filename}`;
 
     // Upload to Supabase Storage
-    const uploadResponse = await fetch(`${SUPABASE_API_URL}/${uniqueFilename}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_API_KEY}`,
-        'Content-Type': 'image/jpeg'
-      },
-      body: buffer
-    });
+    const { data, error } = await supabase.storage
+      .from('profile-images')
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      });
 
-    if (!uploadResponse.ok) {
-      console.error('Supabase upload failed:', await uploadResponse.text());
+    if (error) {
+      console.error('Supabase upload failed:', error);
       return res.status(500).json({ error: 'Failed to upload to storage' });
     }
 
-    // Generate both URLs
-    const supabaseUrl = getSupabaseImageUrl(uniqueFilename);
-    const localUrl = `${process.env.BASE_URL || 'https://aldra-app.onrender.com'}/uploads/${uniqueFilename}`;
+    // Generate a signed URL valid for 1 hour
+    const { data: { signedUrl } } = await supabase.storage
+      .from('profile-images')
+      .createSignedUrl(filePath, 3600);
 
-    // Update the database with both URLs
+    // Update the database with the image path
     await client.query(
-      'UPDATE users SET profile_image = $1, supabase_image = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-      [localUrl, supabaseUrl, userId]
+      'UPDATE users SET profile_image = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [filePath, userId]
     );
 
-    return res.json({ imageUrl });
+    res.json({ imageUrl: signedUrl });
   } catch (error) {
-    console.error('Upload error:', error);
-    return res.status(500).json({ error: 'Upload failed' });
+    console.error('Error handling upload:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Get signed URL for profile image
+app.get('/user/:id/avatar-url', async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Get the image path from database
+    const result = await client.query(
+      'SELECT profile_image FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (!result.rows[0]?.profile_image) {
+      return res.json({ imageUrl: null });
+    }
+
+    // Generate a new signed URL
+    const { data: { signedUrl } } = await supabase.storage
+      .from('profile-images')
+      .createSignedUrl(result.rows[0].profile_image, 3600);
+
+    res.json({ imageUrl: signedUrl });
+  } catch (error) {
+    console.error('Error getting avatar URL:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 
 // Login endpoint
 app.post('/login', async (req, res) => {

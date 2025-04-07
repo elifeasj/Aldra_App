@@ -5,17 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
-import { API_URL } from '../config.js';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../config/supabase';
+import * as FileSystem from 'expo-file-system';
+import { API_URL } from '../config';
 
 interface UserProfileData {
   name: string;
   email: string;
   password?: string;
   birthday: string;
-  profileImage?: string;  // Local URL from Render
-  supabaseImage?: string; // Backup URL from Supabase
+  profile_image?: string;  // Signed URL from Supabase
   relationToDementiaPerson?: string;
   token?: string;
   id?: number;
@@ -34,7 +34,7 @@ const MyProfile: React.FC = () => {
     email: '',
     password: '',
     birthday: '',
-    profileImage: '',
+    profile_image: '',
     relationToDementiaPerson: ''
   });
 
@@ -65,28 +65,27 @@ const MyProfile: React.FC = () => {
         const parsedData = JSON.parse(storedUserData);
         console.log('Loading stored user data:', parsedData);
 
-        // Extract the image filename from the URL
-        let imageFilename = '';
-        if (parsedData.profileImage) {
-          const match = parsedData.profileImage.match(/\/uploads\/([^/]+)$/);
-          if (match) {
-            imageFilename = match[1];
-            console.log('Found image filename:', imageFilename);
+        // Get a fresh signed URL for the profile image
+        if (parsedData.id) {
+          try {
+            const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`);
+            if (response.ok) {
+              const { imageUrl } = await response.json();
+              if (imageUrl) {
+                parsedData.profileImage = imageUrl;
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching signed URL:', error);
           }
         }
-
-        // Construct both URLs
-        const localUrl = parsedData.profileImage;
-        const supabaseUrl = imageFilename ? 
-          `https://qqmhshgabgopbnauuhhk.supabase.co/storage/v1/object/public/profile-images/${imageFilename}` : '';
 
         setUserData({
           name: parsedData.name || '',
           email: parsedData.email || '',
           password: '',
           birthday: parsedData.birthday || '',
-          profileImage: localUrl || '',
-          supabaseImage: supabaseUrl || '',
+          profile_image: parsedData.profile_image || '',
           relationToDementiaPerson: parsedData.relationToDementiaPerson || '',
           token: parsedData.token,
           id: parsedData.id
@@ -138,9 +137,9 @@ const MyProfile: React.FC = () => {
         type: 'image/jpeg',
         name: 'profile.jpg',
       } as any);
+      formData.append('userId', userData.id?.toString() || '');
 
-      const userId = userData.id;
-      const response = await fetch(`${API_URL}/upload/${userId}`, {
+      const response = await fetch(`${API_URL}/upload-avatar`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -152,10 +151,10 @@ const MyProfile: React.FC = () => {
         const data = await response.json();
         console.log('Upload successful:', data);
 
-        // Update the user data with the new profile image URL
+        // Update the user data with the signed URL
         setUserData(prev => ({
           ...prev,
-          profileImage: data.imageUrl
+          profile_image: data.imageUrl
         }));
 
         // Update AsyncStorage
@@ -164,13 +163,15 @@ const MyProfile: React.FC = () => {
           const parsedData = JSON.parse(storedUserData);
           await AsyncStorage.setItem('userData', JSON.stringify({
             ...parsedData,
-            profileImage: data.imageUrl
+            profile_image: data.imageUrl
           }));
         }
 
         await AsyncStorage.setItem('lastProfileUpdate', new Date().toISOString());
       } else {
-        throw new Error('Upload failed');
+        const errorData = await response.text();
+        console.error('Upload failed:', errorData);
+        throw new Error('Upload failed: ' + errorData);
       }
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -205,7 +206,7 @@ const EditProfile = () => {
     email: '',
     password: '',
     birthday: '',
-    profileImage: '',
+    profile_image: '',
     relationToDementiaPerson: '',
   });
 
@@ -230,8 +231,8 @@ const EditProfile = () => {
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
         console.log('Parsing user data:', parsedData);
-        console.log('Profile image from storage:', parsedData.profileImage);
-        console.log('Profile image type:', typeof parsedData.profileImage);
+        console.log('Profile image from storage:', parsedData.profile_image);
+        console.log('Profile image type:', typeof parsedData.profile_image);
         console.log('Birthday from storage:', parsedData.birthday);
 
         // Make sure we preserve the birthday from the database
@@ -240,7 +241,7 @@ const EditProfile = () => {
           email: parsedData.email || '',
           password: '',
           birthday: parsedData.birthday || '',
-          profileImage: parsedData.profileImage || '',
+          profile_image: parsedData.profile_image || '',
           relationToDementiaPerson: parsedData.relationToDementiaPerson || ''
         });
         
@@ -263,10 +264,10 @@ const EditProfile = () => {
           email: parsedData.email || '',
           password: '',
           birthday: formattedBirthday,
-          profileImage: parsedData.profileImage || '',
+          profile_image: parsedData.profile_image || '',
           relationToDementiaPerson: parsedData.relationToDementiaPerson || ''
         }));
-        console.log('Updated user data with profile:', parsedData.profileImage);
+        console.log('Updated user data with profile:', parsedData.profile_image);
         console.log('Formatted birthday:', formattedBirthday);
 
         // We already set the selected date above, no need to set it again
@@ -320,51 +321,59 @@ const EditProfile = () => {
         { compress: 0.7, format: SaveFormat.JPEG }
       );
 
-      // Convert to blob
-      const response = await fetch(manipulateResult.uri);
-      const blob = await response.blob();
+      // Create FormData
+      const formData = new FormData();
+      
+      // Get file info
+      const fileInfo = await FileSystem.getInfoAsync(manipulateResult.uri);
+      
+      formData.append('image', {
+        uri: manipulateResult.uri,
+        type: 'image/jpeg',
+        name: `user_${userId}_${Date.now()}.jpg`
+      } as any);
+      
+      formData.append('userId', userId.toString());
 
-      // Generate unique filename
-      const fileExt = 'jpg';
-      const fileName = `user_${userId}_${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      // Upload to backend
+      const response = await fetch(`${API_URL}/upload-avatar`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData
+      });
 
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('profile-images')
-        .upload(filePath, blob, {
-          contentType: 'image/jpeg',
-          upsert: true
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
 
-      if (error) throw error;
+      const data = await response.json();
 
-      // Get public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('profile-images')
-        .getPublicUrl(filePath);
+      // Update user data with the new image URL
+      if (data.imageUrl) {
+        setUserData(prev => ({
+          ...prev,
+          profile_image: data.imageUrl
+        }));
 
-      const publicUrl = publicUrlData.publicUrl;
+        // Update AsyncStorage
+        const storedData = await AsyncStorage.getItem('userData');
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          await AsyncStorage.setItem('userData', JSON.stringify({
+            ...parsedData,
+            profile_image: data.imageUrl
+          }));
+        }
+      } else {
+        throw new Error('No image URL received from server');
+      }
 
-      // Update user profile in database
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ profile_image: publicUrl })
-        .eq('id', userId);
-
-      if (updateError) throw updateError;
-
-      // Update local state
-      setUserData(prev => ({
-        ...prev,
-        profile_image: publicUrl
-      }));
-
-      // Update AsyncStorage
-      await AsyncStorage.setItem('userData', JSON.stringify({
-        ...parsedData,
-        profile_image: publicUrl
-      }));
+      // Set last update timestamp
+      await AsyncStorage.setItem('lastProfileUpdate', new Date().toISOString());
 
       Alert.alert('Succes', 'Profilbillede blev uploadet.');
       } catch (error) {
@@ -398,49 +407,24 @@ const EditProfile = () => {
 
           <View style={styles.profileImageContainer}>
             <TouchableOpacity onPress={pickImage} style={styles.profileImageWrapper}>
-              {userData.profileImage ? (
+              {userData.profile_image ? (
                 <>
                   <Image 
-                    source={{ uri: userData.profileImage }} 
+                    source={userData.profile_image ? { uri: userData.profile_image } : undefined} 
                     style={styles.profileImage}
                     onError={(error) => {
                       console.log('Image loading error:', error.nativeEvent.error);
-                      
-                      // If we're already using the Supabase URL, clear everything
-                      if (userData.profileImage === userData.supabaseImage) {
-                        console.log('Both URLs failed, clearing image');
-                        setUserData(prev => ({ ...prev, profileImage: '', supabaseImage: '' }));
-                        AsyncStorage.getItem('userData').then(data => {
-                          if (data) {
-                            const parsed = JSON.parse(data);
-                            parsed.profileImage = '';
-                            parsed.supabaseImage = '';
-                            AsyncStorage.setItem('userData', JSON.stringify(parsed));
-                          }
-                        });
-                      }
-                      // Otherwise try the Supabase URL
-                      else if (userData.supabaseImage) {
-                        console.log('Trying Supabase URL:', userData.supabaseImage);
-                        setUserData(prev => ({ ...prev, profileImage: userData.supabaseImage }));
-                      }
-                      // If no Supabase URL, clear everything
-                      else {
-                        console.log('No backup URL available, clearing image');
-                        setUserData(prev => ({ ...prev, profileImage: '', supabaseImage: '' }));
-                        AsyncStorage.getItem('userData').then(data => {
-                          if (data) {
-                            const parsed = JSON.parse(data);
-                            parsed.profileImage = '';
-                            parsed.supabaseImage = '';
-                            AsyncStorage.setItem('userData', JSON.stringify(parsed));
-                          }
-                        });
-                      }
+                      setUserData(prev => ({ ...prev, profile_image: '' }));
+                      AsyncStorage.getItem('userData').then(data => {
+                        if (data) {
+                          const parsed = JSON.parse(data);
+                          parsed.profile_image = '';
+                          AsyncStorage.setItem('userData', JSON.stringify(parsed));
+                        }
+                      });
                     }}
                     onLoad={() => {
-                      console.log('Image loaded successfully:', userData.profileImage);
-                      // Update the last profile update timestamp
+                      console.log('Image loaded successfully:', userData.profile_image);
                       AsyncStorage.setItem('lastProfileUpdate', new Date().toISOString());
                     }}
                   />
@@ -452,7 +436,13 @@ const EditProfile = () => {
                 </>
               ) : (
                 <View style={styles.placeholderImage}>
-                  <Ionicons name="person" size={40} color="#999" />
+                  {userData.name ? (
+                    <Text style={[styles.initialsText, { color: '#42865F' }]}>
+                      {userData.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </Text>
+                  ) : (
+                    <Ionicons name="person-outline" size={40} color="#42865F" />
+                  )}
                 </View>
               )}
               <View style={styles.editIconContainer}>
@@ -639,6 +629,11 @@ const EditProfile = () => {
 };
 
 const styles = StyleSheet.create({
+  initialsText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#42865F',
+  },
     loadingContainer: {
       justifyContent: 'center',
       alignItems: 'center',
