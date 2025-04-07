@@ -11,17 +11,114 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const app = express();
 
+// Function to sanitize sensitive data
+const sanitizeData = (data) => {
+  if (typeof data === 'string') {
+    // Redact anything that looks like a password field
+    return data.replace(/(["']?(?:password|currentPassword|newPassword)["']?\s*[:=]\s*["'])[^"']+(["'])/gi, '$1[REDACTED]$2')
+              .replace(/(Body:\s*{[^}]*password[^}]*})/gi, '[REDACTED REQUEST BODY]')
+              .replace(/(["']?body["']?\s*[:=]\s*{[^}]*password[^}]*})/gi, '"body": "[REDACTED]"');
+  }
+  if (typeof data === 'object' && data !== null) {
+    if (Array.isArray(data)) {
+      return data.map(sanitizeData);
+    }
+    const sanitized = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (key.toLowerCase().includes('password')) {
+        sanitized[key] = '[REDACTED]';
+      } else {
+        sanitized[key] = sanitizeData(value);
+      }
+    }
+    return sanitized;
+  }
+  return data;
+};
+
+// Store original console methods
+const consoleOverrides = {
+  log: console.log,
+  error: console.error,
+  info: console.info,
+  warn: console.warn,
+  debug: console.debug
+};
+
+// Override all console methods
+Object.keys(consoleOverrides).forEach(method => {
+  console[method] = function (...args) {
+    const sanitizedArgs = args.map(arg => {
+      if (typeof arg === 'string') {
+        return sanitizeData(arg);
+      }
+      if (typeof arg === 'object' && arg !== null) {
+        try {
+          const str = JSON.stringify(arg);
+          const sanitized = sanitizeData(str);
+          return JSON.parse(sanitized);
+        } catch (e) {
+          return sanitizeData(arg);
+        }
+      }
+      return arg;
+    });
+    
+    // Call original console method with sanitized args
+    consoleOverrides[method].apply(console, sanitizedArgs);
+  };
+});
+
 // Enable CORS
 app.use(cors());
 
-// Configure body parser for non-multipart routes
+// Disable all request logging for password-related endpoints
 app.use((req, res, next) => {
-  if (req.path !== '/upload-avatar') {
-    bodyParser.json({ limit: '5mb' })(req, res, next);
+  // Skip logging for password-related endpoints
+  if (!req.path.includes('password')) {
+    console.log(`${req.method} ${req.path}`);
+  }
+  next();
+});
+
+// Custom body parser for sensitive routes
+app.use((req, res, next) => {
+  if (req.path === '/change-password') {
+    let data = '';
+    req.setEncoding('utf8');
+    req.on('data', chunk => { data += chunk; });
+    req.on('end', () => {
+      try {
+        const parsedBody = JSON.parse(data);
+        const originalBody = { ...parsedBody };
+
+        // Sanitize
+        ['password', 'currentPassword', 'newPassword'].forEach(field => {
+          if (parsedBody[field]) parsedBody[field] = '[REDACTED]';
+        });
+
+        // Custom getter
+        req._originalBody = originalBody;
+        Object.defineProperty(req, 'body', {
+          get: function() {
+            return this._originalBody;
+          },
+          set: function(val) {
+            this._originalBody = val;
+          },
+          configurable: true
+        });
+
+      } catch (err) {
+        req.body = {};
+      }
+      next();
+    });
   } else {
-    next();
+    bodyParser.json({ limit: '5mb' })(req, res, next);
   }
 });
+
 
 app.use((req, res, next) => {
   if (req.path !== '/upload-avatar') {
@@ -51,13 +148,58 @@ const upload = multer({
   }
 });
 
-// Log all incoming requests
+// Override console.log to filter out sensitive data
+const originalConsoleLog = console.log;
+console.log = function() {
+  const args = Array.from(arguments);
+  // Check if any argument contains sensitive data
+  const sanitizedArgs = args.map(arg => {
+    if (typeof arg === 'string') {
+      // Remove any password-related information from strings
+      return arg.replace(/(['"]?(?:password|currentPassword|newPassword|hashed_password)['"]?\s*[:=]\s*['"])[^'"]+(['"])/gi, '$1[REDACTED]$2');
+    }
+    if (typeof arg === 'object' && arg !== null) {
+      // Deep clone the object to avoid modifying the original
+      const clone = JSON.parse(JSON.stringify(arg));
+      // Remove sensitive fields
+      ['password', 'currentPassword', 'newPassword', 'hashed_password'].forEach(field => {
+        if (clone[field]) clone[field] = '[REDACTED]';
+        if (clone.body && clone.body[field]) clone.body[field] = '[REDACTED]';
+      });
+      return clone;
+    }
+    return arg;
+  });
+  originalConsoleLog.apply(console, sanitizedArgs);
+};
+
+// Minimal request logging middleware
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
-  if (req.path === '/upload-avatar') {
-    console.log('Content-Type:', req.headers['content-type']);
+  if (req.path === '/change-password') {
+    console.log('Processing password change request');
+  } else {
+    console.log(`${req.method} ${req.path}`);
   }
   next();
+});
+
+// Parse JSON body while preventing sensitive data from being logged
+app.use((req, res, next) => {
+  let data = '';
+  req.setEncoding('utf8');
+  req.on('data', chunk => {
+    data += chunk;
+  });
+  req.on('end', () => {
+    if (data) {
+      try {
+        req.body = JSON.parse(data);
+      } catch (e) {
+        req.body = {};
+      }
+    }
+    next();
+  });
 });
 
 // Apply JSON parser only for non-file upload routes
@@ -177,6 +319,18 @@ app.post('/user/:id/avatar-url', async (req, res) => {
   console.log('Fetched signed URL:', signedUrlData.signedUrl); 
 
   res.status(200).json({ signedUrl: signedUrlData.signedUrl });
+
+  ['log', 'error', 'info', 'debug', 'warn'].forEach(method => {
+    const original = console[method];
+    console[method] = (...args) => {
+      const filtered = args.map(arg =>
+        typeof arg === 'string'
+          ? arg.replace(/(password\s*[:=]\s*['"]).+?(['"])/gi, '$1[REDACTED]$2')
+          : arg
+      );
+      original.apply(console, filtered);
+    };
+  });
 });
 
 // Funktion til at maskere følsomme data
@@ -370,10 +524,9 @@ if (!fs.existsSync(uploadsPath)) {
 // Change password endpoint
 app.post('/change-password', async (req, res) => {
   try {
-    const { userId, currentPassword, newPassword } = req.body;
+    console.log('Sanitized req.body:', sanitizeLog(req._originalBody));
 
-    // Log only non-sensitive information
-    console.log(`Attempting password change for user ID: ${userId}`);
+    const { userId, currentPassword, newPassword } = req.body;
 
     if (!userId || !currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -386,20 +539,13 @@ app.post('/change-password', async (req, res) => {
       .eq('id', userId)
       .single();
 
-    if (userError) {
-      console.error('Database error fetching user:', userError.message);
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    if (!user || !user.hashed_password) {
-      console.error('User or hashed_password not found for ID:', userId);
+    if (userError || !user || !user.hashed_password) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Verify current password
     const isValidPassword = await bcrypt.compare(currentPassword, user.hashed_password);
     if (!isValidPassword) {
-      console.log(`Invalid password attempt for user ID: ${userId}`);
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 

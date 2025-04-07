@@ -14,6 +14,7 @@ const ChangePassword = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   const validatePassword = (password: string) => {
     const minLength = password.length >= 8;
@@ -67,15 +68,22 @@ const ChangePassword = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Kunne ikke ændre adgangskode');
+        console.log('Server response not OK:', response.status);
+        const errorMessage = data.error || 'Kunne ikke ændre adgangskode';
+        throw new Error(errorMessage);
       }
 
-      Alert.alert('Succes', 'Din adgangskode er blevet ændret', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      setShowSuccessMessage(true);
+      setTimeout(() => {
+        router.back();
+      }, 2000);
     } catch (error) {
       console.error('Error changing password:', error instanceof Error ? error.message : 'Unknown error');
-      Alert.alert('Fejl', 'Der opstod en fejl ved ændring af adgangskode');
+      Alert.alert('Fejl', 
+        error instanceof Error && error.message ? 
+        error.message : 
+        'Der opstod en fejl ved ændring af adgangskode'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -144,15 +152,27 @@ const ChangePassword = () => {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            style={[styles.changeButton, isLoading && styles.changeButtonDisabled]}
-            onPress={handleChangePassword}
-            disabled={isLoading}
-          >
-            <Text style={styles.changeButtonText}>
-              {isLoading ? 'Ændrer adgangskode...' : 'Skift adgangskode'}
-            </Text>
-          </TouchableOpacity>
+          {showSuccessMessage ? (
+            <View style={styles.successMessage}>
+              <View style={styles.successIconContainer}>
+                <Ionicons name="checkmark-circle" size={24} color="#42865F" />
+              </View>
+              <Text style={styles.successText}>
+                Din adgangskode er opdateret{"\n"}
+                – brug den ved næste login.
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.changeButton, isLoading && styles.changeButtonDisabled]}
+              onPress={handleChangePassword}
+              disabled={isLoading}
+            >
+              <Text style={styles.changeButtonText}>
+                {isLoading ? 'Ændrer adgangskode...' : 'Skift adgangskode'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -160,6 +180,31 @@ const ChangePassword = () => {
 };
 
 const styles = StyleSheet.create({
+  successMessage: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 8,
+    marginTop: 20,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  successIconContainer: {
+    marginBottom: 10,
+  },
+  successText: {
+    color: '#000',
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    fontFamily: 'RedHatDisplay_400Regular',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
