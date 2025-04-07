@@ -8,11 +8,11 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { API_URL } from '../../config';
 
 interface UserData {
-  id?: number; // Tilføjet id, hvis det modtages
+  id?: number;
   name: string;
   relationToDementiaPerson: string;
   familyId?: number;
-  profileImage?: string;
+  profile_image?: string;
 }
 
 interface LogData {
@@ -29,41 +29,30 @@ const Profil = () => {
     name: '',
     relationToDementiaPerson: ''
   });
+  const [familyMembers, setFamilyMembers] = useState<UserData[]>([]);
+  const [userLogs, setUserLogs] = useState<LogData[]>([]);
+  const [uniqueCode, setUniqueCode] = useState<string>('');
 
   const handleLogout = async () => {
     try {
-      // Clear user data from AsyncStorage
       await AsyncStorage.removeItem('userData');
-      // Redirect to index.js
       router.replace('/');
     } catch (error) {
       console.error('Error during logout:', error);
     }
   };
 
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [familyMembers, setFamilyMembers] = useState<UserData[]>([]);
-  const [userLogs, setUserLogs] = useState<LogData[]>([]);
-
   const handleViewLog = (log: LogData) => {
-    router.push({
-      pathname: '/ny-log',
-      params: { 
-        date: log.created_at,
-        logId: log.id
-      }
-    });
+    router.push({ pathname: '/ny-log', params: { date: log.created_at, logId: log.id } });
   };
 
   const loadFamilyMembers = async () => {
     try {
       const userDataString = await AsyncStorage.getItem('userData');
       if (!userDataString) return;
-
       const userData = JSON.parse(userDataString);
       const response = await fetch(`${API_URL}/users/family/${userData.id}`);
       if (!response.ok) throw new Error('Failed to fetch family members');
-
       const data = await response.json();
       setFamilyMembers(data);
     } catch (error) {
@@ -73,27 +62,56 @@ const Profil = () => {
 
   const loadUserLogs = async () => {
     try {
-      console.log('Loading user logs...');
       const userDataString = await AsyncStorage.getItem('userData');
-      if (!userDataString) {
-        console.log('No user data found');
-        return;
-      }
-
+      if (!userDataString) return;
       const userData = JSON.parse(userDataString);
-      console.log('User ID:', userData.id);
-      
       const response = await fetch(`${API_URL}/user-logs/${userData.id}`);
-      if (!response.ok) {
-        console.error('Failed to fetch logs:', response.status);
-        throw new Error('Failed to fetch user logs');
-      }
-
+      if (!response.ok) throw new Error('Failed to fetch user logs');
       const data = await response.json();
-      console.log('Fetched logs:', data);
       setUserLogs(data);
     } catch (error) {
       console.error('Error fetching user logs:', error);
+    }
+  };
+
+  const loadProfileImage = async () => {
+    try {
+      const storedUserData = await AsyncStorage.getItem('userData');
+      if (storedUserData) {
+        const parsedData = JSON.parse(storedUserData);
+        if (parsedData.profile_image && parsedData.id) {
+          const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: parsedData.profile_image }),
+          });
+          const result = await response.json();
+          if (result.signedUrl) {
+            const updatedUserData = { ...parsedData, profile_image: result.signedUrl };
+            await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
+            setUserData(prev => ({ ...prev, profile_image: result.signedUrl }));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Fejl ved indlæsning af profilbillede:', error);
+    }
+  };
+
+  const loadUserData = async () => {
+    try {
+      const storedUserData = await AsyncStorage.getItem('userData');
+      if (storedUserData) {
+        const parsedData = JSON.parse(storedUserData);
+        setUserData({
+          id: parsedData.id,
+          name: parsedData.name,
+          relationToDementiaPerson: parsedData.relationToDementiaPerson,
+          profile_image: parsedData.profile_image,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
     }
   };
 
@@ -109,95 +127,22 @@ const Profil = () => {
     revalidate();
   }, [revalidate]);
 
-  // Opdater data når vi kommer tilbage til denne side
-  useFocusEffect(
-    useCallback(() => {
-      revalidate();
-    }, [revalidate])
-  );
+  useFocusEffect(useCallback(() => {
+    revalidate();
+  }, [revalidate]));
 
-  const loadProfileImage = async () => {
-    try {
-      const storedUserData = await AsyncStorage.getItem('userData');
-      if (storedUserData) {
-        const parsedData = JSON.parse(storedUserData);
-        console.log('Loading profile image from stored data:', parsedData);
-        if (parsedData.profile_image) {
-          console.log('Found profile image:', parsedData.profile_image);
-          setProfileImage(parsedData.profile_image);
-        } else {
-          console.log('No profile image found in stored data');
-        }
-      }
-    } catch (error) {
-      console.error('Fejl ved indlæsning af profilbillede:', error);
-    }
-  };
-
-  useEffect(() => {
-    loadProfileImage();
-  }, []);
-
-  useEffect(() => {
-    const initializeData = async () => {
-      await loadUserData();
-      await loadFamilyMembers();
-      await loadUserLogs();
-    };
-    initializeData();
-  }, []);
-
-  // Watch for profile image updates
   useEffect(() => {
     const checkProfileUpdate = async () => {
       const lastUpdate = await AsyncStorage.getItem('lastProfileUpdate');
-      if (lastUpdate) {
-        await loadUserData();
-      }
+      if (lastUpdate) await loadUserData();
     };
     checkProfileUpdate();
   }, []);
 
-  const loadUserData = async () => {
-    try {
-      const storedUserData = await AsyncStorage.getItem('userData');
-      if (storedUserData) {
-        const parsedData = JSON.parse(storedUserData);
-        console.log('Loaded user data:', parsedData);
-        
-        // Set user data first
-        setUserData({
-          id: parsedData.id,
-          name: parsedData.name,
-          relationToDementiaPerson: parsedData.relationToDementiaPerson
-        });
-
-        // Handle profile image
-        const imageUrl = parsedData.profile_image;
-        console.log('Profile image URL:', imageUrl);
-
-        if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('http')) {
-          console.log('Setting valid profile image:', imageUrl);
-          setProfileImage(imageUrl);
-        } else {
-          console.log('No valid profile image found');
-          setProfileImage('');
-        }
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    }
-  };
-
-  // Funktion til at formatere navn med stort første bogstav
   const formatName = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
+    return name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
   };
 
-  // Funktion til at beregne initialer ud fra brugerens navn
   const getInitials = (name: string) => {
     const nameParts = name.trim().split(' ');
     if (nameParts.length === 0) return '';
@@ -205,44 +150,30 @@ const Profil = () => {
     return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
   };
 
-  const [uniqueCode, setUniqueCode] = useState<string>('');
-
-  // Funktion til at hente eller oprette et unikt Aldra-link
   const getUniqueAldraLink = async () => {
     if (userData.id) {
       try {
         const response = await fetch(`${API_URL}/api/family-link/${userData.id}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const text = await response.text();
-        try {
-          const data = JSON.parse(text);
-          if (data.unique_code) {
-            setUniqueCode(`aldra.dk/invite/${data.unique_code}`);
-          }
-        } catch (parseError) {
-          console.error('Error parsing response:', text, parseError);
-        }
+        const data = JSON.parse(text);
+        if (data.unique_code) setUniqueCode(`aldra.dk/invite/${data.unique_code}`);
       } catch (error) {
         console.error('Error fetching unique code:', error);
       }
     }
   };
 
+  const formatRelation = (relation: string) => {
+    if (!relation) return '';
+    if (relation === 'Barn') return 'Datter';
+    return relation;
+  };
+
   useEffect(() => {
     getUniqueAldraLink();
   }, [userData.id]);
 
-  const formatRelation = (relation: string) => {
-    if (relation === 'Barn') {
-      return 'Datter';
-    }
-    return relation;
-  };
-
-
-  
   return (
     <ScrollView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
       <View style={styles.header}>
@@ -255,9 +186,9 @@ const Profil = () => {
       <View style={styles.profileSection}>
         <View style={styles.profileContainer}>
           <TouchableOpacity onPress={() => router.push('/myprofile')}>
-            {profileImage ? (
-              <Image 
-                source={{ uri: profileImage }} 
+            {userData.profile_image && userData.profile_image.startsWith('http') ? (
+              <Image
+                source={{ uri: userData.profile_image }}
                 style={styles.profileImage}
                 resizeMode="cover"
               />
@@ -331,9 +262,9 @@ const Profil = () => {
             <View key={member?.id || index} style={styles.familyMemberCard}>
               <View style={[styles.familyImageContainer, !member && styles.emptyFamilyContainer]}>
                 {member ? (
-                  member.profileImage ? (
+                  member.profile_image ? (
                     <Image
-                      source={{ uri: member.profileImage }}
+                      source={{ uri: member.profile_image }}
                       style={styles.familyImage}
                     />
                   ) : (

@@ -53,43 +53,35 @@ const EditProfile = () => {
     try {
       const storedUserData = await AsyncStorage.getItem('userData');
       if (!storedUserData) return;
-
+  
       const parsedData = JSON.parse(storedUserData);
+      const imagePath = parsedData.profile_image || parsedData.profileImage; // sikrer begge versioner
+  
       let signedUrl = '';
-
-        if (parsedData.profile_image && parsedData.id) {
-          try {
-            const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ path: parsedData.profileImage }),
-            });
-
-            const result = await response.json();
-            signedUrl = result.signedUrl;
-          } catch (err) {
-            console.warn('Could not load signed URL:', err);
-          }
-        }      
-
+      if (imagePath && parsedData.id) {
+        console.log('Sending imagePath to backend:', imagePath);
+  
+        const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: imagePath }),
+        });
+  
+        const result = await response.json();
+        signedUrl = result.signedUrl;
+        console.log('Signed URL fetched:', signedUrl);
+      }
+  
       setUserData({
         name: parsedData.name || '',
         email: parsedData.email || '',
         password: '',
         birthday: parsedData.birthday || '',
-        profile_image: signedUrl || '', 
+        profile_image: signedUrl || '',
         relationToDementiaPerson: parsedData.relationToDementiaPerson || '',
         token: parsedData.token,
         id: parsedData.id
       });
-      
-
-      if (parsedData.birthday) {
-        const date = new Date(parsedData.birthday);
-        if (!isNaN(date.getTime())) {
-          setSelectedDate(date);
-        }
-      }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
@@ -382,7 +374,7 @@ const EditProfile = () => {
 
             <TouchableOpacity 
               style={styles.settingsItem}
-              onPress={() => router.push('../../..')}
+              onPress={() => router.push('../../change-password')}
             >
               <View style={styles.settingsIcon}>
                 <Ionicons name="key-outline" size={24} color="#000" />
@@ -458,7 +450,7 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 20,
-      paddingTop: 90,
+      paddingTop: 70,
       paddingBottom: 20,
       backgroundColor: '#fff',
     },
@@ -521,11 +513,11 @@ const styles = StyleSheet.create({
     settingsItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 16,
+      paddingVertical: 20,
       paddingHorizontal: 20,
       borderBottomWidth: 1,
       borderBottomColor: '#F0F0F0',
-      marginBottom: 11,
+      marginBottom: 8,
     },
     settingsText: {
       flex: 1,
@@ -616,8 +608,8 @@ const styles = StyleSheet.create({
         },
       }),
       marginLeft: 20,
-      marginBottom: 8,
-    },
+      marginBottom: 2,
+    }
 });
 
 export default EditProfile;

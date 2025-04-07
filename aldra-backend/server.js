@@ -367,6 +367,55 @@ if (!fs.existsSync(uploadsPath)) {
 
 
 // Login endpoint
+// Change password endpoint
+app.post('/change-password', async (req, res) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Get user from database
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('password')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      console.error('Error fetching user:', userError);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password in database
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ password: hashedPassword })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Error updating password:', updateError);
+      return res.status(500).json({ error: 'Failed to update password' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error in change-password route:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const maskedData = maskSensitiveData({ email, password });
