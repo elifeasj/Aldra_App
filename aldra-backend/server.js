@@ -437,37 +437,29 @@ app.post('/change-password', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Get user from database silently
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('hashed_password')
-      .eq('id', userId)
-      .single();
+    // Brug PostgreSQL direkte
+    const result = await client.query(
+      'SELECT hashed_password FROM users WHERE id = $1',
+      [userId]
+    );
 
-    if (userError || !user || !user.hashed_password) {
+    if (result.rows.length === 0 || !result.rows[0].hashed_password) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Verify current password silently
+    const user = result.rows[0];
+
     const isValidPassword = await bcrypt.compare(currentPassword, user.hashed_password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
-    // Hash new password silently
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password in database silently
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ hashed_password: hashedPassword })
-      .eq('id', userId);
-
-    if (updateError) {
-      console.error('Error updating password:', updateError);
-      return res.status(500).json({ error: 'Failed to update password' });
-    }
+    const updateResult = await client.query(
+      'UPDATE users SET hashed_password = $1 WHERE id = $2',
+      [hashedPassword, userId]
+    );
 
     res.json({ success: true });
   } catch (error) {
