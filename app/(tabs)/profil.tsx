@@ -149,11 +149,22 @@ const Profil = () => {
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
         console.log('Loaded user data:', parsedData); // Log hele brugerdata
+        // Get profile image from either field name
+        const imageUrl = parsedData.profileImage || parsedData.profile_image;
+        console.log('Profile image URL:', imageUrl);
+
         setUserData({
-          id: parsedData.id, // Hvis id er gemt
+          id: parsedData.id,
           name: parsedData.name,
-          relationToDementiaPerson: parsedData.relationToDementiaPerson
+          relationToDementiaPerson: parsedData.relationToDementiaPerson,
+          profileImage: imageUrl
         });
+
+        // Update profile image state
+        if (imageUrl) {
+          setProfileImage(imageUrl);
+          console.log('Set profile image to:', imageUrl);
+        }
         console.log('User ID:', parsedData.id); // Log userId for debugging
       }
     } catch (error) {

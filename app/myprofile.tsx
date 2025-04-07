@@ -100,9 +100,7 @@ const EditProfile = () => {
         const uploadResponse = await fetch(`${API_URL}/upload-profile-image`, {
           method: 'POST',
           body: formData,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+          // Don't set Content-Type for FormData, browser will set it with boundary
         });
 
         console.log('Upload response status:', uploadResponse.status);
@@ -120,37 +118,35 @@ const EditProfile = () => {
           throw new Error('No image URL in response');
         }
 
-        // Transform local URL to use the production domain
+        // Transform local URL to production URL
         const originalUrl = new URL(imageData.imageUrl);
-        const transformedImageUrl = `https://aldra-app.onrender.com${originalUrl.pathname}`;
-        imageData.imageUrl = transformedImageUrl;
-        console.log('Transformed image URL:', transformedImageUrl);
+        const productionImageUrl = `https://aldra-app.onrender.com${originalUrl.pathname}`;
+        console.log('Transformed image URL:', productionImageUrl);
 
-        // Validate URL format
-        try {
-          new URL(imageData.imageUrl);
-          console.log('Valid URL format:', imageData.imageUrl);
-        } catch (e) {
-          console.error('Invalid URL format:', imageData.imageUrl);
-          throw new Error('Invalid image URL format in response');
+        // Get the auth token
+        const token = parsedData.token;
+        if (!token) {
+          throw new Error('No auth token found');
         }
 
-        // Update user profile in database
+        // Update user data with new profile image
         const updateData = {
           name: parsedData.name,
           email: parsedData.email,
-          birthday: parsedData.birthday,
           relationToDementiaPerson: parsedData.relationToDementiaPerson,
-          profileImage: imageData.imageUrl
+          profile_image: productionImageUrl
         };
-        console.log('Updating user profile with data:', updateData);
+        console.log('Updating user data:', updateData);
 
-        const updateUrl = `${API_URL}/users/${userId}`;  // Changed from /users to /user
-        console.log('Updating user at URL:', updateUrl);
+        const updateUrl = `${API_URL}/users/${userId}`;
+        console.log('Making request to:', updateUrl);
+        console.log('With data:', JSON.stringify(updateData, null, 2));
+
         const updateResponse = await fetch(updateUrl, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(updateData)
         });
@@ -163,11 +159,18 @@ const EditProfile = () => {
           throw new Error(`Failed to update user profile: ${updateResponseText}`);
         }
 
-        console.log('Updating with image URL:', imageData.imageUrl);
-        // Update local state and storage
-        setUserData(prev => ({ ...prev, profileImage: imageData.imageUrl }));
-        const updatedUserData = { ...parsedData, profileImage: imageData.imageUrl };
+        console.log('Update successful');
+        const updatedUserData = { 
+          ...parsedData,
+          profile_image: productionImageUrl  // Match database column name
+        };
+        
+        // Save to AsyncStorage
         await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
+        console.log('Saved to AsyncStorage:', updatedUserData);
+        
+        // Update local state to show new image immediately
+        setUserData(prev => ({ ...prev, profile_image: productionImageUrl }));
       } catch (error) {
         console.error('Error uploading image:', error);
         Alert.alert('Fejl', 'Der opstod en fejl ved upload af billedet. Prøv igen.');

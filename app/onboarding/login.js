@@ -33,15 +33,23 @@ export default function Login() {
             }
     
             if (response.ok) {
-                console.log('Bruger logget ind:', data);
-                // Gem brugerdata i AsyncStorage
-                // Gem alle brugerdata i AsyncStorage
+                console.log('Server response data:', data);
+
+                // Create a token from user ID since server doesn't provide one
+                const token = `user_${data.id}`;
+                console.log('Created token:', token);
+
+                // Save token in AsyncStorage
+                await AsyncStorage.setItem('token', token);
+                console.log('Token saved to AsyncStorage');
+
                 const userData = {
                     id: data.id,
                     name: data.name,
                     email: data.email,
                     relationToDementiaPerson: data.relationToDementiaPerson,
-                    profileImage: data.profile_image // Gem profilbillede URL
+                    profileImage: data.profile_image, // Profile image URL
+                    token: token // Save the authentication token
                 };
                 
                 console.log('Gemmer brugerdata:', userData);
