@@ -372,6 +372,9 @@ app.post('/change-password', async (req, res) => {
   try {
     const { userId, currentPassword, newPassword } = req.body;
 
+    // Log only non-sensitive information
+    console.log(`Attempting password change for user ID: ${userId}`);
+
     if (!userId || !currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -379,18 +382,24 @@ app.post('/change-password', async (req, res) => {
     // Get user from database
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('password')
+      .select('hashed_password')
       .eq('id', userId)
       .single();
 
-    if (userError || !user) {
-      console.error('Error fetching user:', userError);
+    if (userError) {
+      console.error('Database error fetching user:', userError.message);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user || !user.hashed_password) {
+      console.error('User or hashed_password not found for ID:', userId);
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    const isValidPassword = await bcrypt.compare(currentPassword, user.hashed_password);
     if (!isValidPassword) {
+      console.log(`Invalid password attempt for user ID: ${userId}`);
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
@@ -401,7 +410,7 @@ app.post('/change-password', async (req, res) => {
     // Update password in database
     const { error: updateError } = await supabase
       .from('users')
-      .update({ password: hashedPassword })
+      .update({ hashed_password: hashedPassword })
       .eq('id', userId);
 
     if (updateError) {

@@ -46,6 +46,9 @@ const ChangePassword = () => {
 
       const { id, token } = JSON.parse(userData);
 
+      // Log only non-sensitive information
+      console.log('Attempting to change password...');
+
       const response = await fetch(`${API_URL}/change-password`, {
         method: 'POST',
         headers: {
@@ -59,6 +62,8 @@ const ChangePassword = () => {
         })
       });
 
+      console.log('Password change request sent');
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -69,7 +74,7 @@ const ChangePassword = () => {
         { text: 'OK', onPress: () => router.back() }
       ]);
     } catch (error) {
-      console.error('Error changing password:', error);
+      console.error('Error changing password:', error instanceof Error ? error.message : 'Unknown error');
       Alert.alert('Fejl', 'Der opstod en fejl ved ændring af adgangskode');
     } finally {
       setIsLoading(false);
