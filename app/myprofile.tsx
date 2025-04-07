@@ -77,11 +77,12 @@ const EditProfile = () => {
         email: parsedData.email || '',
         password: '',
         birthday: parsedData.birthday || '',
-        profile_image: signedUrl || '',
+        profile_image: signedUrl || '', 
         relationToDementiaPerson: parsedData.relationToDementiaPerson || '',
         token: parsedData.token,
-        id: parsedData.id,
+        id: parsedData.id
       });
+      
 
       if (parsedData.birthday) {
         const date = new Date(parsedData.birthday);
