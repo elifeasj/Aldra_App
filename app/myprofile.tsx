@@ -3,7 +3,7 @@ import { Platform, StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollVi
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker';
+import { MediaTypeOptions, launchImageLibraryAsync, requestMediaLibraryPermissionsAsync } from 'expo-image-picker';
 import { API_URL } from '../config.js';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -63,21 +63,22 @@ const EditProfile = () => {
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status } = await requestMediaLibraryPermissionsAsync();
     
     if (status !== 'granted') {
       Alert.alert('Tilladelse nødvendig', 'Vi skal bruge din tilladelse for at vælge et billede.');
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    const result = await launchImageLibraryAsync({
+      mediaTypes: MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
     });
 
     if (!result.canceled && result.assets[0].uri) {
+      console.log('Selected image URI:', result.assets[0].uri);
       const formData = new FormData();
       formData.append('profileImage', {
         uri: result.assets[0].uri,
@@ -91,8 +92,12 @@ const EditProfile = () => {
 
         const parsedData = JSON.parse(storedUserData);
         const userId = parsedData.id;
+        console.log('User ID for update:', userId);
+        console.log('Stored user data:', parsedData);
 
-        const response = await fetch(`${API_URL}/upload-profile-image`, {
+        // Upload image first
+        console.log('Uploading to:', `${API_URL}/upload-profile-image`);
+        const uploadResponse = await fetch(`${API_URL}/upload-profile-image`, {
           method: 'POST',
           body: formData,
           headers: {
@@ -100,15 +105,68 @@ const EditProfile = () => {
           },
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to upload image');
+        console.log('Upload response status:', uploadResponse.status);
+        const responseText = await uploadResponse.text();
+        console.log('Upload response text:', responseText);
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload image: ${responseText}`);
         }
 
-        const data = await response.json();
-        setUserData(prev => ({ ...prev, profileImage: data.imageUrl }));
-        
-        // Opdater AsyncStorage med nyt billede URL
-        const updatedUserData = { ...parsedData, profileImage: data.imageUrl };
+        const imageData = JSON.parse(responseText);
+        console.log('Parsed image data:', imageData);
+
+        if (!imageData.imageUrl) {
+          throw new Error('No image URL in response');
+        }
+
+        // Transform local URL to use the production domain
+        const originalUrl = new URL(imageData.imageUrl);
+        const transformedImageUrl = `https://aldra-app.onrender.com${originalUrl.pathname}`;
+        imageData.imageUrl = transformedImageUrl;
+        console.log('Transformed image URL:', transformedImageUrl);
+
+        // Validate URL format
+        try {
+          new URL(imageData.imageUrl);
+          console.log('Valid URL format:', imageData.imageUrl);
+        } catch (e) {
+          console.error('Invalid URL format:', imageData.imageUrl);
+          throw new Error('Invalid image URL format in response');
+        }
+
+        // Update user profile in database
+        const updateData = {
+          name: parsedData.name,
+          email: parsedData.email,
+          birthday: parsedData.birthday,
+          relationToDementiaPerson: parsedData.relationToDementiaPerson,
+          profileImage: imageData.imageUrl
+        };
+        console.log('Updating user profile with data:', updateData);
+
+        const updateUrl = `${API_URL}/users/${userId}`;  // Changed from /users to /user
+        console.log('Updating user at URL:', updateUrl);
+        const updateResponse = await fetch(updateUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData)
+        });
+
+        console.log('Update response status:', updateResponse.status);
+        const updateResponseText = await updateResponse.text();
+        console.log('Update response:', updateResponseText);
+
+        if (!updateResponse.ok) {
+          throw new Error(`Failed to update user profile: ${updateResponseText}`);
+        }
+
+        console.log('Updating with image URL:', imageData.imageUrl);
+        // Update local state and storage
+        setUserData(prev => ({ ...prev, profileImage: imageData.imageUrl }));
+        const updatedUserData = { ...parsedData, profileImage: imageData.imageUrl };
         await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
       } catch (error) {
         console.error('Error uploading image:', error);
@@ -117,101 +175,6 @@ const EditProfile = () => {
     }
   };
 
-  const handleSave = async () => {
-    try {
-      const storedUserData = await AsyncStorage.getItem('userData');
-      if (!storedUserData) {
-        Alert.alert('Fejl', 'Kunne ikke finde brugerdata');
-        return;
-      }
-
-      // Update AsyncStorage with new data
-      await AsyncStorage.setItem('userData', JSON.stringify({
-        ...JSON.parse(storedUserData),
-        name: userData.name,
-        relationToDementiaPerson: userData.relationToDementiaPerson,
-        birthday: userData.birthday
-      }));
-
-      const parsedData = JSON.parse(storedUserData);
-      const userId = parsedData.id;
-
-      if (!userId) {
-        Alert.alert('Fejl', 'Kunne ikke finde bruger ID');
-        return;
-      }
-
-      interface UpdateData {
-        name: string;
-        email: string;
-        birthday: string;
-        password?: string;
-      }
-
-      const updateData: UpdateData = {
-        name: userData.name,
-        email: userData.email,
-        birthday: userData.birthday,
-      };
-
-      // Kun inkluder password hvis det er udfyldt
-      if (userData.password && userData.password.trim() !== '') {
-        updateData.password = userData.password;
-      }
-
-      console.log('Sending update request to:', `${API_URL}/users/${userId}`);
-      console.log('Update data:', updateData);
-
-      console.log('Making request to:', `${API_URL}/users/${userId}`);
-      console.log('With data:', updateData);
-
-      const response = await fetch(`${API_URL}/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData),
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-      if (!response.ok) {
-        const responseText = await response.text();
-        console.error('Server response:', responseText);
-        try {
-          const errorData = JSON.parse(responseText);
-          throw new Error(errorData.error || 'Failed to update user data');
-        } catch (parseError) {
-          console.error('Error parsing error response:', parseError);
-          throw new Error(`Server error: ${response.status} ${response.statusText}`);
-        }
-      }
-
-      const responseText = await response.text();
-      console.log('Server response:', responseText);
-      let updatedData;
-      try {
-        updatedData = JSON.parse(responseText);
-        console.log('Parsed updated data:', updatedData);
-      } catch (parseError) {
-        console.error('Error parsing success response:', parseError);
-        throw new Error('Invalid response from server');
-      }
-
-      await AsyncStorage.setItem('userData', JSON.stringify({
-        ...parsedData,
-        ...updatedData,
-      }));
-
-      Alert.alert('Succes', 'Dine ændringer er blevet gemt');
-      router.back();
-    } catch (error) {
-      console.error('Error updating user data:', error);
-      Alert.alert('Fejl', 'Der skete en fejl ved opdatering af dine data. Prøv igen.');
-    }
-  };
 
   return (
     <KeyboardAvoidingView
@@ -237,7 +200,12 @@ const EditProfile = () => {
       <View style={styles.profileImageContainer}>
         <TouchableOpacity onPress={pickImage} style={styles.profileImageWrapper}>
           {userData.profileImage ? (
-            <Image source={{ uri: userData.profileImage }} style={styles.profileImage} />
+            <Image 
+              source={{ uri: userData.profileImage }} 
+              style={styles.profileImage}
+              onError={(error) => console.log('Image loading error:', error.nativeEvent.error)}
+              onLoad={() => console.log('Image loaded successfully:', userData.profileImage)}
+            />
           ) : (
             <View style={styles.placeholderImage}>
               <Ionicons name="person" size={40} color="#999" />

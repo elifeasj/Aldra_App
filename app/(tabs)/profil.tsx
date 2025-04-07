@@ -102,6 +102,7 @@ const Profil = () => {
     getUniqueAldraLink();
     loadFamilyMembers();
     loadUserLogs();
+    loadProfileImage();
   }, []);
 
   useEffect(() => {
@@ -115,21 +116,21 @@ const Profil = () => {
     }, [revalidate])
   );
 
-  useEffect(() => {
-    const loadProfileImage = async () => {
-      try {
-        const storedUserData = await AsyncStorage.getItem('userData');
-        if (storedUserData) {
-          const parsedData = JSON.parse(storedUserData);
-          if (parsedData.profileImage) {
-            setProfileImage(parsedData.profileImage);
-          }
+  const loadProfileImage = async () => {
+    try {
+      const storedUserData = await AsyncStorage.getItem('userData');
+      if (storedUserData) {
+        const parsedData = JSON.parse(storedUserData);
+        if (parsedData.profileImage) {
+          setProfileImage(parsedData.profileImage);
         }
-      } catch (error) {
-        console.error('Fejl ved indlæsning af profilbillede:', error);
       }
-    };
-    
+    } catch (error) {
+      console.error('Fejl ved indlæsning af profilbillede:', error);
+    }
+  };
+
+  useEffect(() => {
     loadProfileImage();
   }, []);
 
