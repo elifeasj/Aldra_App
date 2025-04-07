@@ -1,29 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Platform, StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { Platform, StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { API_URL } from '../config.js';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface UserProfileData {
   name: string;
-  fullName: string;
   email: string;
   password?: string;
   birthday: string;
   profileImage?: string;
+  relationToDementiaPerson?: string;
 }
 
 const EditProfile = () => {
   const router = useRouter();
+  const [showRelationPicker, setShowRelationPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const relations = ["Ægtefælle/Partner", "Barn", "Søskende", "Forældre", "Andet"];
+  
   const [userData, setUserData] = useState<UserProfileData>({
     name: '',
-    fullName: '',
     email: '',
     password: '',
     birthday: '',
     profileImage: '',
+    relationToDementiaPerson: '',
   });
 
   useEffect(() => {
@@ -38,12 +44,18 @@ const EditProfile = () => {
         setUserData(prevData => ({
           ...prevData,
           name: parsedData.name || '',
-          fullName: parsedData.fullName || '',
           email: parsedData.email || '',
           password: '',
           birthday: parsedData.birthday || '',
-          profileImage: parsedData.profileImage || ''
+          profileImage: parsedData.profileImage || '',
+          relationToDementiaPerson: parsedData.relationToDementiaPerson || ''
         }));
+
+        // Set selected date from stored birthday if it exists
+        if (parsedData.birthday) {
+          const [day, month, year] = parsedData.birthday.split('/');
+          setSelectedDate(new Date(Number(year), Number(month) - 1, Number(day)));
+        }
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -113,6 +125,14 @@ const EditProfile = () => {
         return;
       }
 
+      // Update AsyncStorage with new data
+      await AsyncStorage.setItem('userData', JSON.stringify({
+        ...JSON.parse(storedUserData),
+        name: userData.name,
+        relationToDementiaPerson: userData.relationToDementiaPerson,
+        birthday: userData.birthday
+      }));
+
       const parsedData = JSON.parse(storedUserData);
       const userId = parsedData.id;
 
@@ -123,7 +143,6 @@ const EditProfile = () => {
 
       interface UpdateData {
         name: string;
-        fullName: string;
         email: string;
         birthday: string;
         password?: string;
@@ -131,7 +150,6 @@ const EditProfile = () => {
 
       const updateData: UpdateData = {
         name: userData.name,
-        fullName: userData.fullName,
         email: userData.email,
         birthday: userData.birthday,
       };
@@ -231,35 +249,105 @@ const EditProfile = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.inputGroup}>
-          <Text style={styles.label}>Fuldenavn</Text>
-          <TextInput
-            style={styles.input}
-            value={userData.fullName}
-            onChangeText={(text) => setUserData({ ...userData, fullName: text })}
-            placeholder="Linda Boe"
-          />
-        </View>
+      <Text style={styles.sectionLabel}>Fuldenavn</Text>
+      <View style={styles.settingsItem}>
+        <Text style={styles.settingsText}>{userData.name}</Text>
+      </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Relation til person med demens</Text>
-          <TouchableOpacity style={styles.input} onPress={() => {/* Add relation picker logic */}}>
-            <Text>Datter</Text>
-          </TouchableOpacity>
-        </View>
+      <Text style={styles.sectionLabel}>Relation</Text>
+      <View style={styles.settingsItem}>
+        <Text style={styles.settingsText}>
+          {userData.relationToDementiaPerson || 'Relation til person med demens'}
+        </Text>
+      </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Fødselsdato</Text>
-          <TextInput
-            style={styles.input}
-            value={userData.birthday}
-            onChangeText={(text) => setUserData({ ...userData, birthday: text })}
-            placeholder="mm/dd/åååå"
-          />
-        </View>
+      <Text style={styles.sectionLabel}>Fødselsdato</Text>
+      <View style={styles.settingsItem}>
+        <Text style={styles.settingsText}>
+          {userData.birthday || 'Vælg fødselsdato (valgfrit)'}
+        </Text>
+        <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+          <Ionicons name="create-outline" size={24} color="#707070" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Birthday Picker Modal */}
+      <Modal
+        visible={showDatePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={[styles.modalTitle, { color: '#000' }]}>Vælg fødselsdato</Text>
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="spinner"
+                textColor="#000"
+                themeVariant="light"
+                minimumDate={new Date(1900, 0, 1)}
+                maximumDate={new Date()}
+                onChange={(event, selectedDate) => {
+                  if (event.type === 'set' && selectedDate) {
+                    setSelectedDate(selectedDate);
+                    const day = String(selectedDate.getDate()).padStart(2, '0');
+                    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                    const year = selectedDate.getFullYear();
+                    const formattedDate = `${day}/${month}/${year}`;
+                    setUserData(prev => ({ ...prev, birthday: formattedDate }));
+                  }
+                }}
+              />
+              <TouchableOpacity 
+                style={styles.modalSaveButton}
+                onPress={async () => {
+                  try {
+                    // Get current user data
+                    const storedData = await AsyncStorage.getItem('userData');
+                    if (!storedData) return;
+
+                    const parsedData = JSON.parse(storedData);
+                    const updatedData = { ...parsedData, birthday: userData.birthday };
+
+                    // Update database
+                    const response = await fetch(`${API_URL}/users/${parsedData.id}`, {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        birthday: userData.birthday
+                      })
+                    });
+
+                    if (!response.ok) {
+                      throw new Error('Failed to update birthday');
+                    }
+
+                    // Update AsyncStorage
+                    await AsyncStorage.setItem('userData', JSON.stringify(updatedData));
+                    setShowDatePicker(false);
+                  } catch (error) {
+                    console.error('Error updating birthday:', error);
+                    Alert.alert('Fejl', 'Der opstod en fejl ved opdatering af fødselsdato. Prøv igen.');
+                  }
+                }}
+              >
+                <Text style={styles.modalSaveButtonText}>Gem</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
         <View style={styles.settingsContainer}>
           <View style={styles.settingsSection}>
+
+
+           
             <TouchableOpacity 
               style={styles.settingsItem}
               onPress={() => router.push('../../myprofile')}
@@ -294,10 +382,6 @@ const EditProfile = () => {
             </TouchableOpacity>
           </View>
         </View>
-
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Gem ændringer</Text>
-        </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -387,19 +471,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'RedHatDisplay_400Regular',
   },
-  saveButton: {
-    backgroundColor: '#42865F',
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '500',
-    fontFamily: 'RedHatDisplay_500Medium',
-  },
+
   settingsContainer: {
     marginTop: 0,
     marginBottom: 16,
@@ -424,6 +496,64 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#000',
     fontFamily: 'RedHatDisplay_400Regular',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalSaveButton: {
+    backgroundColor: '#42865F',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  modalSaveButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontFamily: 'RedHatDisplay_500Medium',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    fontFamily: 'RedHatDisplay_700Bold',
+  },
+  relationItem: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  relationText: {
+    fontSize: 18,
+    color: '#000',
+    fontFamily: 'RedHatDisplay_400Regular',
+  },
+  sectionLabel: {
+    ...Platform.select({
+      ios: {
+        fontSize: 18,
+        color: '#000000',
+        fontFamily: 'RedHatDisplay_400Regular',
+      },
+      android: {
+        fontSize: 18,
+        color: '#000000',
+        fontFamily: 'RedHatDisplay_400Regular',
+      },
+    }),
+    marginLeft: 20,
+    marginBottom: 8,
   },
 });
 

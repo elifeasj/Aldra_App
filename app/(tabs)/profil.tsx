@@ -489,14 +489,14 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   logTitle: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: '400',
     color: '#000',
     marginBottom: 8,
     fontFamily: 'RedHatDisplay',
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     fontFamily: 'RedHatDisplay_400Regular',
   },
