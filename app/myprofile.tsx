@@ -16,6 +16,18 @@ interface UserProfileData {
   relationToDementiaPerson?: string;
 }
 
+const danishMonths = [
+  'januar', 'februar', 'marts', 'april', 'maj', 'juni',
+  'juli', 'august', 'september', 'oktober', 'november', 'december'
+];
+
+const formatDanishDate = (date: Date) => {
+  const day = date.getDate();
+  const month = danishMonths[date.getMonth()];
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
+};
+
 const EditProfile = () => {
   const router = useRouter();
   const [showRelationPicker, setShowRelationPicker] = useState(false);
@@ -53,16 +65,27 @@ const EditProfile = () => {
       const storedUserData = await AsyncStorage.getItem('userData');
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
+        // Format birthday from ISO to Danish format if it exists
+        let formattedBirthday = '';
+        if (parsedData.birthday) {
+          const date = new Date(parsedData.birthday);
+          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const year = date.getFullYear();
+          formattedBirthday = `${day}/${month}/${year}`;
+        }
+
         setUserData(prevData => ({
           ...prevData,
           name: parsedData.name || '',
           email: parsedData.email || '',
           password: '',
-          birthday: parsedData.birthday || '',
+          birthday: formattedBirthday,
           profileImage: parsedData.profile_image || '',
           relationToDementiaPerson: parsedData.relationToDementiaPerson || ''
         }));
         console.log('Updated user data with profile:', parsedData.profile_image);
+        console.log('Formatted birthday:', formattedBirthday);
 
         // Set selected date from stored birthday if it exists
         if (parsedData.birthday) {
@@ -278,8 +301,12 @@ const EditProfile = () => {
       >
         <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={[styles.modalTitle, { color: '#000' }]}>Vælg fødselsdato</Text>
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalContent}>
+                <Text style={[styles.modalTitle, { color: '#000' }]}>Vælg fødselsdato</Text>
+              <Text style={[styles.modalText, { marginBottom: 10 }]}>
+                {formatDanishDate(selectedDate)}
+              </Text>
               <DateTimePicker
                 value={selectedDate}
                 mode="date"
@@ -288,38 +315,69 @@ const EditProfile = () => {
                 themeVariant="light"
                 minimumDate={new Date(1900, 0, 1)}
                 maximumDate={new Date()}
-                onChange={(event, selectedDate) => {
-                  if (event.type === 'set' && selectedDate) {
-                    setSelectedDate(selectedDate);
-                    const day = String(selectedDate.getDate()).padStart(2, '0');
-                    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-                    const year = selectedDate.getFullYear();
-                    const formattedDate = `${day}/${month}/${year}`;
-                    setUserData(prev => ({ ...prev, birthday: formattedDate }));
-                  }
+                onChange={(event, date) => {
+                  const currentDate = date || selectedDate;
+                  setSelectedDate(currentDate);
+                  console.log('Date selected in picker:', currentDate);
                 }}
               />
-              <TouchableOpacity 
-                style={styles.modalSaveButton}
-                onPress={async () => {
+              <View style={styles.modalButtonContainer}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.modalCancelButton]}
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    // Reset selected date to current value
+                    if (userData.birthday) {
+                      const [day, month, year] = userData.birthday.split('/');
+                      setSelectedDate(new Date(Number(year), Number(month) - 1, Number(day)));
+                    }
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Annuller</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.modalSaveButton]}
+                  onPress={async () => {
                   try {
                     // Get current user data
                     const storedData = await AsyncStorage.getItem('userData');
                     if (!storedData) return;
 
                     const parsedData = JSON.parse(storedData);
-                    const updatedData = { ...parsedData, birthday: userData.birthday };
+
+                    // Ensure we have a valid date
+                    const currentDate = new Date(selectedDate);
+                    const day = String(currentDate.getDate()).padStart(2, '0');
+                    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                    const year = currentDate.getFullYear();
+                    
+                    // Format date for database (YYYY-MM-DD)
+                    const isoDate = `${year}-${month}-${day}`;
+                    // Format date in Danish format (DD/MM/YYYY)
+                    const formattedDate = `${day}/${month}/${year}`;
+
+                    // Update local state with formatted date
+                    setUserData(prev => ({ ...prev, birthday: formattedDate }));
+
+                    const updatedData = { ...parsedData, birthday: formattedDate };
 
                     // Update database
                     const response = await fetch(`${API_URL}/users/${parsedData.id}`, {
                       method: 'PUT',
                       headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${parsedData.token}`
                       },
                       body: JSON.stringify({
-                        birthday: userData.birthday
+                        birthday: isoDate,
+                        // Keep other fields unchanged
+                        name: parsedData.name,
+                        email: parsedData.email,
+                        profile_image: parsedData.profile_image,
+                        relationToDementiaPerson: parsedData.relationToDementiaPerson
                       })
                     });
+                    console.log('Birthday update response:', await response.text());
 
                     if (!response.ok) {
                       throw new Error('Failed to update birthday');
@@ -334,9 +392,11 @@ const EditProfile = () => {
                   }
                 }}
               >
-                <Text style={styles.modalSaveButtonText}>Gem</Text>
+                <Text style={[styles.modalButtonText, { color: '#fff' }]}>Gem</Text>
               </TouchableOpacity>
             </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
@@ -387,6 +447,30 @@ const EditProfile = () => {
 }
 
 const styles = StyleSheet.create({
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    marginHorizontal: 10,
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#e0e0e0',
+  },
+  modalSaveButton: {
+    backgroundColor: '#42865F',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -507,25 +591,18 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: '80%',
   },
-  modalSaveButton: {
-    backgroundColor: '#42865F',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  modalSaveButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontFamily: 'RedHatDisplay_500Medium',
-  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
     fontFamily: 'RedHatDisplay_700Bold',
+  },
+  modalText: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#000',
+    fontFamily: 'RedHatDisplay_400Regular',
   },
   relationItem: {
     paddingVertical: 15,
