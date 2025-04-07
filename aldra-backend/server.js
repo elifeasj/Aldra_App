@@ -77,6 +77,7 @@ app.use((req, res, next) => {
 });
 
 // Handle profile image upload
+// Handle profile image upload
 app.post('/upload-avatar', upload.single('image'), async (req, res) => {
   try {
     const userId = req.body.userId;
@@ -87,6 +88,8 @@ app.post('/upload-avatar', upload.single('image'), async (req, res) => {
     }
 
     const fileName = `avatars/user_${userId}_${Date.now()}.jpg`;
+    console.log('Uploading to bucket: profile-images');
+    console.log('File name:', fileName);    
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('profile-images')
@@ -106,7 +109,20 @@ app.post('/upload-avatar', upload.single('image'), async (req, res) => {
       .update({ profile_image: fileName })
       .eq('id', userId);
 
-    res.status(200).json({ success: true, path: fileName });
+    // Få signed URL
+    const { data: signedUrlData, error: signedUrlError } = await supabase
+      .storage
+      .from('profile-images')
+      .createSignedUrl(fileName, 60 * 60); // 1 time
+
+    if (signedUrlError) {
+      console.error('Error creating signed URL:', signedUrlError);
+      return res.status(500).json({ error: 'Could not create signed URL' });
+    }
+
+    // ✅ Success
+    res.status(200).json({ success: true, path: fileName, imageUrl: signedUrlData.signedUrl });
+
   } catch (error) {
     console.error('Error in upload-avatar route:', error);
     res.status(500).json({ error: 'Internal server error' });

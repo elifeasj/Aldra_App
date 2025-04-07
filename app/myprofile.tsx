@@ -21,8 +21,6 @@ interface UserProfileData {
   id?: number;
 }
 
-const MyProfile: React.FC = () => {
-  const router = useRouter();
   const [showRelationPicker, setShowRelationPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -61,41 +59,36 @@ const MyProfile: React.FC = () => {
   const loadUserData = async () => {
     try {
       const storedUserData = await AsyncStorage.getItem('userData');
-      if (storedUserData) {
-        const parsedData = JSON.parse(storedUserData);
-        console.log('Loading stored user data:', parsedData);
+      if (!storedUserData) return;
 
-        // Get a fresh signed URL for the profile image
-        if (parsedData.id) {
-          try {
-            const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`);
-            if (response.ok) {
-              const { imageUrl } = await response.json();
-              if (imageUrl) {
-                parsedData.profileImage = imageUrl;
-              }
-            }
-          } catch (error) {
-            console.error('Error fetching signed URL:', error);
-          }
+      const parsedData = JSON.parse(storedUserData);
+      let signedUrl = '';
+
+      if (parsedData.profile_image && parsedData.id) {
+        try {
+          const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`);
+          const result = await response.json();
+          signedUrl = result.signedUrl;
+        } catch (err) {
+          console.warn('Could not load signed URL:', err);
         }
+      }
 
-        setUserData({
-          name: parsedData.name || '',
-          email: parsedData.email || '',
-          password: '',
-          birthday: parsedData.birthday || '',
-          profile_image: parsedData.profile_image || '',
-          relationToDementiaPerson: parsedData.relationToDementiaPerson || '',
-          token: parsedData.token,
-          id: parsedData.id
-        });
+      setUserData({
+        name: parsedData.name || '',
+        email: parsedData.email || '',
+        password: '',
+        birthday: parsedData.birthday || '',
+        profile_image: signedUrl || '',
+        relationToDementiaPerson: parsedData.relationToDementiaPerson || '',
+        token: parsedData.token,
+        id: parsedData.id
+      });
 
-        if (parsedData.birthday) {
-          const date = new Date(parsedData.birthday);
-          if (!isNaN(date.getTime())) {
-            setSelectedDate(date);
-          }
+      if (parsedData.birthday) {
+        const date = new Date(parsedData.birthday);
+        if (!isNaN(date.getTime())) {
+          setSelectedDate(date);
         }
       }
     } catch (error) {
@@ -307,81 +300,69 @@ const EditProfile = () => {
   const uploadImage = async (uri: string) => {
     try {
       setIsUploading(true);
-
+  
       const storedUserData = await AsyncStorage.getItem('userData');
       if (!storedUserData) throw new Error('No user data found');
-      
+  
       const parsedData = JSON.parse(storedUserData);
       const userId = parsedData.id;
-
-      // First compress the image
-      const manipulateResult = await manipulateAsync(
+  
+      // Komprimer billedet
+      const manipulatedImage = await manipulateAsync(
         uri,
         [{ resize: { width: 500 } }],
         { compress: 0.7, format: SaveFormat.JPEG }
       );
-
-      // Create FormData
+  
+      // Konverter til blob
+      const imageResponse = await fetch(manipulatedImage.uri);
+      const imageBlob = await imageResponse.blob();
+  
+      const fileName = `user_${userId}_${Date.now()}.jpg`;
+  
+      // FormData til upload
       const formData = new FormData();
-      
-      // Get file info
-      const fileInfo = await FileSystem.getInfoAsync(manipulateResult.uri);
-      
       formData.append('image', {
-        uri: manipulateResult.uri,
+        uri: manipulatedImage.uri,
+        name: fileName,
         type: 'image/jpeg',
-        name: `user_${userId}_${Date.now()}.jpg`
-      } as any);
-      
+      } as any); // TS hack
+  
       formData.append('userId', userId.toString());
-
-      // Upload to backend
+  
+      // Upload til backend
       const response = await fetch(`${API_URL}/upload-avatar`, {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'multipart/form-data',
-        },
-        body: formData
+        body: formData,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
-      }
-
-      const data = await response.json();
-
-      // Update user data with the new image URL
-      if (data.imageUrl) {
-        setUserData(prev => ({
-          ...prev,
-          profile_image: data.imageUrl
-        }));
-
-        // Update AsyncStorage
-        const storedData = await AsyncStorage.getItem('userData');
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          await AsyncStorage.setItem('userData', JSON.stringify({
-            ...parsedData,
-            profile_image: data.imageUrl
-          }));
-        }
-      } else {
-        throw new Error('No image URL received from server');
-      }
-
-      // Set last update timestamp
-      await AsyncStorage.setItem('lastProfileUpdate', new Date().toISOString());
-
-      Alert.alert('Succes', 'Profilbillede blev uploadet.');
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        Alert.alert('Fejl', 'Der opstod en fejl ved upload af billedet. Prøv igen.');
-      }
+  
+      const result = await response.json();
+      if (!response.ok || !result.path) throw new Error('Upload failed');
+  
+      // Hent signed URL til visning
+      const signedUrlRes = await fetch(`${API_URL}/user/${userId}/avatar-url`);
+      const signedUrlJson = await signedUrlRes.json();
+  
+      const signedUrl = signedUrlJson.signedUrl;
+  
+      // Opdater brugerdata lokalt
+      const updatedUserData = {
+        ...parsedData,
+        profile_image: signedUrl,
+      };
+  
+      await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
+      setUserData(updatedUserData);
+  
+      Alert.alert('Succes', 'Profilbillede opdateret!');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Fejl', 'Kunne ikke uploade billede');
+    } finally {
+      setIsUploading(false);
     }
   };
+  
 
 
   return (
@@ -409,23 +390,12 @@ const EditProfile = () => {
             <TouchableOpacity onPress={pickImage} style={styles.profileImageWrapper}>
               {userData.profile_image ? (
                 <>
-                  <Image 
-                    source={userData.profile_image ? { uri: userData.profile_image } : undefined} 
+                  <Image
+                    source={{ uri: userData.profile_image }}
                     style={styles.profileImage}
-                    onError={(error) => {
-                      console.log('Image loading error:', error.nativeEvent.error);
+                    onError={() => {
+                      console.log('Image failed to load, fallback to initials');
                       setUserData(prev => ({ ...prev, profile_image: '' }));
-                      AsyncStorage.getItem('userData').then(data => {
-                        if (data) {
-                          const parsed = JSON.parse(data);
-                          parsed.profile_image = '';
-                          AsyncStorage.setItem('userData', JSON.stringify(parsed));
-                        }
-                      });
-                    }}
-                    onLoad={() => {
-                      console.log('Image loaded successfully:', userData.profile_image);
-                      AsyncStorage.setItem('lastProfileUpdate', new Date().toISOString());
                     }}
                   />
                   {isUploading && (
@@ -839,4 +809,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default MyProfile;
+export default EditProfile;
