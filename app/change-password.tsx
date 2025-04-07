@@ -153,14 +153,16 @@ const ChangePassword = () => {
           </View>
 
           {showSuccessMessage ? (
-            <View style={styles.successMessage}>
-              <View style={styles.successIconContainer}>
-                <Ionicons name="checkmark-circle" size={24} color="#42865F" />
+            <View style={styles.successMessageContainer}>
+              <View style={styles.successMessage}>
+                <View style={styles.successIconContainer}>
+                  <Ionicons name="checkmark-circle-outline" size={28} color="#42865F" />
+                </View>
+                <Text style={styles.successText}>
+                  Din adgangskode er opdateret{"\n"}
+                  – brug den ved næste login.
+                </Text>
               </View>
-              <Text style={styles.successText}>
-                Din adgangskode er opdateret{"\n"}
-                – brug den ved næste login.
-              </Text>
             </View>
           ) : (
             <TouchableOpacity 
@@ -180,27 +182,37 @@ const ChangePassword = () => {
 };
 
 const styles = StyleSheet.create({
+  successMessageContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    zIndex: 1000,
+  },
   successMessage: {
     backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 8,
-    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderRadius: 12,
     alignItems: 'center',
-    width: '100%',
+    width: '90%',
+    maxWidth: 340,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
   },
   successIconContainer: {
-    marginBottom: 10,
+    marginBottom: 12,
   },
   successText: {
     color: '#000',
-    fontSize: 16,
+    fontSize: 17,
     textAlign: 'center',
     lineHeight: 24,
     fontFamily: 'RedHatDisplay_400Regular',
