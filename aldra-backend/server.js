@@ -292,13 +292,14 @@ app.post('/upload-profile-image', express.json({limit: '5mb'}), async (req, res)
       return res.status(500).json({ error: 'Failed to upload to storage' });
     }
 
-    // Generate the public URL
-    const imageUrl = getSupabaseImageUrl(uniqueFilename);
+    // Generate both URLs
+    const supabaseUrl = getSupabaseImageUrl(uniqueFilename);
+    const localUrl = `${process.env.BASE_URL || 'https://aldra-app.onrender.com'}/uploads/${uniqueFilename}`;
 
-    // Update the database with the new URL
+    // Update the database with both URLs
     await client.query(
-      'UPDATE users SET profile_image = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [imageUrl, userId]
+      'UPDATE users SET profile_image = $1, supabase_image = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+      [localUrl, supabaseUrl, userId]
     );
 
     return res.json({ imageUrl });

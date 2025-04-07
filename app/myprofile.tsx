@@ -14,7 +14,8 @@ interface UserProfileData {
   email: string;
   password?: string;
   birthday: string;
-  profileImage?: string;  // Changed from profile_image to match server response
+  profileImage?: string;  // Local URL from Render
+  supabaseImage?: string; // Backup URL from Supabase
   relationToDementiaPerson?: string;
   token?: string;
   id?: number;
@@ -22,33 +23,160 @@ interface UserProfileData {
 
 const MyProfile: React.FC = () => {
   const router = useRouter();
-  const [userData, setUserData] = useState<UserProfileData>({ 
+  const [showRelationPicker, setShowRelationPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isUploading, setIsUploading] = useState(false);
+  const relations = ["Ægtefælle/Partner", "Barn", "Søskende", "Forældre", "Andet"];
+
+  const [userData, setUserData] = useState<UserProfileData>({
     name: '',
     email: '',
+    password: '',
     birthday: '',
     profileImage: '',
     relationToDementiaPerson: ''
   });
-  
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
 
-    if (!result.canceled) {
-      // Handle the selected image
-      const manipulatedImage = await manipulateAsync(
-        result.assets[0].uri,
-        [{ resize: { width: 300, height: 300 } }],
-        { format: SaveFormat.JPEG }
-      );
-      return manipulatedImage.uri;
+  // Load user data on mount
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  // Watch for profile image updates
+  useEffect(() => {
+    const checkProfileUpdate = async () => {
+      const lastUpdate = await AsyncStorage.getItem('lastProfileUpdate');
+      if (lastUpdate) {
+        await loadUserData();
+      }
+    };
+    checkProfileUpdate();
+
+    // Set up an interval to check for updates
+    const interval = setInterval(checkProfileUpdate, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const storedUserData = await AsyncStorage.getItem('userData');
+      if (storedUserData) {
+        const parsedData = JSON.parse(storedUserData);
+        console.log('Loading stored user data:', parsedData);
+
+        // Extract the image filename from the URL
+        let imageFilename = '';
+        if (parsedData.profileImage) {
+          const match = parsedData.profileImage.match(/\/uploads\/([^/]+)$/);
+          if (match) {
+            imageFilename = match[1];
+            console.log('Found image filename:', imageFilename);
+          }
+        }
+
+        // Construct both URLs
+        const localUrl = parsedData.profileImage;
+        const supabaseUrl = imageFilename ? 
+          `https://qqmhshgabgopbnauuhhk.supabase.co/storage/v1/object/public/profile-images/${imageFilename}` : '';
+
+        setUserData({
+          name: parsedData.name || '',
+          email: parsedData.email || '',
+          password: '',
+          birthday: parsedData.birthday || '',
+          profileImage: localUrl || '',
+          supabaseImage: supabaseUrl || '',
+          relationToDementiaPerson: parsedData.relationToDementiaPerson || '',
+          token: parsedData.token,
+          id: parsedData.id
+        });
+
+        if (parsedData.birthday) {
+          const date = new Date(parsedData.birthday);
+          if (!isNaN(date.getTime())) {
+            setSelectedDate(date);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Tilladelse nødvendig', 'Vi skal bruge din tilladelse for at vælge et billede.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0].uri) {
+        await uploadImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Fejl', 'Der opstod en fejl ved valg af billede.');
+    }
+  };
+
+  const uploadImage = async (uri: string) => {
+    try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('image', {
+        uri,
+        type: 'image/jpeg',
+        name: 'profile.jpg',
+      } as any);
+
+      const userId = userData.id;
+      const response = await fetch(`${API_URL}/upload/${userId}`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Upload successful:', data);
+
+        // Update the user data with the new profile image URL
+        setUserData(prev => ({
+          ...prev,
+          profileImage: data.imageUrl
+        }));
+
+        // Update AsyncStorage
+        const storedUserData = await AsyncStorage.getItem('userData');
+        if (storedUserData) {
+          const parsedData = JSON.parse(storedUserData);
+          await AsyncStorage.setItem('userData', JSON.stringify({
+            ...parsedData,
+            profileImage: data.imageUrl
+          }));
+        }
+
+        await AsyncStorage.setItem('lastProfileUpdate', new Date().toISOString());
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Fejl', 'Der opstod en fejl ved upload af billede.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -102,6 +230,8 @@ const EditProfile = () => {
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
         console.log('Parsing user data:', parsedData);
+        console.log('Profile image from storage:', parsedData.profileImage);
+        console.log('Profile image type:', typeof parsedData.profileImage);
         console.log('Birthday from storage:', parsedData.birthday);
 
         // Make sure we preserve the birthday from the database
@@ -269,17 +399,57 @@ const EditProfile = () => {
           <View style={styles.profileImageContainer}>
             <TouchableOpacity onPress={pickImage} style={styles.profileImageWrapper}>
               {userData.profileImage ? (
-                // Use Supabase URL directly
-                <Image 
-                  source={{ uri: userData.profileImage }} 
-                  style={styles.profileImage}
-                  onError={(error) => {
-                    console.log('Image loading error:', error.nativeEvent.error);
-                    // Show placeholder on error
-                    setUserData(prev => ({ ...prev, profileImage: '' }));
-                  }}
-                  onLoad={() => console.log('Image loaded successfully:', userData.profileImage)}
-                />
+                <>
+                  <Image 
+                    source={{ uri: userData.profileImage }} 
+                    style={styles.profileImage}
+                    onError={(error) => {
+                      console.log('Image loading error:', error.nativeEvent.error);
+                      
+                      // If we're already using the Supabase URL, clear everything
+                      if (userData.profileImage === userData.supabaseImage) {
+                        console.log('Both URLs failed, clearing image');
+                        setUserData(prev => ({ ...prev, profileImage: '', supabaseImage: '' }));
+                        AsyncStorage.getItem('userData').then(data => {
+                          if (data) {
+                            const parsed = JSON.parse(data);
+                            parsed.profileImage = '';
+                            parsed.supabaseImage = '';
+                            AsyncStorage.setItem('userData', JSON.stringify(parsed));
+                          }
+                        });
+                      }
+                      // Otherwise try the Supabase URL
+                      else if (userData.supabaseImage) {
+                        console.log('Trying Supabase URL:', userData.supabaseImage);
+                        setUserData(prev => ({ ...prev, profileImage: userData.supabaseImage }));
+                      }
+                      // If no Supabase URL, clear everything
+                      else {
+                        console.log('No backup URL available, clearing image');
+                        setUserData(prev => ({ ...prev, profileImage: '', supabaseImage: '' }));
+                        AsyncStorage.getItem('userData').then(data => {
+                          if (data) {
+                            const parsed = JSON.parse(data);
+                            parsed.profileImage = '';
+                            parsed.supabaseImage = '';
+                            AsyncStorage.setItem('userData', JSON.stringify(parsed));
+                          }
+                        });
+                      }
+                    }}
+                    onLoad={() => {
+                      console.log('Image loaded successfully:', userData.profileImage);
+                      // Update the last profile update timestamp
+                      AsyncStorage.setItem('lastProfileUpdate', new Date().toISOString());
+                    }}
+                  />
+                  {isUploading && (
+                    <View style={[styles.placeholderImage, styles.uploadingOverlay]}>
+                      <ActivityIndicator size="large" color="#42865F" />
+                    </View>
+                  )}
+                </>
               ) : (
                 <View style={styles.placeholderImage}>
                   <Ionicons name="person" size={40} color="#999" />
@@ -545,6 +715,17 @@ const styles = StyleSheet.create({
       height: '100%',
       borderRadius: 60,
       backgroundColor: '#f0f0f0',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    uploadingOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      borderRadius: 60,
+      backgroundColor: 'rgba(255, 255, 255, 0.8)',
       justifyContent: 'center',
       alignItems: 'center',
     },

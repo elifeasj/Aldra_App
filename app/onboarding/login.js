@@ -34,6 +34,8 @@ export default function Login() {
     
             if (response.ok) {
                 console.log('Server response data:', data);
+                console.log('Profile image from server:', data.profile_image);
+                console.log('Profile image type:', typeof data.profile_image);
 
                 // Create a token from user ID since server doesn't provide one
                 const token = `user_${data.id}`;
@@ -48,13 +50,15 @@ export default function Login() {
                     name: data.name,
                     email: data.email,
                     relationToDementiaPerson: data.relationToDementiaPerson,
-                    profileImage: data.profile_image, // Convert server key to our interface key
+                    profileImage: data.profile_image, // Local URL from Render
+                    supabaseImage: data.supabase_image, // Backup URL from Supabase
                     birthday: data.birthday, // Add birthday
                     token: token // Save the authentication token
                 };
                 
                 console.log('Server data:', data);
                 console.log('Saving user data:', userData);
+                console.log('Profile image being saved:', userData.profileImage);
                 
                 console.log('Gemmer brugerdata:', userData);
                 await AsyncStorage.setItem('userData', JSON.stringify(userData));
