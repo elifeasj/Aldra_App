@@ -742,7 +742,7 @@ app.put('/users/:userId', async (req, res) => {
   console.log('Update data:', req.body);
   try {
     const { userId } = req.params;
-    const { name, email, password, birthday } = req.body;
+    const { name, email, password, birthday, profile_image, relationToDementiaPerson } = req.body;
 
     // Verify that the user exists first
     const userCheck = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
@@ -783,6 +783,23 @@ app.put('/users/:userId', async (req, res) => {
       paramCounter++;
     }
 
+    // Always include profile_image in update if it's provided
+    console.log('Checking profile_image:', profile_image);
+    if (profile_image !== undefined) {
+      updateFields.push(`profile_image = $${paramCounter}`);
+      queryParams.push(profile_image);
+      paramCounter++;
+      console.log('Adding profile_image to update:', profile_image);
+    } else {
+      console.log('No profile_image to update');
+    }
+
+    if (relationToDementiaPerson) {
+      updateFields.push(`relation_to_dementia_person = $${paramCounter}`);
+      queryParams.push(relationToDementiaPerson);
+      paramCounter++;
+    }
+
     // Add the userId as the last parameter
     queryParams.push(userId);
 
@@ -797,11 +814,13 @@ app.put('/users/:userId', async (req, res) => {
 
     const query = `
       UPDATE users
-      SET ${updateFields.join(', ')},
-          updated_at = CURRENT_TIMESTAMP
+      SET ${updateFields.join(', ')}
       WHERE id = $${paramCounter}
       RETURNING id, name, email, birthday, profile_image, relation_to_dementia_person
     `;
+    
+    console.log('Final SQL query:', query);
+    console.log('Final query parameters:', queryParams);
 
     console.log('Executing query:', query);
     const result = await client.query(query, queryParams);

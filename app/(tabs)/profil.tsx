@@ -121,8 +121,12 @@ const Profil = () => {
       const storedUserData = await AsyncStorage.getItem('userData');
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
-        if (parsedData.profileImage) {
-          setProfileImage(parsedData.profileImage);
+        console.log('Loading profile image from stored data:', parsedData);
+        if (parsedData.profile_image) {
+          console.log('Found profile image:', parsedData.profile_image);
+          setProfileImage(parsedData.profile_image);
+        } else {
+          console.log('No profile image found in stored data');
         }
       }
     } catch (error) {
@@ -143,29 +147,42 @@ const Profil = () => {
     initializeData();
   }, []);
 
+  // Watch for profile image updates
+  useEffect(() => {
+    const checkProfileUpdate = async () => {
+      const lastUpdate = await AsyncStorage.getItem('lastProfileUpdate');
+      if (lastUpdate) {
+        await loadUserData();
+      }
+    };
+    checkProfileUpdate();
+  }, []);
+
   const loadUserData = async () => {
     try {
       const storedUserData = await AsyncStorage.getItem('userData');
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
-        console.log('Loaded user data:', parsedData); // Log hele brugerdata
-        // Get profile image from either field name
-        const imageUrl = parsedData.profileImage || parsedData.profile_image;
-        console.log('Profile image URL:', imageUrl);
-
+        console.log('Loaded user data:', parsedData);
+        
+        // Set user data first
         setUserData({
           id: parsedData.id,
           name: parsedData.name,
-          relationToDementiaPerson: parsedData.relationToDementiaPerson,
-          profileImage: imageUrl
+          relationToDementiaPerson: parsedData.relationToDementiaPerson
         });
 
-        // Update profile image state
-        if (imageUrl) {
+        // Handle profile image
+        const imageUrl = parsedData.profile_image;
+        console.log('Profile image URL:', imageUrl);
+
+        if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('http')) {
+          console.log('Setting valid profile image:', imageUrl);
           setProfileImage(imageUrl);
-          console.log('Set profile image to:', imageUrl);
+        } else {
+          console.log('No valid profile image found');
+          setProfileImage('');
         }
-        console.log('User ID:', parsedData.id); // Log userId for debugging
       }
     } catch (error) {
       console.error('Error loading user data:', error);

@@ -21,6 +21,7 @@ const EditProfile = () => {
   const [showRelationPicker, setShowRelationPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [profileImage, setProfileImage] = useState('');
   const relations = ["Ægtefælle/Partner", "Barn", "Søskende", "Forældre", "Andet"];
   
   const [userData, setUserData] = useState<UserProfileData>({
@@ -36,6 +37,17 @@ const EditProfile = () => {
     loadUserData();
   }, []);
 
+  // Watch for profile image updates
+  useEffect(() => {
+    const checkProfileUpdate = async () => {
+      const lastUpdate = await AsyncStorage.getItem('lastProfileUpdate');
+      if (lastUpdate) {
+        await loadUserData();
+      }
+    };
+    checkProfileUpdate();
+  }, []);
+
   const loadUserData = async () => {
     try {
       const storedUserData = await AsyncStorage.getItem('userData');
@@ -47,9 +59,10 @@ const EditProfile = () => {
           email: parsedData.email || '',
           password: '',
           birthday: parsedData.birthday || '',
-          profileImage: parsedData.profileImage || '',
+          profileImage: parsedData.profile_image || '',
           relationToDementiaPerson: parsedData.relationToDementiaPerson || ''
         }));
+        console.log('Updated user data with profile:', parsedData.profile_image);
 
         // Set selected date from stored birthday if it exists
         if (parsedData.birthday) {
@@ -118,29 +131,32 @@ const EditProfile = () => {
           throw new Error('No image URL in response');
         }
 
-        // Transform local URL to production URL
-        const originalUrl = new URL(imageData.imageUrl);
-        const productionImageUrl = `https://aldra-app.onrender.com${originalUrl.pathname}`;
-        console.log('Transformed image URL:', productionImageUrl);
-
         // Get the auth token
         const token = parsedData.token;
         if (!token) {
           throw new Error('No auth token found');
         }
 
-        // Update user data with new profile image
+        // Transform local URL to production URL
+        const imagePath = imageData.imageUrl.split('/uploads/')[1];
+        const productionImageUrl = `https://aldra-app.onrender.com/uploads/${imagePath}`;
+        console.log('Using production URL:', productionImageUrl);
+
+        // Update user data with profile image
         const updateData = {
           name: parsedData.name,
           email: parsedData.email,
           relationToDementiaPerson: parsedData.relationToDementiaPerson,
-          profile_image: productionImageUrl
+          profile_image: productionImageUrl,
+          // Add all other fields to prevent them from being nulled
+          birthday: parsedData.birthday || null
         };
-        console.log('Updating user data:', updateData);
+        console.log('Full update data:', updateData);
+        console.log('Profile image URL being sent:', productionImageUrl);
 
         const updateUrl = `${API_URL}/users/${userId}`;
+        console.log('Updating user data:', updateData);
         console.log('Making request to:', updateUrl);
-        console.log('With data:', JSON.stringify(updateData, null, 2));
 
         const updateResponse = await fetch(updateUrl, {
           method: 'PUT',
@@ -160,17 +176,25 @@ const EditProfile = () => {
         }
 
         console.log('Update successful');
+        // Remove old profileImage field and use only profile_image
+        const { profileImage, ...rest } = parsedData;
         const updatedUserData = { 
-          ...parsedData,
-          profile_image: productionImageUrl  // Match database column name
+          ...rest,
+          profile_image: productionImageUrl
         };
         
         // Save to AsyncStorage
         await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
         console.log('Saved to AsyncStorage:', updatedUserData);
         
-        // Update local state to show new image immediately
-        setUserData(prev => ({ ...prev, profile_image: productionImageUrl }));
+        // Update local state
+        setUserData(prev => ({
+          ...prev,
+          profile_image: productionImageUrl
+        }));
+        
+        // Force reload profile image in parent component
+        await AsyncStorage.setItem('lastProfileUpdate', new Date().toISOString());
       } catch (error) {
         console.error('Error uploading image:', error);
         Alert.alert('Fejl', 'Der opstod en fejl ved upload af billedet. Prøv igen.');
@@ -202,11 +226,14 @@ const EditProfile = () => {
 
       <View style={styles.profileImageContainer}>
         <TouchableOpacity onPress={pickImage} style={styles.profileImageWrapper}>
-          {userData.profileImage ? (
+          {userData.profileImage && userData.profileImage.startsWith('http') ? (
             <Image 
               source={{ uri: userData.profileImage }} 
               style={styles.profileImage}
-              onError={(error) => console.log('Image loading error:', error.nativeEvent.error)}
+              onError={(error) => {
+                console.log('Image loading error:', error.nativeEvent.error);
+                setUserData(prev => ({ ...prev, profileImage: '' }));
+              }}
               onLoad={() => console.log('Image loaded successfully:', userData.profileImage)}
             />
           ) : (
