@@ -48,9 +48,13 @@ export default function Login() {
                     name: data.name,
                     email: data.email,
                     relationToDementiaPerson: data.relationToDementiaPerson,
-                    profileImage: data.profile_image, // Profile image URL
+                    profile_image: data.profile_image, // Keep the same key as server
+                    birthday: data.birthday, // Add birthday
                     token: token // Save the authentication token
                 };
+                
+                console.log('Server data:', data);
+                console.log('Saving user data:', userData);
                 
                 console.log('Gemmer brugerdata:', userData);
                 await AsyncStorage.setItem('userData', JSON.stringify(userData));

@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const app = express();
 app.use(express.json());
@@ -21,8 +22,18 @@ app.use(cors({
 }));
 
 
-// Parse JSON bodies
-app.use(bodyParser.json());
+// Configure body parser with reasonable limits
+app.use(bodyParser.json({limit: '2mb'}));
+app.use(bodyParser.urlencoded({limit: '2mb', extended: true}));
+
+// Log request sizes
+app.use((req, res, next) => {
+  const contentLength = req.headers['content-length'];
+  if (contentLength) {
+    console.log(`Request size: ${(parseInt(contentLength) / 1024 / 1024).toFixed(2)}MB`);
+  }
+  next();
+});
 
 // Add error handling middleware
 app.use((err, req, res, next) => {
@@ -30,8 +41,23 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Supabase configuration
+const SUPABASE_PROJECT_ID = 'qqmhshgabgopbnauuhhk';
+const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxbWhzaGdhYmdvcGJuYXV1aGhrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDcwNzA5NjAsImV4cCI6MjAyMjY0Njk2MH0.QALnKHlJQ-0xvXn7YGoxYqON1SQz_AZDtIxNJI4aBGY';
+const SUPABASE_STORAGE_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public/profile-images`;
+const SUPABASE_API_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/profile-images`;
+
+// Helper function to get Supabase URL
+function getSupabaseImageUrl(filename) {
+    return `${SUPABASE_STORAGE_URL}/${filename}`;
+}
+
+// Endpoint to get image URL
+app.get('/uploads/:filename', (req, res) => {
+    const imageUrl = getSupabaseImageUrl(req.params.filename);
+    console.log('Redirecting to:', imageUrl);
+    res.redirect(imageUrl);
+});
 
 // Funktion til at maskere følsomme data
 function maskSensitiveData(obj) {
@@ -118,6 +144,7 @@ async function initializeDatabase() {
         hashed_password VARCHAR(255) NOT NULL,
         relation_to_dementia_person VARCHAR(255),
         profile_image TEXT,  -- Ny kolonne til profilbillede URL
+        birthday DATE,  -- Added birthday column
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         termsAccepted BOOLEAN DEFAULT false
@@ -210,39 +237,74 @@ function formatDateForComparison(dateStr) {
   return `${year}-${month}-${day}`;
 }
 
-// Konfigurer multer til filupload
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Sørg for, at denne mappe eksisterer
-  },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname);
-    cb(null, uuidv4() + ext);
-  }
-});
-const upload = multer({ storage: storage });
+// Ensure uploads directory exists
+const uploadsPath = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
 
-// Endpoint til upload af profilbillede
-app.post('/upload-profile-image', upload.single('profileImage'), async (req, res) => {
+// Serve static files from uploads directory
+app.use('/uploads', express.static(uploadsPath));
+console.log('Serving uploads from:', uploadsPath);
+
+// Endpoint for profile image upload
+app.post('/upload-profile-image', express.json({limit: '5mb'}), async (req, res) => {
   try {
-    console.log('Request body:', req.body);  // Log the request body
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+    console.log('Received upload request');
+    const { image, userId } = req.body;
+
+    if (!image || !userId) {
+      console.log('Missing required data:', { hasImage: !!image, hasUserId: !!userId });
+      return res.status(400).json({ error: 'Missing required data' });
     }
 
-    const imageUrl = `http://192.168.0.215:5001/uploads/${req.file.filename}`;
-    console.log('Image URL:', imageUrl);  // Log the image URL before saving
-    const { userId } = req.body;
-    if (userId) {
-      await client.query(
-        'UPDATE users SET profile_image = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        [imageUrl, userId]
-      );
+    // Validate and extract base64 data
+    if (!image.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Invalid image format' });
     }
+
+    const base64Data = image.split(',')[1];
+    if (!base64Data) {
+      return res.status(400).json({ error: 'Invalid image data' });
+    }
+
+    // Create buffer
+    const buffer = Buffer.from(base64Data, 'base64');
+    if (buffer.length === 0) {
+      return res.status(400).json({ error: 'Empty image' });
+    }
+
+    // Generate unique filename
+    const uniqueFilename = `${uuidv4()}.jpg`;
+
+    // Upload to Supabase Storage
+    const uploadResponse = await fetch(`${SUPABASE_API_URL}/${uniqueFilename}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_API_KEY}`,
+        'Content-Type': 'image/jpeg'
+      },
+      body: buffer
+    });
+
+    if (!uploadResponse.ok) {
+      console.error('Supabase upload failed:', await uploadResponse.text());
+      return res.status(500).json({ error: 'Failed to upload to storage' });
+    }
+
+    // Generate the public URL
+    const imageUrl = getSupabaseImageUrl(uniqueFilename);
+
+    // Update the database with the new URL
+    await client.query(
+      'UPDATE users SET profile_image = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [imageUrl, userId]
+    );
+
     return res.json({ imageUrl });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Upload failed' });
   }
 });
 
@@ -257,7 +319,11 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+        const result = await client.query(
+            'SELECT id, name, email, relation_to_dementia_person, profile_image, birthday, hashed_password FROM users WHERE email = $1',
+            [email]
+        );
+        console.log('Database query result:', result.rows[0]);
 
         if (result.rows.length === 0) {
             return res.status(401).json({ error: 'Forkert email eller adgangskode' });
@@ -271,12 +337,25 @@ app.post('/login', async (req, res) => {
         }
 
         // Send brugerdata tilbage (uden adgangskode)
+        // Log the data we're sending back
+        // Format the birthday if it exists
+        const formattedBirthday = user.birthday ? user.birthday.toISOString().split('T')[0] : null;
+        console.log('User data being sent:', {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            relationToDementiaPerson: user.relation_to_dementia_person,
+            profile_image: user.profile_image,
+            birthday: formattedBirthday
+        });
+        
         res.json({
             id: user.id,
             name: user.name,
             email: user.email,
             relationToDementiaPerson: user.relation_to_dementia_person,
-            profile_image: user.profile_image
+            profile_image: user.profile_image,
+            birthday: formattedBirthday
         });
     } catch (error) {
         console.error('Login error:', error);
