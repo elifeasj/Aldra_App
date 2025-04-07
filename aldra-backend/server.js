@@ -122,22 +122,37 @@ app.use((req, res, next) => {
 
 // Parse JSON body while preventing sensitive data from being logged
 app.use((req, res, next) => {
-  let data = '';
-  req.setEncoding('utf8');
-  req.on('data', chunk => {
-    data += chunk;
-  });
-  req.on('end', () => {
-    if (data) {
+  if (req.path === '/change-password') {
+    let data = '';
+    req.on('data', chunk => {
+      data += chunk.toString(); // konverter manuelt til string
+    });
+    req.on('end', () => {
       try {
-        req.body = JSON.parse(data);
-      } catch (e) {
-        req.body = {};
+        const parsedBody = JSON.parse(data);
+        req._originalBody = { ...parsedBody };
+
+        // Safe proxy via Object.defineProperty
+        Object.defineProperty(req, 'body', {
+          get: function () {
+            return this._originalBody;
+          },
+          set: function (val) {
+            this._originalBody = val;
+          },
+          configurable: true
+        });
+      } catch (err) {
+        console.error('Error parsing JSON body:', err.message);
+        return res.status(400).json({ error: 'Invalid JSON body' });
       }
-    }
+      next();
+    });
+  } else {
     next();
-  });
+  }
 });
+
 
 // Apply JSON parser only for non-file upload routes
 app.use((req, res, next) => {
