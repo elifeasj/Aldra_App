@@ -161,21 +161,22 @@ app.post('/user/:id/avatar-url', async (req, res) => {
   const { path } = req.body;
 
   if (!path) {
-    return res.status(400).json({ error: 'Missing path' });
+    return res.status(400).json({ error: 'Missing image path' });
   }
 
-  const { data, error } = await supabase
+  const { data: signedUrlData, error: signedUrlError } = await supabase
     .storage
     .from('profile-images')
     .createSignedUrl(path, 60 * 60);
 
-  if (error) {
-    console.error('Signed URL error:', error);
-    return res.status(500).json({ error: 'Could not generate signed URL' });
+  if (signedUrlError) {
+    console.error('Error creating signed URL:', signedUrlError);
+    return res.status(500).json({ error: 'Failed to generate signed URL' });
   }
 
-  res.json({ signedUrl: data.signedUrl });
-  console.log('Fetched signed URL:', signedUrl);
+  console.log('Fetched signed URL:', signedUrlData.signedUrl); 
+
+  res.status(200).json({ signedUrl: signedUrlData.signedUrl });
 });
 
 // Funktion til at maskere følsomme data

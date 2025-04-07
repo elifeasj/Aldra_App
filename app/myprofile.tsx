@@ -57,20 +57,20 @@ const EditProfile = () => {
       const parsedData = JSON.parse(storedUserData);
       let signedUrl = '';
 
-      if (parsedData.profile_image && parsedData.id) {
-        try {
-          const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: parsedData.profile_image }),
-          });
-      
-          const result = await response.json();
-          signedUrl = result.signedUrl;
-        } catch (err) {
-          console.warn('Could not load signed URL:', err);
-        }
-      }      
+        if (parsedData.profile_image && parsedData.id) {
+          try {
+            const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: parsedData.profileImage }),
+            });
+
+            const result = await response.json();
+            signedUrl = result.signedUrl;
+          } catch (err) {
+            console.warn('Could not load signed URL:', err);
+          }
+        }      
 
       setUserData({
         name: parsedData.name || '',
