@@ -32,21 +32,30 @@ app.use((req, res, next) => {
     req.on('data', chunk => { data += chunk; });
     req.on('end', () => {
       try {
-        const body = JSON.parse(data);
-        // Only log non-sensitive information
-        console.log('Processing password change request for user:', body.userId);
-        req.body = body;
-      } catch (e) {
-        console.error('Error parsing request body');
+        const parsedBody = JSON.parse(data);
+        req._originalBody = { ...parsedBody };
+
+        // Lav en sanitiseret version
+        Object.defineProperty(req, 'body', {
+          get: function () {
+            return this._originalBody;
+          },
+          set: function (val) {
+            this._originalBody = val;
+          },
+          configurable: true
+        });
+
+      } catch (err) {
+        req._originalBody = {};
       }
       next();
     });
-  } else if (req.path !== '/upload-avatar') {
-    bodyParser.json({ limit: '5mb' })(req, res, next);
   } else {
     next();
   }
 });
+
 
 app.use((req, res, next) => {
   if (req.path !== '/upload-avatar') {
