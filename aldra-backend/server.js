@@ -34,7 +34,7 @@ app.use((req, res, next) => {
 // Initialize Supabase client
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
+  process.env.SUPABASE_KEY
 );
 
 // Configure multer for handling file uploads
