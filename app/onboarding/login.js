@@ -48,7 +48,7 @@ export default function Login() {
                     name: data.name,
                     email: data.email,
                     relationToDementiaPerson: data.relationToDementiaPerson,
-                    profile_image: data.profile_image, // Keep the same key as server
+                    profileImage: data.profile_image, // Convert server key to our interface key
                     birthday: data.birthday, // Add birthday
                     token: token // Save the authentication token
                 };

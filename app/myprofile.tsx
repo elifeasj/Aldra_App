@@ -14,8 +14,10 @@ interface UserProfileData {
   email: string;
   password?: string;
   birthday: string;
-  profile_image?: string;
+  profileImage?: string;  // Changed from profile_image to match server response
   relationToDementiaPerson?: string;
+  token?: string;
+  id?: number;
 }
 
 const MyProfile: React.FC = () => {
@@ -24,7 +26,7 @@ const MyProfile: React.FC = () => {
     name: '',
     email: '',
     birthday: '',
-    profile_image: '',
+    profileImage: '',
     relationToDementiaPerson: ''
   });
   
@@ -75,7 +77,7 @@ const EditProfile = () => {
     email: '',
     password: '',
     birthday: '',
-    profile_image: '',
+    profileImage: '',
     relationToDementiaPerson: '',
   });
 
@@ -108,7 +110,7 @@ const EditProfile = () => {
           email: parsedData.email || '',
           password: '',
           birthday: parsedData.birthday || '',
-          profile_image: parsedData.profile_image || '',
+          profileImage: parsedData.profileImage || '',
           relationToDementiaPerson: parsedData.relationToDementiaPerson || ''
         });
         
@@ -131,10 +133,10 @@ const EditProfile = () => {
           email: parsedData.email || '',
           password: '',
           birthday: formattedBirthday,
-          profile_image: parsedData.profile_image || '',
+          profileImage: parsedData.profileImage || '',
           relationToDementiaPerson: parsedData.relationToDementiaPerson || ''
         }));
-        console.log('Updated user data with profile:', parsedData.profile_image);
+        console.log('Updated user data with profile:', parsedData.profileImage);
         console.log('Formatted birthday:', formattedBirthday);
 
         // We already set the selected date above, no need to set it again
@@ -266,17 +268,17 @@ const EditProfile = () => {
 
           <View style={styles.profileImageContainer}>
             <TouchableOpacity onPress={pickImage} style={styles.profileImageWrapper}>
-              {userData.profile_image ? (
+              {userData.profileImage ? (
                 // Use Supabase URL directly
                 <Image 
-                  source={{ uri: userData.profile_image }} 
+                  source={{ uri: userData.profileImage }} 
                   style={styles.profileImage}
                   onError={(error) => {
                     console.log('Image loading error:', error.nativeEvent.error);
                     // Show placeholder on error
-                    setUserData(prev => ({ ...prev, profile_image: '' }));
+                    setUserData(prev => ({ ...prev, profileImage: '' }));
                   }}
-                  onLoad={() => console.log('Image loaded successfully:', userData.profile_image)}
+                  onLoad={() => console.log('Image loaded successfully:', userData.profileImage)}
                 />
               ) : (
                 <View style={styles.placeholderImage}>
