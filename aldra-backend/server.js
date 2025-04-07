@@ -79,76 +79,40 @@ app.use((req, res, next) => {
 // Handle profile image upload
 app.post('/upload-avatar', upload.single('image'), async (req, res) => {
   try {
-    console.log('Processing upload request');
-    console.log('File:', req.file);
-    console.log('Body:', req.body);
-
-    if (!req.file) {
-      return res.status(400).json({ error: 'No image file received' });
-    }
-
     const userId = req.body.userId;
-    if (!userId) {
-      return res.status(400).json({ error: 'No userId received' });
+    const file = req.file;
+
+    if (!file || !userId) {
+      return res.status(400).json({ error: 'Missing file or userId' });
     }
 
-    // Generate unique filename
-    const fileExt = path.extname(req.file.originalname) || '.jpg';
-    const filename = `user_${userId}${fileExt}`;
-    const filePath = `avatars/${filename}`;
+    const fileName = `avatars/user_${userId}_${Date.now()}.jpg`;
 
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('profile-images')
-      .upload(filePath, req.file.buffer, {
-        contentType: req.file.mimetype,
-        upsert: true
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
       });
 
-    if (error) {
-      console.error('Supabase upload error:', error);
-      return res.status(500).json({ error: 'Failed to upload to storage' });
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      return res.status(500).json({ error: 'Failed to upload image' });
     }
 
-    // Get signed URL
-    const { data: urlData } = await supabase.storage
-      .from('profile-images')
-      .createSignedUrl(filePath, 3600);
+    // Gem kun stien i databasen – ikke URL
+    await supabase
+      .from('users')
+      .update({ profile_image: fileName })
+      .eq('id', userId);
 
-    res.json({ imageUrl: urlData.signedUrl });
+    res.status(200).json({ success: true, path: fileName });
   } catch (error) {
-    console.error('Error handling upload:', error);
+    console.error('Error in upload-avatar route:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-
-// Get signed URL for profile image
-app.get('/user/:id/avatar-url', async (req, res) => {
-  try {
-    const userId = req.params.id;
-
-    // Get the image path from database
-    const result = await client.query(
-      'SELECT profile_image FROM users WHERE id = $1',
-      [userId]
-    );
-
-    if (!result.rows[0]?.profile_image) {
-      return res.json({ imageUrl: null });
-    }
-
-    // Generate a new signed URL
-    const { data: { signedUrl } } = await supabase.storage
-      .from('profile-images')
-      .createSignedUrl(result.rows[0].profile_image, 3600);
-
-    res.json({ imageUrl: signedUrl });
-  } catch (error) {
-    console.error('Error getting avatar URL:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 // Log request sizes
 app.use((req, res, next) => {
@@ -177,11 +141,37 @@ function getSupabaseImageUrl(filename) {
 }
 
 // Endpoint to get image URL
-app.get('/uploads/:filename', (req, res) => {
-    const imageUrl = getSupabaseImageUrl(req.params.filename);
-    console.log('Redirecting to:', imageUrl);
-    res.redirect(imageUrl);
+app.get('/user/:id/avatar-url', async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('profile_image')
+      .eq('id', userId)
+      .single();
+
+    if (error || !data?.profile_image) {
+      console.log('No profile image found for user:', userId);
+      return res.status(404).json({ error: 'No profile image set' });
+    }
+
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from('profile-images')
+      .createSignedUrl(data.profile_image, 3600); // 1 hour
+
+    if (signedUrlError || !signedUrlData) {
+      console.error('Signed URL error:', signedUrlError);
+      return res.status(500).json({ error: 'Failed to generate signed URL' });
+    }
+
+    res.json({ signedUrl: signedUrlData.signedUrl });
+  } catch (err) {
+    console.error('Error getting avatar URL:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
+
 
 // Funktion til at maskere følsomme data
 function maskSensitiveData(obj) {
