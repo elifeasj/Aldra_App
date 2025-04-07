@@ -122,52 +122,6 @@ app.post('/upload-avatar', upload.single('image'), async (req, res) => {
   }
 });
 
-// Handle profile image upload
-app.post('/upload-avatar', upload.single('image'), async (req, res) => {
-  try {
-    console.log('Received upload request');
-    const userId = req.body.userId;
-
-    if (!req.file || !userId) {
-      console.log('Missing required data:', { hasFile: !!req.file, hasUserId: !!userId });
-      return res.status(400).json({ error: 'Missing required data' });
-    }
-
-    // Generate unique filename
-    const fileExt = path.extname(req.file.originalname) || '.jpg';
-    const filename = `user_${userId}${fileExt}`;
-    const filePath = `avatars/${filename}`;
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('profile-images')
-      .upload(filePath, req.file.buffer, {
-        contentType: req.file.mimetype,
-        upsert: true
-      });
-
-    if (error) {
-      console.error('Supabase upload failed:', error);
-      return res.status(500).json({ error: 'Failed to upload to storage' });
-    }
-
-    // Generate a signed URL valid for 1 hour
-    const { data: { signedUrl } } = await supabase.storage
-      .from('profile-images')
-      .createSignedUrl(filePath, 3600);
-
-    // Update the database with the image path
-    await client.query(
-      'UPDATE users SET profile_image = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [filePath, userId]
-    );
-
-    res.json({ imageUrl: signedUrl });
-  } catch (error) {
-    console.error('Error handling upload:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 // Get signed URL for profile image
 app.get('/user/:id/avatar-url', async (req, res) => {
@@ -413,84 +367,6 @@ if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
 }
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(uploadsPath));
-console.log('Serving uploads from:', uploadsPath);
-
-// Endpoint for profile image upload
-// Handle profile image upload
-app.post('/upload-avatar', upload.single('image'), async (req, res) => {
-  try {
-    console.log('Received upload request');
-    const userId = req.body.userId;
-
-    if (!req.file || !userId) {
-      console.log('Missing required data:', { hasFile: !!req.file, hasUserId: !!userId });
-      return res.status(400).json({ error: 'Missing required data' });
-    }
-
-    // Generate unique filename
-    const fileExt = path.extname(req.file.originalname) || '.jpg';
-    const filename = `user_${userId}${fileExt}`;
-    const filePath = `avatars/${filename}`;
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('profile-images')
-      .upload(filePath, req.file.buffer, {
-        contentType: req.file.mimetype,
-        upsert: true
-      });
-
-    if (error) {
-      console.error('Supabase upload failed:', error);
-      return res.status(500).json({ error: 'Failed to upload to storage' });
-    }
-
-    // Generate a signed URL valid for 1 hour
-    const { data: { signedUrl } } = await supabase.storage
-      .from('profile-images')
-      .createSignedUrl(filePath, 3600);
-
-    // Update the database with the image path
-    await client.query(
-      'UPDATE users SET profile_image = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [filePath, userId]
-    );
-
-    res.json({ imageUrl: signedUrl });
-  } catch (error) {
-    console.error('Error handling upload:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get signed URL for profile image
-app.get('/user/:id/avatar-url', async (req, res) => {
-  try {
-    const userId = req.params.id;
-
-    // Get the image path from database
-    const result = await client.query(
-      'SELECT profile_image FROM users WHERE id = $1',
-      [userId]
-    );
-
-    if (!result.rows[0]?.profile_image) {
-      return res.json({ imageUrl: null });
-    }
-
-    // Generate a new signed URL
-    const { data: { signedUrl } } = await supabase.storage
-      .from('profile-images')
-      .createSignedUrl(result.rows[0].profile_image, 3600);
-
-    res.json({ imageUrl: signedUrl });
-  } catch (error) {
-    console.error('Error getting avatar URL:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 
 
