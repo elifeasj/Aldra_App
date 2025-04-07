@@ -6,8 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { supabase } from '../config/supabase';
-import * as FileSystem from 'expo-file-system';
 import { API_URL } from '../config';
 
 interface UserProfileData {
@@ -15,45 +13,40 @@ interface UserProfileData {
   email: string;
   password?: string;
   birthday: string;
-  profile_image?: string;  // Signed URL from Supabase
+  profile_image?: string;
   relationToDementiaPerson?: string;
   token?: string;
   id?: number;
 }
 
-  const [showRelationPicker, setShowRelationPicker] = useState(false);
+const danishMonths = [
+  'januar', 'februar', 'marts', 'april', 'maj', 'juni',
+  'juli', 'august', 'september', 'oktober', 'november', 'december'
+];
+
+const formatDanishDate = (date: Date) => {
+  const day = date.getDate(); 
+  const month = danishMonths[date.getMonth()];
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
+};
+
+const EditProfile = () => {
+  const router = useRouter();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isUploading, setIsUploading] = useState(false);
-  const relations = ["Ægtefælle/Partner", "Barn", "Søskende", "Forældre", "Andet"];
-
   const [userData, setUserData] = useState<UserProfileData>({
     name: '',
     email: '',
     password: '',
     birthday: '',
     profile_image: '',
-    relationToDementiaPerson: ''
+    relationToDementiaPerson: '',
   });
 
-  // Load user data on mount
   useEffect(() => {
     loadUserData();
-  }, []);
-
-  // Watch for profile image updates
-  useEffect(() => {
-    const checkProfileUpdate = async () => {
-      const lastUpdate = await AsyncStorage.getItem('lastProfileUpdate');
-      if (lastUpdate) {
-        await loadUserData();
-      }
-    };
-    checkProfileUpdate();
-
-    // Set up an interval to check for updates
-    const interval = setInterval(checkProfileUpdate, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   const loadUserData = async () => {
@@ -66,13 +59,18 @@ interface UserProfileData {
 
       if (parsedData.profile_image && parsedData.id) {
         try {
-          const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`);
+          const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: parsedData.profile_image }),
+          });
+      
           const result = await response.json();
           signedUrl = result.signedUrl;
         } catch (err) {
           console.warn('Could not load signed URL:', err);
         }
-      }
+      }      
 
       setUserData({
         name: parsedData.name || '',
@@ -82,7 +80,7 @@ interface UserProfileData {
         profile_image: signedUrl || '',
         relationToDementiaPerson: parsedData.relationToDementiaPerson || '',
         token: parsedData.token,
-        id: parsedData.id
+        id: parsedData.id,
       });
 
       if (parsedData.birthday) {
@@ -99,7 +97,6 @@ interface UserProfileData {
   const pickImage = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
       if (status !== 'granted') {
         Alert.alert('Tilladelse nødvendig', 'Vi skal bruge din tilladelse for at vælge et billede.');
         return;
@@ -124,236 +121,50 @@ interface UserProfileData {
   const uploadImage = async (uri: string) => {
     try {
       setIsUploading(true);
-      const formData = new FormData();
-      formData.append('image', {
-        uri,
-        type: 'image/jpeg',
-        name: 'profile.jpg',
-      } as any);
-      formData.append('userId', userData.id?.toString() || '');
-
-      const response = await fetch(`${API_URL}/upload-avatar`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Upload successful:', data);
-
-        // Update the user data with the signed URL
-        setUserData(prev => ({
-          ...prev,
-          profile_image: data.imageUrl
-        }));
-
-        // Update AsyncStorage
-        const storedUserData = await AsyncStorage.getItem('userData');
-        if (storedUserData) {
-          const parsedData = JSON.parse(storedUserData);
-          await AsyncStorage.setItem('userData', JSON.stringify({
-            ...parsedData,
-            profile_image: data.imageUrl
-          }));
-        }
-
-        await AsyncStorage.setItem('lastProfileUpdate', new Date().toISOString());
-      } else {
-        const errorData = await response.text();
-        console.error('Upload failed:', errorData);
-        throw new Error('Upload failed: ' + errorData);
-      }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      Alert.alert('Fejl', 'Der opstod en fejl ved upload af billede.');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const danishMonths = [
-  'januar', 'februar', 'marts', 'april', 'maj', 'juni',
-  'juli', 'august', 'september', 'oktober', 'november', 'december'
-];
-
-const formatDanishDate = (date: Date) => {
-  const day = date.getDate(); 
-  const month = danishMonths[date.getMonth()];
-  const year = date.getFullYear();
-  return `${day} ${month} ${year}`;
-};
-
-const EditProfile = () => {
-  const router = useRouter();
-  const [showRelationPicker, setShowRelationPicker] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [profileImage, setProfileImage] = useState(''); // Local state for image picker
-  const relations = ["Ægtefælle/Partner", "Barn", "Søskende", "Forældre", "Andet"];
-  
-  const [userData, setUserData] = useState<UserProfileData>({
-    name: '',
-    email: '',
-    password: '',
-    birthday: '',
-    profile_image: '',
-    relationToDementiaPerson: '',
-  });
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  // Watch for profile image updates
-  useEffect(() => {
-    const checkProfileUpdate = async () => {
-      const lastUpdate = await AsyncStorage.getItem('lastProfileUpdate');
-      if (lastUpdate) {
-        await loadUserData();
-      }
-    };
-    checkProfileUpdate();
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      const storedUserData = await AsyncStorage.getItem('userData');
-      if (storedUserData) {
-        const parsedData = JSON.parse(storedUserData);
-        console.log('Parsing user data:', parsedData);
-        console.log('Profile image from storage:', parsedData.profile_image);
-        console.log('Profile image type:', typeof parsedData.profile_image);
-        console.log('Birthday from storage:', parsedData.birthday);
-
-        // Make sure we preserve the birthday from the database
-        setUserData({
-          name: parsedData.name || '',
-          email: parsedData.email || '',
-          password: '',
-          birthday: parsedData.birthday || '',
-          profile_image: parsedData.profile_image || '',
-          relationToDementiaPerson: parsedData.relationToDementiaPerson || ''
-        });
-        
-        // Format birthday from ISO to Danish format if it exists
-        let formattedBirthday = '';
-        if (parsedData.birthday) {
-          console.log('Raw birthday:', parsedData.birthday);
-          const date = new Date(parsedData.birthday);
-          console.log('Parsed date:', date);
-          if (!isNaN(date.getTime())) {
-            formattedBirthday = formatDanishDate(date);
-            setSelectedDate(date);
-            console.log('Formatted birthday:', formattedBirthday);
-          }
-        }
-
-        setUserData(prevData => ({
-          ...prevData,
-          name: parsedData.name || '',
-          email: parsedData.email || '',
-          password: '',
-          birthday: formattedBirthday,
-          profile_image: parsedData.profile_image || '',
-          relationToDementiaPerson: parsedData.relationToDementiaPerson || ''
-        }));
-        console.log('Updated user data with profile:', parsedData.profile_image);
-        console.log('Formatted birthday:', formattedBirthday);
-
-        // We already set the selected date above, no need to set it again
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    }
-  };
-
-  const [isUploading, setIsUploading] = useState(false);
-
-  const pickImage = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Tilladelse nødvendig', 'Vi skal bruge din tilladelse for at vælge et billede.');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0].uri) {
-        await uploadImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Fejl', 'Der opstod en fejl ved valg af billede.');
-    }
-  };
-
-  const uploadImage = async (uri: string) => {
-    try {
-      setIsUploading(true);
-  
       const storedUserData = await AsyncStorage.getItem('userData');
       if (!storedUserData) throw new Error('No user data found');
-  
+
       const parsedData = JSON.parse(storedUserData);
       const userId = parsedData.id;
-  
-      // Komprimer billedet
+
       const manipulatedImage = await manipulateAsync(
         uri,
         [{ resize: { width: 500 } }],
         { compress: 0.7, format: SaveFormat.JPEG }
       );
-  
-      // Konverter til blob
-      const imageResponse = await fetch(manipulatedImage.uri);
-      const imageBlob = await imageResponse.blob();
-  
-      const fileName = `user_${userId}_${Date.now()}.jpg`;
-  
-      // FormData til upload
+
       const formData = new FormData();
       formData.append('image', {
         uri: manipulatedImage.uri,
-        name: fileName,
         type: 'image/jpeg',
-      } as any); // TS hack
-  
+        name: `user_${userId}_${Date.now()}.jpg`,
+      } as any);
       formData.append('userId', userId.toString());
-  
-      // Upload til backend
+
       const response = await fetch(`${API_URL}/upload-avatar`, {
         method: 'POST',
         body: formData,
       });
-  
+
       const result = await response.json();
       if (!response.ok || !result.path) throw new Error('Upload failed');
-  
-      // Hent signed URL til visning
-      const signedUrlRes = await fetch(`${API_URL}/user/${userId}/avatar-url`);
+
+      const signedUrlRes = await fetch(`${API_URL}/user/${userId}/avatar-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: result.path }),
+      });
+
       const signedUrlJson = await signedUrlRes.json();
-  
       const signedUrl = signedUrlJson.signedUrl;
-  
-      // Opdater brugerdata lokalt
+
       const updatedUserData = {
         ...parsedData,
         profile_image: signedUrl,
       };
-  
+
       await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
       setUserData(updatedUserData);
-  
       Alert.alert('Succes', 'Profilbillede opdateret!');
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -362,7 +173,6 @@ const EditProfile = () => {
       setIsUploading(false);
     }
   };
-  
 
 
   return (
