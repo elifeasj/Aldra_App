@@ -24,39 +24,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Custom body parser for sensitive routes
-app.use((req, res, next) => {
-  if (req.path === '/change-password') {
-    let data = '';
-    req.setEncoding('utf8');
-    req.on('data', chunk => { data += chunk; });
-    req.on('end', () => {
-      try {
-        const parsedBody = JSON.parse(data);
-        req._originalBody = { ...parsedBody };
-
-        // Lav en sanitiseret version
-        Object.defineProperty(req, 'body', {
-          get: function () {
-            return this._originalBody;
-          },
-          set: function (val) {
-            this._originalBody = val;
-          },
-          configurable: true
-        });
-
-      } catch (err) {
-        req._originalBody = {};
-      }
-      next();
-    });
-  } else {
-    next();
-  }
-});
-
-
 app.use((req, res, next) => {
   if (req.path !== '/upload-avatar') {
     bodyParser.urlencoded({ extended: true, limit: '5mb' })(req, res, next);
