@@ -17,6 +17,7 @@ interface UserProfileData {
   relationToDementiaPerson?: string;
   token?: string;
   id?: number;
+  avatarUrl?: string;
 }
 
 const danishMonths = [
@@ -77,7 +78,7 @@ const EditProfile = () => {
         email: parsedData.email || '',
         password: '',
         birthday: parsedData.birthday || '',
-        profile_image: signedUrl || '',
+        avatarUrl: signedUrl || '',
         relationToDementiaPerson: parsedData.relationToDementiaPerson || '',
         token: parsedData.token,
         id: parsedData.id
@@ -191,10 +192,10 @@ const EditProfile = () => {
 
           <View style={styles.profileImageContainer}>
             <TouchableOpacity onPress={pickImage} style={styles.profileImageWrapper}>
-              {userData.profile_image ? (
+              {userData.avatarUrl ? (
                 <>
                   <Image
-                    source={{ uri: userData.profile_image }}
+                    source={{ uri: userData.avatarUrl }}
                     style={styles.profileImage}
                     onError={() => {
                       console.log('Image failed to load, fallback to initials');

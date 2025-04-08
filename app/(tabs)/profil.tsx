@@ -13,6 +13,7 @@ interface UserData {
   relationToDementiaPerson: string;
   familyId?: number;
   profile_image?: string;
+  avatarUrl?: string;
 }
 
 interface LogData {
@@ -89,10 +90,11 @@ const Profil = () => {
           if (result.signedUrl) {
             const updatedUserData = { ...parsedData, profile_image: result.signedUrl };
             await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
-            setUserData(prev => ({ ...prev, profile_image: result.signedUrl }));
+            setUserData(prev => ({ ...prev, profile_image: result.signedUrl, avatarUrl: result.signedUrl }));
           }
         }
       }
+      console.log('userData:', userData);
     } catch (error) {
       console.error('Fejl ved indlæsning af profilbillede:', error);
     }
@@ -108,6 +110,7 @@ const Profil = () => {
           name: parsedData.name,
           relationToDementiaPerson: parsedData.relationToDementiaPerson,
           profile_image: parsedData.profile_image,
+          avatarUrl: parsedData.profile_image,
         });
       }
     } catch (error) {
@@ -121,6 +124,7 @@ const Profil = () => {
     loadFamilyMembers();
     loadUserLogs();
     loadProfileImage();
+    
   }, []);
 
   useEffect(() => {
@@ -186,9 +190,9 @@ const Profil = () => {
       <View style={styles.profileSection}>
         <View style={styles.profileContainer}>
           <TouchableOpacity onPress={() => router.push('/myprofile')}>
-            {userData.profile_image && userData.profile_image.startsWith('http') ? (
+            {userData.avatarUrl ? (
               <Image
-                source={{ uri: userData.profile_image }}
+                source={{ uri: userData.avatarUrl }}
                 style={styles.profileImage}
                 resizeMode="cover"
               />
