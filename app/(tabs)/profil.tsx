@@ -102,6 +102,8 @@ const Profil = () => {
       const storedUserData = await AsyncStorage.getItem('userData');
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
+        console.log('Parsed userData from AsyncStorage:', parsedData);
+
   
         const updated = {
           id: parsedData.id,
