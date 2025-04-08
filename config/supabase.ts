@@ -1,9 +1,9 @@
-require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+// Type assertion, da vi ved at disse variabler er defineret i .env
+const supabaseUrl = process.env.SUPABASE_URL as string;
+const supabaseKey = process.env.SUPABASE_KEY as string;
 
-module.exports = { supabase };
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+export default supabase;

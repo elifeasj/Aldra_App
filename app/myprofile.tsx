@@ -163,7 +163,7 @@ const EditProfile = () => {
         uri: manipulatedImage.uri,
         type: 'image/jpeg',
         name: `user_${userId}_${Date.now()}.jpg`,
-      } as any);
+      });
       formData.append('userId', userId.toString());
   
       const response = await fetch(`${API_URL}/upload-avatar`, {
@@ -173,6 +173,8 @@ const EditProfile = () => {
   
       const result = await response.json();
       if (!response.ok || !result.path) throw new Error('Upload failed');
+      
+      console.log('Image uploaded successfully:', result.path); // Log the uploaded path
   
       const signedUrlRes = await fetch(`${API_URL}/user/${userId}/avatar-url`, {
         method: 'POST',
@@ -183,28 +185,28 @@ const EditProfile = () => {
       const signedUrlJson = await signedUrlRes.json();
       const signedUrl = signedUrlJson.signedUrl;
   
+      console.log('Signed URL fetched:', signedUrl); // Log the signed URL
+  
       const updatedUserData = {
         ...parsedData,
         profile_image: result.path,         // gem kun stien!
-        avatarUrl: signedUrl,              // brug denne til visning i UI.
+        avatarUrl: signedUrl,              // brug denne til visning i UI
       };
-      
+  
       await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
       setUserData(updatedUserData);
   
-      // Vis success overlay
       setToast({ type: 'success', message: 'Dit profilbillede er nu opdateret' });
       
-      // Timeout for at fjerne toast efter 5 sekunder
       setTimeout(() => {
         setToast(null);
       }, 4000);
-      
+  
     } catch (error) {
       console.error('Error uploading image:', error);
       setToast({ type: 'error', message: 'Kunne ikke uploade billede' });
       setTimeout(() => {
-        setToast(null); // remove error toast after a few seconds
+        setToast(null);
       }, 5000);
     } finally {
       setIsUploading(false);
