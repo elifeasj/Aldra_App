@@ -102,22 +102,37 @@ const Profil = () => {
       const storedUserData = await AsyncStorage.getItem('userData');
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
-        
+  
         const updated = {
           id: parsedData.id,
           name: parsedData.name,
           relationToDementiaPerson: parsedData.relationToDementiaPerson,
           profile_image: parsedData.profile_image,
-          avatarUrl: parsedData.avatarUrl || '',
         };
   
         setUserData(updated);
-        console.log(' Updated userData in loadUserData:', updated);
+        console.log('Updated userData in loadUserData:', updated);
+  
+        // Hvis der findes et image path, hent signed URL
+        if (parsedData.profile_image && parsedData.id) {
+          const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: parsedData.profile_image }),
+          });
+  
+          const result = await response.json();
+          if (result.signedUrl) {
+            setUserData(prev => ({ ...prev, avatarUrl: result.signedUrl }));
+            console.log('Updated userData with avatarUrl:', result.signedUrl);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
   };
+  
   
 
   const revalidate = useCallback(async () => {
