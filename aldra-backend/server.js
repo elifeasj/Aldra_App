@@ -1336,6 +1336,35 @@ app.post('/confirm-email-change', async (req, res) => {
   }
 });
 
+// Delete account endpoint
+app.delete('/user/:id/delete-account', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Delete user's data from Supabase
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Error deleting user:', deleteError);
+      return res.status(500).json({ error: 'Kunne ikke slette kontoen' });
+    }
+
+    // Delete related data (preferences, linked devices, etc.)
+    await Promise.all([
+      supabase.from('email_change_requests').delete().eq('user_id', id),
+      // Add more delete operations for other related tables as needed
+    ]);
+
+    res.json({ success: true, message: 'Konto slettet' });
+  } catch (error) {
+    console.error('Error in delete-account route:', error);
+    res.status(500).json({ error: 'Der opstod en fejl ved sletning af kontoen' });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 10000;
 

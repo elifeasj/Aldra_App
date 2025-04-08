@@ -427,7 +427,7 @@ const EditProfile = () => {
 
             <TouchableOpacity 
               style={styles.settingsItem}
-              onPress={() => router.push('../../..')}
+              onPress={() => router.push('../../delete-account')}
             >
               <View style={styles.settingsIcon}>
                 <Ionicons name="trash-outline" size={24} color="#000" />
