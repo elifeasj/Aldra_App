@@ -21,7 +21,7 @@ const ChangeEmail = () => {
     try {
       const userData = await AsyncStorage.getItem('userData');
       if (userData) {
-        const { email } = JSON.parse(userData);
+        const { email } = JSON.parse(userData) as UserData;
         setCurrentEmail(email);
       }
     } catch (error) {
@@ -29,7 +29,16 @@ const ChangeEmail = () => {
     }
   };
 
-  const handleRequestChange = async () => {
+  interface UserData {
+  id: string;
+  email: string;
+}
+
+interface ApiResponse {
+  error?: string;
+}
+
+const handleRequestChange = async () => {
     try {
       if (!newEmail) {
         setToast({ type: 'error', message: 'Indtast venligst en ny e-mailadresse' });
@@ -47,7 +56,7 @@ const ChangeEmail = () => {
       const userData = await AsyncStorage.getItem('userData');
       if (!userData) throw new Error('No user data found');
 
-      const { id } = JSON.parse(userData);
+      const { id } = JSON.parse(userData) as UserData;
       
       const response = await fetch(`${API_URL}/request-email-change`, {
         method: 'POST',
@@ -60,7 +69,7 @@ const ChangeEmail = () => {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as ApiResponse;
       
       if (!response.ok) {
         throw new Error(data.error || 'Could not request email change');
