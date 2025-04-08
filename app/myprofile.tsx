@@ -395,7 +395,7 @@ const EditProfile = () => {
            
             <TouchableOpacity 
               style={styles.settingsItem}
-              onPress={() => router.push('../../myprofile')}
+              onPress={() => router.push('../../change-email')}
             >
               <View style={styles.settingsIcon}>
                 <Ionicons name="mail-outline" size={24} color="#000" />

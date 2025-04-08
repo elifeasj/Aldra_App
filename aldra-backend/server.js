@@ -9,7 +9,10 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
+
 
 // Enable CORS
 app.use(cors());
@@ -1200,6 +1203,133 @@ app.get('/logs', async (req, res) => {
 
 app.get('/test', (req, res) => {
   res.send('✅ Backend kører');
+});
+
+// Email change request endpoint
+app.post('/request-email-change', async (req, res) => {
+  try {
+    const { userId, newEmail } = req.body;
+    
+    // Check if email is already in use
+    const { data: existingUser, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', newEmail)
+      .single();
+
+    if (existingUser) {
+      return res.status(400).json({ 
+        error: 'Denne e-mailadresse er allerede i brug' 
+      });
+    }
+
+    // Generate 6-digit code
+    const confirmationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedCode = await bcrypt.hash(confirmationCode, 10);
+
+    // Delete any existing unverified requests for this user
+    await supabase
+      .from('email_change_requests')
+      .delete()
+      .eq('user_id', userId)
+      .is('verified_at', null);
+
+    // Create new request
+    const { error: insertError } = await supabase
+      .from('email_change_requests')
+      .insert([{
+        user_id: userId,
+        new_email: newEmail,
+        confirmation_code: hashedCode,
+      }]);
+
+    if (insertError) throw insertError;
+
+    // Send email
+    await resend.emails.send({
+      from: 'Aldra App <noreply@aldra.dk>',
+      to: newEmail,
+      subject: 'Bekræft din nye e-mailadresse',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Bekræft din nye e-mailadresse</h2>
+          <p>Du har anmodet om at ændre din e-mailadresse i Aldra App.</p>
+          <p>Din bekræftelseskode er: <strong style="font-size: 24px; color: #42865F;">${confirmationCode}</strong></p>
+          <p>Koden udløber om 10 minutter.</p>
+          <p>Hvis du ikke har anmodet om denne ændring, kan du ignorere denne e-mail.</p>
+        </div>
+      `
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error requesting email change:', error);
+    res.status(500).json({ error: 'Der opstod en fejl' });
+  }
+});
+
+// Confirm email change endpoint
+app.post('/confirm-email-change', async (req, res) => {
+  try {
+    const { userId, code } = req.body;
+
+    // Get the latest unverified request
+    const { data: request, error: requestError } = await supabase
+      .from('email_change_requests')
+      .select('*')
+      .eq('user_id', userId)
+      .is('verified_at', null)
+      .order('sent_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (requestError || !request) {
+      return res.status(400).json({ 
+        error: 'Ingen aktiv anmodning fundet' 
+      });
+    }
+
+    // Check if request is expired (10 minutes)
+    const requestAge = Date.now() - new Date(request.sent_at).getTime();
+    if (requestAge > 10 * 60 * 1000) {
+      return res.status(400).json({ 
+        error: 'Bekræftelseskoden er udløbet' 
+      });
+    }
+
+    // Verify code
+    const isValidCode = await bcrypt.compare(code, request.confirmation_code);
+    if (!isValidCode) {
+      return res.status(400).json({ 
+        error: 'Ugyldig bekræftelseskode' 
+      });
+    }
+
+    // Update user's email
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ email: request.new_email })
+      .eq('id', userId);
+
+    if (updateError) throw updateError;
+
+    // Mark request as verified
+    await supabase
+      .from('email_change_requests')
+      .update({ verified_at: new Date().toISOString() })
+      .eq('id', request.id);
+
+    // Cleanup old requests
+    await supabase.rpc('cleanup_expired_email_requests');
+
+    res.json({ 
+      success: true,
+      email: request.new_email 
+    });
+  } catch (error) {
+    console.error('Error confirming email change:', error);
+    res.status(500).json({ error: 'Der opstod en fejl' });
+  }
 });
 
 // Start server
