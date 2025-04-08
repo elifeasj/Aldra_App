@@ -1,3 +1,4 @@
+require('dotenv').config(); // altid først!
 const { Client } = require('pg');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
@@ -10,9 +11,19 @@ const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
 
+
+console.log('🔐 Resend API key loaded:', process.env.RESEND_API_KEY ? '✅' : '❌');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // Enable CORS
 app.use(cors());
@@ -50,11 +61,6 @@ app.use((req, res, next) => {
   }
 });
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
 
 // Configure multer for handling file uploads
 const upload = multer({
@@ -193,11 +199,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
-// Supabase configuration
-const SUPABASE_PROJECT_ID = 'qqmhshgabgopbnauuhhk';
-const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxbWhzaGdhYmdvcGJuYXV1aGhrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDcwNzA5NjAsImV4cCI6MjAyMjY0Njk2MH0.QALnKHlJQ-0xvXn7YGoxYqON1SQz_AZDtIxNJI4aBGY';
-const SUPABASE_STORAGE_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public/profile-images`;
-const SUPABASE_API_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/profile-images`;
 
 // Helper function to get Supabase URL
 function getSupabaseImageUrl(filename) {
@@ -246,7 +247,7 @@ app.use((req, res, next) => {
 
 // Database connection configuration
 const client = new Client({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres.qqmhshgabgopbnauuhhk:7NCG4FNBZHp1QQtE@aws-0-eu-central-1.pooler.supabase.com:5432/postgres',
+  connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
   }
