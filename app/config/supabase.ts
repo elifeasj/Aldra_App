@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import Constants from 'expo-constants';
 
-dotenv.config(); // Load environment variables from .env
+const supabaseUrl = Constants.expoConfig?.extra?.SUPABASE_URL;
+const supabaseKey = Constants.expoConfig?.extra?.SUPABASE_ANON_KEY;
 
-const supabaseUrl = process.env.SUPABASE_URL as string;
-const supabaseKey = process.env.SUPABASE_KEY as string;
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error("Supabase config mangler");
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
