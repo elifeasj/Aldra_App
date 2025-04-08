@@ -110,6 +110,7 @@ const Profil = () => {
           name: parsedData.name,
           relationToDementiaPerson: parsedData.relationToDementiaPerson,
           profile_image: parsedData.profile_image,
+          avatarUrl: parsedData.avatarUrl
         };
   
         setUserData(updated);
