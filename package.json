@@ -73,7 +73,9 @@
     "doctor": {
       "reactNativeDirectoryCheck": {
         "listUnknownPackages": false,
-        "exclude": ["react-native-modal-dropdown"]
+        "exclude": [
+          "react-native-modal-dropdown"
+        ]
       }
     }
   },

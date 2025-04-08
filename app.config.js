@@ -1,11 +1,8 @@
-import 'dotenv/config';
-
 export default {
   expo: {
     name: "aldraapp",
     slug: "aldraapp",
     version: "1.0.0",
-    runtimeVersion: "1.0.0",
     orientation: "portrait",
     scheme: "myapp",
     userInterfaceStyle: "automatic",
@@ -18,16 +15,9 @@ export default {
       typedRoutes: true
     },
     extra: {
-      router: {
-        origin: false
-      },
-      SUPABASE_URL: process.env.SUPABASE_URL,
-      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+      SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+      SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
     },
-    eas: {
-      projectId: "353b4f0f-2aa3-4f8c-9ed4-e5c59de58a5e"
-    },
-    owner: "effyo",
     android: {
       package: "com.effyo.aldraapp",
       adaptiveIcon: {
