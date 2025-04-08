@@ -108,7 +108,7 @@ const Profil = () => {
           name: parsedData.name,
           relationToDementiaPerson: parsedData.relationToDementiaPerson,
           profile_image: parsedData.profile_image,
-          avatarUrl: parsedData.profile_image,
+          avatarUrl: parsedData.avatarUrl || '',
         };
   
         setUserData(updated);
@@ -121,8 +121,8 @@ const Profil = () => {
   
 
   const revalidate = useCallback(async () => {
-    await loadUserData();         // først: hent brugerinfo
-    await loadProfileImage();     // derefter: hent signed URL til billede
+    await loadUserData();        
+    await loadProfileImage();     
     getUniqueAldraLink();
     loadFamilyMembers();
     loadUserLogs();
