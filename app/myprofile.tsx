@@ -186,7 +186,7 @@ const EditProfile = () => {
       const updatedUserData = {
         ...parsedData,
         profile_image: result.path,         // gem kun stien!
-        avatarUrl: signedUrl,              // brug denne til visning i UI
+        avatarUrl: signedUrl,              // brug denne til visning i UI.
       };
       
       await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
