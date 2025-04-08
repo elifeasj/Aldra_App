@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_URL } from '../config';
+import Toast from '@/components/Toast';
 
 interface UserProfileData {
   name: string;
@@ -20,16 +21,40 @@ interface UserProfileData {
   avatarUrl?: string;
 }
 
-const danishMonths = [
-  'januar', 'februar', 'marts', 'april', 'maj', 'juni',
-  'juli', 'august', 'september', 'oktober', 'november', 'december'
-];
+
+const parseBirthdayToDate = (dateString: string): Date => {
+  if (!dateString) return new Date();
+
+  // Hvis ISO-format (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    const [year, month, day] = dateString.split('-');
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  // Hvis DD-MM-YYYY (vores gemte format)
+  if (/^\d{2}-\d{2}-\d{4}$/.test(dateString)) {
+    const [day, month, year] = dateString.split('-');
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  return new Date(dateString); // fallback
+};
 
 const formatDanishDate = (date: Date) => {
-  const day = date.getDate(); 
+  const danishMonths = [
+    'januar', 'februar', 'marts', 'april', 'maj', 'juni',
+    'juli', 'august', 'september', 'oktober', 'november', 'december'
+  ];
+  const day = String(date.getDate()).padStart(2, '0');
   const month = danishMonths[date.getMonth()];
   const year = date.getFullYear();
   return `${day} ${month} ${year}`;
+};
+
+
+const parseDanishDateString = (dateStr: string): Date => {
+  const [day, month, year] = dateStr.split('-');
+  return new Date(Number(year), Number(month) - 1, Number(day));
 };
 
 const EditProfile = () => {
@@ -37,6 +62,7 @@ const EditProfile = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isUploading, setIsUploading] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [userData, setUserData] = useState<UserProfileData>({
     name: '',
     email: '',
@@ -44,10 +70,15 @@ const EditProfile = () => {
     birthday: '',
     profile_image: '',
     relationToDementiaPerson: '',
+
   });
 
   useEffect(() => {
     loadUserData();
+    if (userData.birthday) {
+      const parsed = parseBirthdayToDate(userData.birthday);
+      setSelectedDate(parsed);
+    } 
   }, []);
 
   const loadUserData = async () => {
@@ -117,16 +148,16 @@ const EditProfile = () => {
       setIsUploading(true);
       const storedUserData = await AsyncStorage.getItem('userData');
       if (!storedUserData) throw new Error('No user data found');
-
+  
       const parsedData = JSON.parse(storedUserData);
       const userId = parsedData.id;
-
+  
       const manipulatedImage = await manipulateAsync(
         uri,
         [{ resize: { width: 500 } }],
         { compress: 0.7, format: SaveFormat.JPEG }
       );
-
+  
       const formData = new FormData();
       formData.append('image', {
         uri: manipulatedImage.uri,
@@ -134,36 +165,47 @@ const EditProfile = () => {
         name: `user_${userId}_${Date.now()}.jpg`,
       } as any);
       formData.append('userId', userId.toString());
-
+  
       const response = await fetch(`${API_URL}/upload-avatar`, {
         method: 'POST',
         body: formData,
       });
-
+  
       const result = await response.json();
       if (!response.ok || !result.path) throw new Error('Upload failed');
-
+  
       const signedUrlRes = await fetch(`${API_URL}/user/${userId}/avatar-url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: result.path }),
       });
-
+  
       const signedUrlJson = await signedUrlRes.json();
       const signedUrl = signedUrlJson.signedUrl;
-
+  
       const updatedUserData = {
         ...parsedData,
-        profile_image: result.path,         
-        avatarUrl: signedUrl,             
+        profile_image: result.path,         // gem kun stien!
+        avatarUrl: signedUrl,              // brug denne til visning i UI
       };
       
       await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
       setUserData(updatedUserData);
-      Alert.alert('Succes', 'Profilbillede opdateret!');
+  
+      // Vis success overlay
+      setToast({ type: 'success', message: 'Dit profilbillede er nu opdateret' });
+      
+      // Timeout for at fjerne toast efter 5 sekunder
+      setTimeout(() => {
+        setToast(null);
+      }, 4000);
+      
     } catch (error) {
       console.error('Error uploading image:', error);
-      Alert.alert('Fejl', 'Kunne ikke uploade billede');
+      setToast({ type: 'error', message: 'Kunne ikke uploade billede' });
+      setTimeout(() => {
+        setToast(null); // remove error toast after a few seconds
+      }, 5000);
     } finally {
       setIsUploading(false);
     }
@@ -241,7 +283,7 @@ const EditProfile = () => {
           <Text style={styles.sectionLabel}>Fødselsdato</Text>
           <View style={styles.settingsItem}>
             <Text style={styles.settingsText}>
-              {userData.birthday ? formatDanishDate(new Date(userData.birthday)) : 'Vælg fødselsdato (valgfrit)'}
+              {userData.birthday ? formatDanishDate(parseBirthdayToDate(userData.birthday)) : 'Vælg fødselsdato (valgfrit)'}
             </Text>
             <TouchableOpacity onPress={() => setShowDatePicker(true)}>
               <Ionicons name="create-outline" size={24} color="#707070" />
@@ -257,68 +299,60 @@ const EditProfile = () => {
         onRequestClose={() => setShowDatePicker(false)}
       >
         <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-              <View style={styles.modalContent}>
-                <Text style={[styles.modalTitle, { color: '#000' }]}>Vælg fødselsdato</Text>
-              <Text style={[styles.modalText, { marginBottom: 10 }]}>
-                {formatDanishDate(selectedDate)}
-              </Text>
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display="spinner"
-                textColor="#000"
-                themeVariant="light"
-                minimumDate={new Date(1900, 0, 1)}
-                maximumDate={new Date()}
-                onChange={(event, date) => {
-                  const currentDate = date || selectedDate;
-                  setSelectedDate(currentDate);
-                  console.log('Date selected in picker:', currentDate);
+      <View style={styles.modalOverlay}>
+        <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+          <View style={styles.modalContent}>
+            <Text style={[styles.modalTitle, { color: '#000' }]}>Vælg fødselsdato</Text>
+            <Text style={[styles.modalText, { marginBottom: 10 }]}>
+              {formatDanishDate(selectedDate)}
+            </Text>
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display="spinner"
+              textColor="#000"
+              themeVariant="light"
+              minimumDate={new Date(1900, 0, 1)}
+              maximumDate={new Date()}
+              onChange={(event, date) => {
+                const currentDate = date || selectedDate;
+                setSelectedDate(currentDate);
+              }}
+            />
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setShowDatePicker(false);
+                  if (userData.birthday) {
+                    const parsed = parseBirthdayToDate(userData.birthday);
+                    setSelectedDate(parsed);
+                  }
                 }}
-              />
-              <View style={styles.modalButtonContainer}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.modalCancelButton]}
-                  onPress={() => {
-                    setShowDatePicker(false);
-                    // Reset selected date to current value
-                    if (userData.birthday) {
-                      const [day, month, year] = userData.birthday.split('/');
-                      setSelectedDate(new Date(Number(year), Number(month) - 1, Number(day)));
-                    }
-                  }}
-                >
-                  <Text style={styles.modalButtonText}>Annuller</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.modalSaveButton]}
-                  onPress={async () => {
+              >
+                <Text style={styles.modalButtonText}>Annuller</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalSaveButton]}
+                onPress={async () => {
                   try {
-                    // Get current user data
                     const storedData = await AsyncStorage.getItem('userData');
                     if (!storedData) return;
 
                     const parsedData = JSON.parse(storedData);
-
-                    // Ensure we have a valid date
                     const currentDate = new Date(selectedDate);
                     const day = String(currentDate.getDate()).padStart(2, '0');
                     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
                     const year = currentDate.getFullYear();
-                    
-                    // Format date for database (YYYY-MM-DD)
-                    const isoDate = `${year}-${month}-${day}`;
-                    // Format date in Danish format (DD/MM/YYYY)
-                    const formattedDate = `${day}/${month}/${year}`;
 
-                    // Update local state with formatted date
+                    const isoDate = `${year}-${month}-${day}`;
+                    const formattedDate = `${day}-${month}-${year}`;
+
                     setUserData(prev => ({ ...prev, birthday: formattedDate }));
 
                     const updatedData = { ...parsedData, birthday: formattedDate };
 
-                    // Update database
                     const response = await fetch(`${API_URL}/users/${parsedData.id}`, {
                       method: 'PUT',
                       headers: {
@@ -327,20 +361,15 @@ const EditProfile = () => {
                       },
                       body: JSON.stringify({
                         birthday: isoDate,
-                        // Keep other fields unchanged
                         name: parsedData.name,
                         email: parsedData.email,
                         profile_image: parsedData.profile_image,
                         relationToDementiaPerson: parsedData.relationToDementiaPerson
                       })
                     });
-                    console.log('Birthday update response:', await response.text());
 
-                    if (!response.ok) {
-                      throw new Error('Failed to update birthday');
-                    }
+                    if (!response.ok) throw new Error('Failed to update birthday');
 
-                    // Update AsyncStorage
                     await AsyncStorage.setItem('userData', JSON.stringify(updatedData));
                     setShowDatePicker(false);
                   } catch (error) {
@@ -352,11 +381,12 @@ const EditProfile = () => {
                 <Text style={[styles.modalButtonText, { color: '#fff' }]}>Gem</Text>
               </TouchableOpacity>
             </View>
-              </View>
-            </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
-      </Modal>
+      </View>
+    </TouchableWithoutFeedback>
+</Modal>
+
 
         <View style={styles.settingsContainer}>
           <View style={styles.settingsSection}>
@@ -399,6 +429,10 @@ const EditProfile = () => {
         </View>
         </View>
       </ScrollView>
+
+      { toast && (
+        <Toast type={toast.type} message={toast.message} />
+      )}
     </KeyboardAvoidingView>
   );
 };

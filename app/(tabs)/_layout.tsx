@@ -13,10 +13,18 @@ export default function TabLayout() {
             tabBarActiveTintColor: '#42865F',
             tabBarInactiveTintColor: '#666666',
             tabBarStyle: {
+                backgroundColor: '#FFFFFF',
                 borderTopColor: '#EAEAEA',
-                height: 84,
-                paddingTop: 8,
-                paddingBottom: 32,
+                borderRadius: 32,
+                height: 95,
+                paddingTop: 10,
+                paddingHorizontal: 10,
+                position: 'absolute',
+                left: 10,
+                right: 10,
+                bottom: 0, 
+                elevation: 0, // til Android
+                shadowOpacity: 0, 
             },
             tabBarLabelStyle: {
                 fontSize: 12,

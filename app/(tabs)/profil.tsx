@@ -216,9 +216,9 @@ const Profil = () => {
       <View style={styles.profileSection}>
         <View style={styles.profileContainer}>
         <TouchableOpacity onPress={() => router.push('/myprofile')}>
-            {userData.profile_image ? (
+            {userData.avatarUrl ? (
               <Image
-                source={{ uri: userData.profile_image }}
+                source={{ uri: userData.avatarUrl }}
                 style={styles.profileImage}
                 resizeMode="cover"
               />
@@ -226,10 +226,10 @@ const Profil = () => {
               <View
                 style={[
                   styles.profileImage,
-                  { backgroundColor: '#42865F', justifyContent: 'center', alignItems: 'center' }
+                  { backgroundColor: 'rgba(255, 255, 255, 0.8)', justifyContent: 'center', alignItems: 'center' }
                 ]}
               >
-                <Text style={{ color: '#fff', fontSize: 32, fontFamily: 'RedHatDisplay_700Bold' }}>
+                <Text style={{ color: '#42865F', fontSize: 32, fontFamily: 'RedHatDisplay_700Bold' }}>
                   {getInitials(userData.name)}
                 </Text>
               </View>
@@ -608,9 +608,9 @@ const styles = StyleSheet.create({
     width: 95,
     height: 95,
     borderRadius: 55,
-    borderWidth: 5,
+    borderWidth: 3,
     borderColor: '#42865F',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
   imageContainer: {
     position: 'relative',
