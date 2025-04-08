@@ -103,31 +103,33 @@ const Profil = () => {
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
         console.log('Parsed userData from AsyncStorage:', parsedData);
-
+  
+        // Fallback mellem forskellige navne
+        const imagePath = parsedData.profile_image || parsedData.profileImage;
   
         const updated = {
           id: parsedData.id,
           name: parsedData.name,
           relationToDementiaPerson: parsedData.relationToDementiaPerson,
-          profile_image: parsedData.profile_image,
-          avatarUrl: parsedData.avatarUrl
+          profile_image: imagePath,
+          avatarUrl: '', // vi sætter den om lidt
         };
   
+        // Midlertidigt sæt
         setUserData(updated);
-        console.log('Updated userData in loadUserData:', updated);
   
-        // Hvis der findes et image path, hent signed URL
-        if (parsedData.profile_image && parsedData.id) {
+        if (imagePath && parsedData.id) {
           const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: parsedData.profile_image }),
+            body: JSON.stringify({ path: imagePath }),
           });
   
           const result = await response.json();
           if (result.signedUrl) {
-            setUserData(prev => ({ ...prev, avatarUrl: result.signedUrl }));
-            console.log('Updated userData with avatarUrl:', result.signedUrl);
+            const updatedWithAvatar = { ...updated, avatarUrl: result.signedUrl };
+            setUserData(updatedWithAvatar);
+            console.log('Updated userData with avatarUrl:', updatedWithAvatar);
           }
         }
       }
@@ -135,6 +137,7 @@ const Profil = () => {
       console.error('Error loading user data:', error);
     }
   };
+  
   
   
 
