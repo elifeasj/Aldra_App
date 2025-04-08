@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-// Type assertion, da vi ved at disse variabler er defineret i .env
+// Indlæs miljøvariabler fra .env filen
+dotenv.config();
+
 const supabaseUrl = process.env.SUPABASE_URL as string;
 const supabaseKey = process.env.SUPABASE_KEY as string;
 
