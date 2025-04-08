@@ -811,6 +811,7 @@ const styles = StyleSheet.create({
     paddingLeft: 22,
     borderRadius: 10,
     marginHorizontal: 20,
+    marginBottom: 60,
     alignItems: 'center',
   },
   logoutText: {
