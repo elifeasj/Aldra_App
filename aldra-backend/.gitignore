@@ -3,4 +3,4 @@ node_modules/
 *.log
 uploads/
 .DS_Store
-config/supabase.ts
+

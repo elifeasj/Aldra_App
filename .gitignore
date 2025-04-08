@@ -40,9 +40,6 @@ yarn-error.*
 .env*.local
 .env
 
-# Supabase
-supabase/migrations/
-
 # Render logs
 render-build.log
 
