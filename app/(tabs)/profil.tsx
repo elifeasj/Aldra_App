@@ -112,8 +112,9 @@ const Profil = () => {
           name: parsedData.name,
           relationToDementiaPerson: parsedData.relationToDementiaPerson,
           profile_image: imagePath,
-          avatarUrl: '', // vi sætter den om lidt
+          avatarUrl: imagePath,
         };
+        
   
         // Midlertidigt sæt
         setUserData(updated);
