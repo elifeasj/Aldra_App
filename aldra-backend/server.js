@@ -21,8 +21,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Initialize Supabase client
 const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_URL,  // Din Supabase URL
+  process.env.SUPABASE_KEY   // Din Supabase API key (anon key)
 );
 
 // Enable CORS
