@@ -1,4 +1,4 @@
-require('dotenv').config(); // altid først!
+require('dotenv').config();
 const { Client } = require('pg');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
