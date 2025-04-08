@@ -14,6 +14,21 @@ const app = express();
 // Enable CORS
 app.use(cors());
 
+app.use(bodyParser.json({ limit: '5mb' }));
+app.use((req, res, next) => {
+  if (req.path === '/change-password') {
+    const clone = { ...req.body };
+    ['password', 'currentPassword', 'newPassword'].forEach(key => {
+      if (clone[key]) clone[key] = '[REDACTED]';
+    });
+    console.log('Processing password change request:', clone);
+  } else {
+    console.log(`${req.method} ${req.path}`);
+  }
+  next();
+});
+
+
 // Custom request logging middleware
 app.use((req, res, next) => {
   if (req.path === '/change-password') {
@@ -77,6 +92,8 @@ console.log = function() {
   originalConsoleLog.apply(console, sanitizedArgs);
 };
 
+
+
 // Minimal request logging middleware
 app.use((req, res, next) => {
   if (req.path === '/change-password') {
@@ -87,38 +104,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Parse JSON body while preventing sensitive data from being logged
-app.use((req, res, next) => {
-  if (req.path === '/change-password') {
-    let data = '';
-    req.on('data', chunk => {
-      data += chunk.toString(); // konverter manuelt til string
-    });
-    req.on('end', () => {
-      try {
-        const parsedBody = JSON.parse(data);
-        req._originalBody = { ...parsedBody };
-
-        // Safe proxy via Object.defineProperty
-        Object.defineProperty(req, 'body', {
-          get: function () {
-            return this._originalBody;
-          },
-          set: function (val) {
-            this._originalBody = val;
-          },
-          configurable: true
-        });
-      } catch (err) {
-        console.error('Error parsing JSON body:', err.message);
-        return res.status(400).json({ error: 'Invalid JSON body' });
-      }
-      next();
-    });
-  } else {
-    next();
-  }
-});
 
 
 // Apply JSON parser only for non-file upload routes
@@ -137,7 +122,6 @@ app.use((req, res, next) => {
   bodyParser.urlencoded({limit: '5mb', extended: true})(req, res, next);
 });
 
-// Handle profile image upload
 // Handle profile image upload
 app.post('/upload-avatar', upload.single('image'), async (req, res) => {
   try {
@@ -427,7 +411,6 @@ if (!fs.existsSync(uploadsPath)) {
 
 
 
-// Login endpoint
 // Change password endpoint
 app.post('/change-password', async (req, res) => {
   try {
@@ -437,29 +420,36 @@ app.post('/change-password', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Brug PostgreSQL direkte
-    const result = await client.query(
-      'SELECT hashed_password FROM users WHERE id = $1',
-      [userId]
-    );
+    // Hent bruger fra Supabase
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('hashed_password')
+      .eq('id', userId)
+      .single();
 
-    if (result.rows.length === 0 || !result.rows[0].hashed_password) {
+    if (userError || !user || !user.hashed_password) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const user = result.rows[0];
-
+    // Tjek adgangskode
     const isValidPassword = await bcrypt.compare(currentPassword, user.hashed_password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
+    // Hash ny adgangskode
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    const updateResult = await client.query(
-      'UPDATE users SET hashed_password = $1 WHERE id = $2',
-      [hashedPassword, userId]
-    );
+    // Opdater i Supabase
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ hashed_password: hashedPassword })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Error updating password:', updateError);
+      return res.status(500).json({ error: 'Failed to update password' });
+    }
 
     res.json({ success: true });
   } catch (error) {
@@ -468,6 +458,7 @@ app.post('/change-password', async (req, res) => {
   }
 });
 
+// Login endpoint
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const maskedData = maskSensitiveData({ email, password });
