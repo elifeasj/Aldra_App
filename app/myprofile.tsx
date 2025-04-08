@@ -154,7 +154,7 @@ const EditProfile = () => {
 
       const updatedUserData = {
         ...parsedData,
-        profile_image: signedUrl,
+        profile_image: result.path,
       };
 
       await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));

@@ -88,13 +88,10 @@ const Profil = () => {
           });
           const result = await response.json();
           if (result.signedUrl) {
-            const updatedUserData = { ...parsedData, profile_image: result.signedUrl };
-            await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
-            setUserData(prev => ({ ...prev, profile_image: result.signedUrl, avatarUrl: result.signedUrl }));
+            setUserData(prev => ({ ...prev, avatarUrl: result.signedUrl }));
           }
         }
       }
-      console.log('userData:', userData);
     } catch (error) {
       console.error('Fejl ved indlæsning af profilbillede:', error);
     }
@@ -105,35 +102,42 @@ const Profil = () => {
       const storedUserData = await AsyncStorage.getItem('userData');
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
-        setUserData({
+        
+        const updated = {
           id: parsedData.id,
           name: parsedData.name,
           relationToDementiaPerson: parsedData.relationToDementiaPerson,
           profile_image: parsedData.profile_image,
           avatarUrl: parsedData.profile_image,
-        });
+        };
+  
+        setUserData(updated);
+        console.log(' Updated userData in loadUserData:', updated);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
   };
+  
 
-  const revalidate = useCallback(() => {
-    loadUserData();
+  const revalidate = useCallback(async () => {
+    await loadUserData();         // først: hent brugerinfo
+    await loadProfileImage();     // derefter: hent signed URL til billede
     getUniqueAldraLink();
     loadFamilyMembers();
     loadUserLogs();
-    loadProfileImage();
-    
   }, []);
-
+  
   useEffect(() => {
     revalidate();
   }, [revalidate]);
-
-  useFocusEffect(useCallback(() => {
-    revalidate();
-  }, [revalidate]));
+  
+  useFocusEffect(
+    useCallback(() => {
+      revalidate();
+    }, [revalidate])
+  );
+  
 
   useEffect(() => {
     const checkProfileUpdate = async () => {
@@ -189,10 +193,10 @@ const Profil = () => {
 
       <View style={styles.profileSection}>
         <View style={styles.profileContainer}>
-          <TouchableOpacity onPress={() => router.push('/myprofile')}>
-            {userData.avatarUrl ? (
+        <TouchableOpacity onPress={() => router.push('/myprofile')}>
+            {userData.profile_image ? (
               <Image
-                source={{ uri: userData.avatarUrl }}
+                source={{ uri: userData.profile_image }}
                 style={styles.profileImage}
                 resizeMode="cover"
               />
