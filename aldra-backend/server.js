@@ -21,8 +21,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Initialize Supabase client
 const supabase = createClient(
-  process.env.SUPABASE_URL,  // Din Supabase URL
-  process.env.SUPABASE_KEY   // Din Supabase API key (anon key)
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE
 );
 
 // Enable CORS
@@ -141,7 +141,7 @@ app.post('/upload-avatar', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'Missing file or userId' });
     }
 
-    const fileName = `avatars/user_${userId}_${Date.now()}.jpg`;
+    const fileName = `avatars/user_${userId}_${Date.now()}.jpg`; 
     console.log('Uploading to bucket: profile-images');
     console.log('File name:', fileName);    
 
@@ -202,7 +202,7 @@ app.use((err, req, res, next) => {
 
 // Helper function to get Supabase URL
 function getSupabaseImageUrl(filename) {
-    return `${SUPABASE_STORAGE_URL}/${filename}`;
+  return `${process.env.SUPABASE_STORAGE_URL}/${filename}`;
 }
 
 // Endpoint to get image URL
