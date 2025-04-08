@@ -38,6 +38,19 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Supabase
+supabase/migrations/
+
+# Render logs
+render-build.log
+
+# VSCode
+.vscode/
+
+# Miljøer
+.env.production
 
 # typescript
 *.tsbuildinfo
