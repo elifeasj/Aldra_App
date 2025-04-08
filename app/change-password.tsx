@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config';
+import Toast from '@/components/Toast';
 
 const ChangePassword = () => {
   const router = useRouter();
@@ -25,23 +26,33 @@ const ChangePassword = () => {
 
   const handleChangePassword = async () => {
     try {
+      // Tjek om alle felter er udfyldt
       if (!currentPassword || !newPassword || !confirmPassword) {
         Alert.alert('Fejl', 'Udfyld venligst alle felter');
         return;
       }
 
+      // Tjek om nye adgangskoder er ens
       if (newPassword !== confirmPassword) {
         Alert.alert('Fejl', 'De nye adgangskoder matcher ikke');
         return;
       }
 
+      // Tjek adgangskode strenghed
       if (!validatePassword(newPassword)) {
         Alert.alert('Fejl', 'Den nye adgangskode skal indeholde mindst 8 tegn, et tal og et specialtegn');
         return;
       }
 
+      // Tjek om nye adgangskoder er ens
+      if (currentPassword === newPassword) {
+        Alert.alert('Fejl', 'Den nye adgangskode må ikke være den samme som den nuværende');
+        return;
+      }
+
       setIsLoading(true);
 
+      // Hent brugerdata fra AsyncStorage
       const userData = await AsyncStorage.getItem('userData');
       if (!userData) throw new Error('No user data found');
 
@@ -50,6 +61,7 @@ const ChangePassword = () => {
       // Log only non-sensitive information
       console.log('Attempting to change password...');
 
+      // Send change-password request
       const response = await fetch(`${API_URL}/change-password`, {
         method: 'POST',
         headers: {
@@ -63,20 +75,23 @@ const ChangePassword = () => {
         })
       });
 
+      // Log response
       console.log('Password change request sent');
 
       const data = await response.json();
 
+      // Tjek response
       if (!response.ok) {
         console.log('Server response not OK:', response.status);
         const errorMessage = data.error || 'Kunne ikke ændre adgangskode';
         throw new Error(errorMessage);
       }
 
+      // Vis success overlay
       setShowSuccessMessage(true);
       setTimeout(() => {
         router.back();
-      }, 2000);
+      }, 5000);
     } catch (error) {
       console.error('Error changing password:', error instanceof Error ? error.message : 'Unknown error');
       Alert.alert('Fejl', 
@@ -101,15 +116,15 @@ const ChangePassword = () => {
           </TouchableOpacity>
           <Text style={styles.title}>Skift adgangskode</Text>
         </View>
-
+  
         <View style={styles.content}>
           <Text style={styles.subtitle}>Opret sikker adgangskode</Text>
-          
+  
           <View style={styles.requirements}>
             <Text style={styles.requirementText}>• Brug mindst 8 tegn</Text>
             <Text style={styles.requirementText}>• Brug en kombination af bogstaver, tal og specialtegn (f.eks.: #$!%)</Text>
           </View>
-
+  
           <Text style={styles.inputLabel}>Nuværende adgangskode</Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -118,12 +133,13 @@ const ChangePassword = () => {
               value={currentPassword}
               onChangeText={setCurrentPassword}
               placeholder="Indtast nuværende adgangskode"
+              placeholderTextColor="#A0A0A0"
             />
             <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
               <Ionicons name={showCurrentPassword ? "eye-off-outline" : "eye-outline"} size={24} color="#707070" />
             </TouchableOpacity>
           </View>
-
+  
           <Text style={styles.inputLabel}>Ny adgangskode</Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -132,12 +148,13 @@ const ChangePassword = () => {
               value={newPassword}
               onChangeText={setNewPassword}
               placeholder="Indtast ny adgangskode"
+              placeholderTextColor="#A0A0A0"
             />
             <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
               <Ionicons name={showNewPassword ? "eye-off-outline" : "eye-outline"} size={24} color="#707070" />
             </TouchableOpacity>
           </View>
-
+  
           <Text style={styles.inputLabel}>Bekræft ny adgangskode</Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -146,77 +163,33 @@ const ChangePassword = () => {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               placeholder="Bekræft ny adgangskode"
+              placeholderTextColor="#A0A0A0"
             />
             <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
               <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={24} color="#707070" />
             </TouchableOpacity>
           </View>
-
-          {showSuccessMessage ? (
-            <View style={styles.successMessageContainer}>
-              <View style={styles.successMessage}>
-                <View style={styles.successIconContainer}>
-                  <Ionicons name="checkmark-circle-outline" size={28} color="#42865F" />
-                </View>
-                <Text style={styles.successText}>
-                  Din adgangskode er opdateret{"\n"}
-                  – brug den ved næste login.
-                </Text>
-              </View>
-            </View>
-          ) : (
-            <TouchableOpacity 
-              style={[styles.changeButton, isLoading && styles.changeButtonDisabled]}
-              onPress={handleChangePassword}
-              disabled={isLoading}
-            >
-              <Text style={styles.changeButtonText}>
-                {isLoading ? 'Ændrer adgangskode...' : 'Skift adgangskode'}
-              </Text>
-            </TouchableOpacity>
-          )}
+  
+          <TouchableOpacity 
+            style={[styles.changeButton, isLoading && styles.changeButtonDisabled]}
+            onPress={handleChangePassword}
+            disabled={isLoading}
+          >
+            <Text style={styles.changeButtonText}>
+              {isLoading ? 'Ændrer adgangskode...' : 'Skift adgangskode'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {showSuccessMessage && (
+  <Toast type="success" message="Din adgangskode er opdateret – brug den ved næste login." />
+)}
     </KeyboardAvoidingView>
   );
-};
+};  
 
 const styles = StyleSheet.create({
-  successMessageContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    zIndex: 1000,
-  },
-  successMessage: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-    width: '90%',
-    maxWidth: 340,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  successIconContainer: {
-    marginBottom: 12,
-  },
-  successText: {
-    color: '#000',
-    fontSize: 17,
-    textAlign: 'center',
-    lineHeight: 24,
-    fontFamily: 'RedHatDisplay_400Regular',
-  },
   container: {
     flex: 1,
     backgroundColor: '#fff',

@@ -437,6 +437,12 @@ app.post('/change-password', async (req, res) => {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
+    // Tjek om ny adgangskode er den samme som den gamle
+    const isSamePassword = await bcrypt.compare(newPassword, user.hashed_password);
+    if (isSamePassword) {
+      return res.status(400).json({ error: 'Den nye adgangskode må ikke være den samme som den nuværende' });
+    }
+
     // Hash ny adgangskode
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
@@ -456,6 +462,7 @@ app.post('/change-password', async (req, res) => {
     console.error('Error in change-password route:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+
 });
 
 // Login endpoint
