@@ -452,10 +452,14 @@ app.post('/change-password', async (req, res) => {
       .update({ hashed_password: hashedPassword })
       .eq('id', userId);
 
-    if (updateError) {
-      console.error('Error updating password:', updateError);
-      return res.status(500).json({ error: 'Failed to update password' });
-    }
+      console.log('Updating user with ID:', userId);
+      console.log('New hashed password:', hashedPassword);
+      
+      if (updateError) {
+        console.error('Fejl ved opdatering:', updateError);
+        return res.status(500).json({ error: 'Failed to update password' });
+      }
+      
 
     res.json({ success: true });
   } catch (error) {

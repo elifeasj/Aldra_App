@@ -15,7 +15,7 @@ const ChangePassword = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   const validatePassword = (password: string) => {
     const minLength = password.length >= 8;
@@ -28,25 +28,29 @@ const ChangePassword = () => {
     try {
       // Tjek om alle felter er udfyldt
       if (!currentPassword || !newPassword || !confirmPassword) {
-        Alert.alert('Fejl', 'Udfyld venligst alle felter');
+        setToast({ type: 'error', message: 'Udfyld venligst alle felter' });
+        setTimeout(() => setToast(null), 4000); // 4 sekunder
         return;
       }
 
       // Tjek om nye adgangskoder er ens
       if (newPassword !== confirmPassword) {
-        Alert.alert('Fejl', 'De nye adgangskoder matcher ikke');
+        setToast({ type: 'error', message: 'De nye adgangskoder matcher ikke' });
+        setTimeout(() => setToast(null), 4000); // 4 sekunder
         return;
       }
 
       // Tjek adgangskode strenghed
       if (!validatePassword(newPassword)) {
-        Alert.alert('Fejl', 'Den nye adgangskode skal indeholde mindst 8 tegn, et tal og et specialtegn');
+        setToast({ type: 'error', message: 'Den nye adgangskode skal indeholde mindst 8 tegn, et tal og et specialtegn' });
+        setTimeout(() => setToast(null), 4000); // 4 sekunder
         return;
       }
 
       // Tjek om nye adgangskoder er ens
       if (currentPassword === newPassword) {
-        Alert.alert('Fejl', 'Den nye adgangskode må ikke være den samme som den nuværende');
+        setToast({ type: 'error', message: 'Den nye adgangskode må ikke være den samme som den nuværende' });
+        setTimeout(() => setToast(null), 4000); // 4 sekunder
         return;
       }
 
@@ -88,17 +92,14 @@ const ChangePassword = () => {
       }
 
       // Vis success overlay
-      setShowSuccessMessage(true);
+      setToast({ type: 'success', message: 'Din adgangskode er opdateret – brug den ved næste login.' });
       setTimeout(() => {
         router.back();
       }, 5000);
     } catch (error) {
       console.error('Error changing password:', error instanceof Error ? error.message : 'Unknown error');
-      Alert.alert('Fejl', 
-        error instanceof Error && error.message ? 
-        error.message : 
-        'Der opstod en fejl ved ændring af adgangskode'
-      );
+      setToast({ type: 'error', message: 'Der opstod en fejl ved ændring af adgangskode' });
+      setTimeout(() => setToast(null), 4000); // 4 sekunder
     } finally {
       setIsLoading(false);
     }
@@ -182,9 +183,9 @@ const ChangePassword = () => {
         </View>
       </ScrollView>
 
-      {showSuccessMessage && (
-  <Toast type="success" message="Din adgangskode er opdateret – brug den ved næste login." />
-)}
+      { toast && (
+        <Toast type={toast.type} message={toast.message} />
+      )}
     </KeyboardAvoidingView>
   );
 };  

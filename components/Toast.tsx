@@ -15,7 +15,7 @@ const iconMap = {
 
 const colorMap = {
   success: '#42865F',
-  error: '#D94343',
+  error: '#B73C3C',
   info: '#3B82F6',
 } as const;
 
