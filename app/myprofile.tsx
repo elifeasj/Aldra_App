@@ -648,4 +648,4 @@ const styles = StyleSheet.create({
     }
 });
 
-export default MyProfile;
+export default EditProfile;
