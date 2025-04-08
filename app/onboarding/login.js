@@ -50,15 +50,9 @@ export default function Login() {
                     name: data.name,
                     email: data.email,
                     relationToDementiaPerson: data.relationToDementiaPerson,
-                    profileImage: data.profile_image, // Local URL from Render
-                    supabaseImage: data.supabase_image, // Backup URL from Supabase
-                    birthday: data.birthday, // Add birthday
+                    profileImage: data.profile_image, // Profile image URL
                     token: token // Save the authentication token
                 };
-                
-                console.log('Server data:', data);
-                console.log('Saving user data:', userData);
-                console.log('Profile image being saved:', userData.profileImage);
                 
                 console.log('Gemmer brugerdata:', userData);
                 await AsyncStorage.setItem('userData', JSON.stringify(userData));
