@@ -51,10 +51,11 @@ export default function Login() {
                     email: data.email,
                     relationToDementiaPerson: data.relationToDementiaPerson,
                     profileImage: data.profile_image, // Profile image URL
+                    birthday: data.birthday, // Birthday
                     token: token // Save the authentication token
                 };
                 
-                console.log('Gemmer brugerdata:', userData);
+                // Gem i AsyncStorage
                 await AsyncStorage.setItem('userData', JSON.stringify(userData));
                 
                 router.push({

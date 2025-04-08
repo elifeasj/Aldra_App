@@ -511,7 +511,7 @@ app.post('/login', async (req, res) => {
             email: user.email,
             relationToDementiaPerson: user.relation_to_dementia_person,
             profile_image: user.profile_image,
-            birthday: formattedBirthday
+            birthday: formattedBirthday,
         });
         
         res.json({
@@ -1320,8 +1320,11 @@ app.post('/confirm-email-change', async (req, res) => {
       .update({ verified_at: new Date().toISOString() })
       .eq('id', request.id);
 
-    // Cleanup old requests
-    await supabase.rpc('cleanup_expired_email_requests');
+      // Cleanup old requests
+      const { error: cleanupError } = await supabase.rpc('cleanup_expired_email_requests');
+      if (cleanupError) {
+        console.warn('⚠️ Cleanup RPC fejlede:', cleanupError);
+      }
 
     res.json({ 
       success: true,

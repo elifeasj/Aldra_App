@@ -73,13 +73,19 @@ const EditProfile = () => {
 
   });
 
+// 1. Hent brugerdata, når siden loader
   useEffect(() => {
     loadUserData();
+  }, []);
+
+// 2. Når fødselsdatoen er sat (fra AsyncStorage), opdater selectedDate
+  useEffect(() => {
     if (userData.birthday) {
       const parsed = parseBirthdayToDate(userData.birthday);
       setSelectedDate(parsed);
-    } 
-  }, []);
+    }
+  }, [userData.birthday]);
+
 
   const loadUserData = async () => {
     try {
@@ -189,6 +195,7 @@ const EditProfile = () => {
   
       const updatedUserData = {
         ...parsedData,
+        birthday: parsedData.birthday,     // gem fødselsdato
         profile_image: result.path,         // gem kun stien!
         avatarUrl: signedUrl,              // brug denne til visning i UI
       };
@@ -320,6 +327,7 @@ const EditProfile = () => {
                 const currentDate = date || selectedDate;
                 setSelectedDate(currentDate);
               }}
+               locale="da" // Danish locale
             />
             <View style={styles.modalButtonContainer}>
               <TouchableOpacity 
