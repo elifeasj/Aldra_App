@@ -1,19 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard, TouchableWithoutFeedback, Platform, ScrollView, KeyboardAvoidingView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/auth';
 import Toast from '../components/Toast';
-import { API_URL } from './config/api';
+import { API_URL } from '../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function FeedbackScreen() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [showToast, setShowToast] = useState(false);
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
 
+  useEffect(() => {
+    console.log('👀 Bruger i feedback:', user);
+  }, [user]);
   const handleSubmit = async () => {
+    if (isLoading || !user?.id) {
+      console.warn('⛔ Brugerdata ikke klar endnu');
+      return;
+    }
+  
+    console.log('🟡 Feedback payload:', {
+      user_id: user?.id,
+      rating,
+      comment,
+    });
+  
     try {
       const response = await fetch(`${API_URL}/submit-feedback`, {
         method: 'POST',
@@ -26,11 +41,11 @@ export default function FeedbackScreen() {
           comment,
         }),
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to submit feedback');
       }
-
+  
       setShowToast(true);
       setRating(0);
       setComment('');
@@ -42,7 +57,7 @@ export default function FeedbackScreen() {
       }, 3000);
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      // Handle error appropriately
+      // Handle error appropriately}
     }
   };
 

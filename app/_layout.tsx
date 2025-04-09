@@ -1,3 +1,4 @@
+import { AuthProvider } from '../context/auth';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -33,15 +34,14 @@ export default function Layout() {
         return null;
     }
 
-    return (
-        <>
-            <StatusBar
+        return (
+            <AuthProvider>
+              <StatusBar
                 barStyle={isDarkMode ? 'light-content' : 'dark-content'}
                 backgroundColor={isDarkMode ? '#000000' : '#FFFFFF'}
-            />
-            <Stack screenOptions={{
-            headerShown: false,
-        }}>
+              />
+              <Stack screenOptions={{ headerShown: false }}>
+        
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding/onboarding_1" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding/onboarding_2" options={{ headerShown: false }} />
@@ -50,7 +50,7 @@ export default function Layout() {
             <Stack.Screen name="onboarding/onboarding_5" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding/register" options={{ headerShown: false }} />
         </Stack>
-        </>
+        </AuthProvider>
     );
 }
 
