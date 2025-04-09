@@ -1341,29 +1341,17 @@ app.delete('/user/:id/delete-account', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1. Slet afhængige data først
-    const { error: appointmentsError } = await supabase
-      .from('appointments')
-      .delete()
-      .eq('user_id', id);
+    // Slet ALT afhængigt data manuelt først
+    await Promise.all([
+      supabase.from('appointments').delete().eq('user_id', id),
+      supabase.from('logs').delete().eq('user_id', id),
+      supabase.from('notifications').delete().eq('user_id', id),
+      supabase.from('push_tokens').delete().eq('user_id', id),
+      supabase.from('family_links').delete().eq('creator_user_id', id),
+      supabase.from('email_change_requests').delete().eq('user_id', id)
+    ]);
 
-    if (appointmentsError) {
-      console.error('Error deleting appointments:', appointmentsError);
-      return res.status(500).json({ error: 'Kunne ikke slette tilknyttede aftaler' });
-    }
-
-    // 2. Slet andre afhængige data (fx email_change_requests)
-    const { error: emailError } = await supabase
-      .from('email_change_requests')
-      .delete()
-      .eq('user_id', id);
-
-    if (emailError) {
-      console.error('Error deleting email change requests:', emailError);
-      return res.status(500).json({ error: 'Kunne ikke slette e-mail ændringer' });
-    }
-
-    // 3. Slet selve brugeren
+    // Slet brugeren til sidst
     const { error: deleteError } = await supabase
       .from('users')
       .delete()
@@ -1375,6 +1363,7 @@ app.delete('/user/:id/delete-account', async (req, res) => {
     }
 
     res.json({ success: true, message: 'Konto slettet' });
+
   } catch (error) {
     console.error('Error in delete-account route:', error);
     res.status(500).json({ error: 'Der opstod en fejl ved sletning af kontoen' });
