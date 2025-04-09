@@ -54,7 +54,7 @@ export default function FeedbackScreen() {
       setTimeout(() => {
         setShowToast(false);
         router.back();
-      }, 3000);
+      }, 4000);
     } catch (error) {
       console.error('Error submitting feedback:', error);
       // Handle error appropriately}
