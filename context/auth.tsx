@@ -32,17 +32,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadUser = async () => {
     try {
       const userDataString = await AsyncStorage.getItem('userData');
-      console.log('🔍 Raw userData from AsyncStorage:', userDataString);
-  
       if (userDataString) {
         const userData = JSON.parse(userDataString);
-        console.log('✅ Parsed userData:', userData);
         setUser(userData);
-      } else {
-        console.warn('⚠️ userData not found in storage');
       }
     } catch (error) {
-      console.error('❌ Error loading user data:', error);
+      console.error('Kunne ikke loade brugerdata:', error);
     } finally {
       setIsLoading(false);
     }
