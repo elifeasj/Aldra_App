@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Switch, Platform, Animated, KeyboardAvoidingView, ViewStyle, TextStyle, Alert, LayoutChangeEvent, Button, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Switch, Platform, Animated, KeyboardAvoidingView, ViewStyle, TextStyle, Alert, LayoutChangeEvent, Button, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
@@ -417,9 +417,15 @@ export default function Kalender() {
 
     const onDateChange = (event: any, selectedDate?: Date) => {
         if (selectedDate) {
-            setTempDate(selectedDate);
+          setTempDate(selectedDate);
+      
+          // Gem den valgte dato i newAppointment
+          setNewAppointment((prev) => ({
+            ...prev,
+            date: selectedDate.toISOString(),
+          }));
         }
-    };
+      };
 
     const onStartTimeChange = (event: any, selectedTime?: Date) => {
         if (selectedTime) {
@@ -637,295 +643,326 @@ export default function Kalender() {
 
     const renderModal = () => (
         <Modal
-            visible={isModalVisible}
-            transparent={true}
-            onRequestClose={() => setIsModalVisible(false)}
-            animationType="none"
+          visible={isModalVisible}
+          transparent={true}
+          onRequestClose={() => setIsModalVisible(false)}
+          animationType="none"
         >
-            <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
-                <Animated.View 
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={{ flex: 1 }}>
+                <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+                  <Animated.View
                     style={[
-                        styles.modalContainer,
-                        {
-                            transform: [{ translateY: slideAnim }]
-                        }
+                      styles.modalContainer,
+                      { transform: [{ translateY: slideAnim }] },
                     ]}
-                >
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Opret besøg</Text>
-                            <TouchableOpacity 
-                                style={styles.closeButton}
-                                onPress={() => setIsModalVisible(false)}
-                            >
-                                <Ionicons name="close" size={24} color="#42865F" />
-                            </TouchableOpacity>
-                        </View>
-                        
-                        <KeyboardAvoidingView 
-                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                            style={{ width: '100%' }}
-                        >
-                            <Text style={styles.label}>Titel</Text>
-                            <TextInput
-                                style={{
-                                    ...styles.input,
-                                    fontFamily: 'RedHatDisplay_400Regular',
-                                    fontSize: 16
-                                }}
-                                value={newAppointment.title}
-                                onChangeText={(text) => setNewAppointment(prev => ({ ...prev, title: text }))}
-                                placeholder="Skriv titel her..."
-                                placeholderTextColor="#8F9BB3"
-                            />
-
-                            <Text style={styles.label}>Beskrivelse</Text>
-                            <View style={styles.descriptionContainer}>
-                                <TextInput
-                                    style={[styles.input, styles.descriptionInput]}
-                                    value={newAppointment.description}
-                                    onChangeText={(text) => {
-                                        if (text.length <= 20) {
-                                            setNewAppointment(prev => ({ ...prev, description: text }));
-                                        }
-                                    }}
-                                    placeholder="Skriv beskrivelse her..."
-                                    placeholderTextColor="#8F9BB3"
-                                    multiline
-                                    maxLength={20}
-                                />
-                                <Text style={styles.characterCount}>{newAppointment.description?.length || 0}/20</Text>
-                            </View>
-                        </KeyboardAvoidingView>
-
+                  >
+                    <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="always">
+                      <View style={styles.modalContent}>
+                      
+                      {/* MODAL HEADER */}
+                      <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Opret besøg</Text>
                         <TouchableOpacity
+                          style={styles.closeButton}
+                          onPress={() => setIsModalVisible(false)}
+                        >
+                          <Ionicons name="close" size={24} color="#42865F" />
+                        </TouchableOpacity>
+                      </View>
+      
+                      {/* TITEL INPUT */}
+                      <Text style={styles.label}>Titel</Text>
+                      <TextInput
+                        style={{ ...styles.input, fontFamily: 'RedHatDisplay_400Regular', fontSize: 16 }}
+                        value={newAppointment.title}
+                        onChangeText={(text) =>
+                          setNewAppointment((prev) => ({ ...prev, title: text }))
+                        }
+                        placeholder="Skriv titel her..."
+                        placeholderTextColor="#8F9BB3"
+                      />
+      
+                      {/* BESKRIVELSE INPUT */}
+                      <Text style={styles.label}>Beskrivelse</Text>
+                      <View style={styles.descriptionContainer}>
+                        <TextInput
+                          style={[styles.input, styles.descriptionInput]}
+                          value={newAppointment.description}
+                          onChangeText={(text) => {
+                            if (text.length <= 20) {
+                              setNewAppointment((prev) => ({ ...prev, description: text }));
+                            }
+                          }}
+                          placeholder="Skriv beskrivelse her..."
+                          placeholderTextColor="#8F9BB3"
+                          multiline
+                          maxLength={20}
+                        />
+                        <Text style={styles.characterCount}>
+                          {newAppointment.description?.length || 0}/20
+                        </Text>
+                      </View>
+      
+                      {/* DATO */}
+                      <TouchableOpacity
                         style={styles.dateButton}
                         onPress={() => {
+                            const today = new Date();
+                              
+                            if (newAppointment.date) {
+                              setTempDate(new Date(newAppointment.date));
+                            } else {
+                              setTempDate(today);
+                            }
+                              
+                            // Luk andre pickere først
+                            setShowStartTimePicker(false);
+                            setShowEndTimePicker(false);
+                              
+                            Keyboard.dismiss();
+                            setShowDatePicker(true); // ← vis kun denne
+                              }}
+                      >
+                        <Text
+                          style={[
+                            styles.dateButtonText,
+                            !newAppointment.date && { color: '#8F9BB3' },
+                          ]}
+                        >
+                          {newAppointment.date
+                            ? new Date(newAppointment.date)
+                                .toLocaleDateString('da-DK', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  formatMatcher: 'basic',
+                                })
+                                .replace(/\//g, '. ')
+                            : 'Dato'}
+                        </Text>
+                        <View style={styles.dateButtonIcon}>
+                          <Ionicons name="calendar-outline" size={24} color="#000" />
+                        </View>
+                      </TouchableOpacity>
+
+      
+                      {/* TIDER */}
+                      <View style={styles.timeContainer}>
+                        <TouchableOpacity
+                          style={[styles.timeButton, { marginRight: 8 }]}
+                          onPress={() => {
+                            Keyboard.dismiss();
+                            setShowDatePicker(false);
+                            setShowEndTimePicker(false);
+                            setShowStartTimePicker(true);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.timeButtonText,
+                              !newAppointment.start_time && { color: '#8F9BB3' },
+                            ]}
+                          >
+                            {newAppointment.start_time || 'Start tid'}
+                          </Text>
+                          <View style={styles.timeButtonIcon}>
+                            <Ionicons name="time-outline" size={24} color="#000" />
+                          </View>
+                        </TouchableOpacity>
+      
+                        <TouchableOpacity
+                          style={[styles.timeButton, { marginLeft: 8 }]}
+                          onPress={() => {
                             const now = new Date();
-                            if (newAppointment.start_time) {
-                              const [hours, minutes] = newAppointment.start_time.split(':').map(Number);
+                            if (newAppointment.end_time) {
+                              const [hours, minutes] = newAppointment.end_time
+                                .split(':')
+                                .map(Number);
                               const selected = new Date();
                               selected.setHours(hours);
                               selected.setMinutes(minutes);
                               selected.setSeconds(0);
                               selected.setMilliseconds(0);
-                              setTempStartTime(selected);
+                              setTempEndTime(selected);
                             } else {
                               now.setSeconds(0);
                               now.setMilliseconds(0);
-                              setTempStartTime(now);
+                              setTempEndTime(now);
                             }
-                            setShowStartTimePicker(true);
-                          }}
+                            Keyboard.dismiss();
+                            setShowStartTimePicker(false);
+                            setShowDatePicker(false);
+                            setShowEndTimePicker(true);
+                        }}
                         >
-                            <Text style={[styles.dateButtonText, !newAppointment.date && { color: '#8F9BB3' }]}>
-                                {newAppointment.date 
-                                    ? new Date(newAppointment.date).toLocaleDateString('da-DK', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric',
-                                        formatMatcher: 'basic'
-                                    }).replace(/\//g, '. ')
-                                    : 'Dato'}
-                            </Text>
-                            <View style={styles.dateButtonIcon}>
-                                <Ionicons name="calendar-outline" size={24} color="#000" />
-                            </View>
+                          <Text
+                            style={[
+                              styles.timeButtonText,
+                              !newAppointment.end_time && { color: '#8F9BB3' },
+                            ]}
+                          >
+                            {newAppointment.end_time || 'Slut tid'}
+                          </Text>
+                          <View style={styles.timeButtonIcon}>
+                            <Ionicons name="time-outline" size={24} color="#000" />
+                          </View>
                         </TouchableOpacity>
+                      </View>
+      
+                      {/* PÅMINDELSE */}
+                      <View style={styles.reminderContainer}>
+                        <Text style={styles.reminderText}>Påmind mig</Text>
+                        <Switch
+                          value={newAppointment.reminder}
+                          onValueChange={(value) =>
+                            setNewAppointment((prev) => ({ ...prev, reminder: value }))
+                          }
+                          trackColor={{ false: '#E5E5E5', true: '#42865F' }}
+                        />
+                      </View>
+      
+                      <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={handleCreateAppointment}
+                  >
+                    <Text style={styles.addButtonText}>Tilføj til kalender</Text>
+                  </TouchableOpacity>
 
-                        <View style={styles.timeContainer}>
+                  {/* DATOVÆLGERE */}
+                  {Platform.OS === 'ios' ? (
+                    <>
+                      {showDatePicker && (
+                        <View style={styles.dateTimePickerContainer}>
+                          <View style={styles.pickerHeader}>
                             <TouchableOpacity
-                                style={[styles.timeButton, { marginRight: 8 }]}
-                                onPress={() => setShowStartTimePicker(true)}
+                              style={styles.pickerButton}
+                              onPress={handleConfirmDate}
                             >
-                                <Text style={[styles.timeButtonText, !newAppointment.start_time && { color: '#8F9BB3' }]}>
-                                    {newAppointment.start_time || 'Start tid'}
-                                </Text>
-                                <View style={styles.timeButtonIcon}>
-                                    <Ionicons name="time-outline" size={24} color="#000" />
-                                </View>
+                              <Text style={[styles.modalButtonText, { color: '#42865F' }]}>Bekræft</Text>
                             </TouchableOpacity>
+                          </View>
+                          <DateTimePicker
+                            value={tempDate}
+                            mode="date"
+                            is24Hour={true}
+                            display="spinner"
+                            onChange={onDateChange}
+                            minimumDate={new Date(2000, 0, 1)}
+                            textColor="black"
+                            themeVariant="light"
+                            style={{ width: '100%' }}
+                            locale="da-DK"
+                            accessibilityRole="adjustable"
+                          />
+                        </View>
+                      )}
 
+                      {showStartTimePicker && (
+                        <View style={styles.dateTimePickerContainer}>
+                          <View style={styles.pickerHeader}>
                             <TouchableOpacity
-                                style={[styles.timeButton, { marginLeft: 8 }]}
-                                onPress={() => {
-                                    const now = new Date();
-                                    if (newAppointment.end_time) {
-                                      const [hours, minutes] = newAppointment.end_time.split(':').map(Number);
-                                      const selected = new Date();
-                                      selected.setHours(hours);
-                                      selected.setMinutes(minutes);
-                                      selected.setSeconds(0);
-                                      selected.setMilliseconds(0);
-                                      setTempEndTime(selected);
-                                    } else {
-                                      now.setSeconds(0);
-                                      now.setMilliseconds(0);
-                                      setTempEndTime(now);
-                                    }
-                                    setShowEndTimePicker(true);
-                                  }}   
+                              style={styles.pickerButton}
+                              onPress={handleConfirmStartTime}
                             >
-                                <Text style={[styles.timeButtonText, !newAppointment.end_time && { color: '#8F9BB3' }]}>
-                                    {newAppointment.end_time || 'Slut tid'}
-                                </Text>
-                                <View style={styles.timeButtonIcon}>
-                                    <Ionicons name="time-outline" size={24} color="#000" />
-                                </View>
+                              <Text style={[styles.modalButtonText, { color: '#42865F' }]}>Bekræft</Text>
                             </TouchableOpacity>
+                          </View>
+                          <DateTimePicker
+                            value={tempStartTime}
+                            mode="time"
+                            is24Hour={true}
+                            display="spinner"
+                            onChange={onStartTimeChange}
+                            textColor="black"
+                            themeVariant="light"
+                            style={{ width: '100%' }}
+                            locale="da-DK"
+                          />
                         </View>
+                      )}
 
-                        <View style={styles.reminderContainer}>
-                            <Text style={styles.reminderText}>Påmind mig</Text>
-                            <Switch
-                                value={newAppointment.reminder}
-                                onValueChange={(value) => setNewAppointment(prev => ({ ...prev, reminder: value }))}
-                                trackColor={{ false: "#E5E5E5", true: "#42865F" }}
-                            />
+                      {showEndTimePicker && (
+                        <View style={styles.dateTimePickerContainer}>
+                          <View style={styles.pickerHeader}>
+                            <TouchableOpacity
+                              style={styles.pickerButton}
+                              onPress={handleConfirmEndTime}
+                            >
+                              <Text style={[styles.modalButtonText, { color: '#42865F' }]}>Bekræft</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <DateTimePicker
+                            value={tempEndTime}
+                            mode="time"
+                            is24Hour={true}
+                            display="spinner"
+                            onChange={onEndTimeChange}
+                            textColor="black"
+                            themeVariant="light"
+                            style={{ width: '100%' }}
+                            locale="da-DK"
+                          />
                         </View>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {showDatePicker && (
+                        <DateTimePicker
+                          value={tempDate}
+                          mode="date"
+                          is24Hour={true}
+                          display="spinner"
+                          onChange={onDateChange}
+                          textColor="black"
+                          themeVariant="light"
+                          style={{ width: '100%' }}
+                          locale="da-DK"
+                          accessibilityRole="adjustable"
+                        />
+                      )}
 
-                        <TouchableOpacity
-                            style={styles.addButton}
-                            onPress={handleCreateAppointment}
-                        >
-                            <Text style={styles.addButtonText}>Tilføj til kalender</Text>
-                        </TouchableOpacity>
-                    </View>
+                      {showStartTimePicker && (
+                        <DateTimePicker
+                          value={tempStartTime}
+                          mode="time"
+                          is24Hour={true}
+                          display="spinner"
+                          onChange={onStartTimeChange}
+                          textColor="black"
+                          themeVariant="light"
+                          style={{ width: '100%' }}
+                          locale="da-DK"
+                        />
+                      )}
 
-                    {Platform.OS === 'ios' ? (
-                        <>
-                            {showDatePicker && (
-                                <View style={styles.dateTimePickerContainer}>
-                                    <View style={styles.pickerHeader}>
-                                        <TouchableOpacity 
-                                            style={styles.pickerButton}
-                                            onPress={handleConfirmDate}
-                                        >
-                                            <Text style={[styles.modalButtonText, { color: '#42865F' }]}>Bekræft</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                    <DateTimePicker
-                                    value={tempDate}
-                                    mode="date"
-                                    is24Hour={true}
-                                    display="spinner"
-                                    onChange={onDateChange}
-                                    minimumDate={new Date(2000, 0, 1)} // ⚠️ kan tilpasses
-                                    textColor="black"
-                                    themeVariant="light"
-                                    style={{ width: '100%' }}
-                                    locale="da-DK"
-                                    accessibilityRole="adjustable"
-                                    />
-                                </View>
-                            )}
-
-                            {showStartTimePicker && (
-                                <View style={styles.dateTimePickerContainer}>
-                                    <View style={styles.pickerHeader}>
-                                        <TouchableOpacity 
-                                            style={styles.pickerButton}
-                                            onPress={handleConfirmStartTime}
-                                        >
-                                            <Text style={[styles.modalButtonText, { color: '#42865F' }]}>Bekræft</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                    <TouchableWithoutFeedback>
-                                        <View>
-                                            <DateTimePicker
-                                                value={tempStartTime}
-                                                mode="time"
-                                                is24Hour={true}
-                                                display="spinner"
-                                                onChange={onStartTimeChange}
-                                                textColor="black"
-                                                themeVariant="light"
-                                                style={{ width: '100%' }}
-                                                locale="da-DK"
-                                            />
-                                        </View>
-                                    </TouchableWithoutFeedback>
-                                </View>
-                            )}
-
-                            {showEndTimePicker && (
-                                <View style={styles.dateTimePickerContainer}>
-                                    <View style={styles.pickerHeader}>
-                                        <TouchableOpacity 
-                                            style={styles.pickerButton}
-                                            onPress={handleConfirmEndTime}
-                                        >
-                                            <Text style={[styles.modalButtonText, { color: '#42865F' }]}>Bekræft</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                    <TouchableWithoutFeedback>
-                                        <View>
-                                            <DateTimePicker
-                                                value={tempEndTime}
-                                                mode="time"
-                                                is24Hour={true}
-                                                display="spinner"
-                                                onChange={onEndTimeChange}
-                                                textColor="black"
-                                                themeVariant="light"
-                                                style={{ width: '100%' }}
-                                                locale="da-DK"
-                                            />
-                                        </View>
-                                    </TouchableWithoutFeedback>
-                                </View>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            {showDatePicker && (
-                                <DateTimePicker
-                                    value={tempDate}
-                                    mode="date"
-                                    is24Hour={true}
-                                    display="spinner"
-                                    onChange={onDateChange}
-                                    textColor="black"
-                                    themeVariant="light"
-                                    style={{ width: '100%' }}
-                                    locale="da-DK"
-                                    accessibilityRole="adjustable"
-                                />
-                            )}
-
-                            {showStartTimePicker && (
-                                <DateTimePicker
-                                    value={tempStartTime}
-                                    mode="time"
-                                    is24Hour={true}
-                                    display="spinner"
-                                    onChange={onStartTimeChange}
-                                    textColor="black"
-                                    themeVariant="light"
-                                    style={{ width: '100%' }}
-                                    locale="da-DK"
-                                />
-                            )}
-
-                            {showEndTimePicker && (
-                                <DateTimePicker
-                                    value={tempEndTime}
-                                    mode="time"
-                                    is24Hour={true}
-                                    display="spinner"
-                                    onChange={onEndTimeChange}
-                                    textColor="black"
-                                    themeVariant="light"
-                                    style={{ width: '100%' }}
-                                    locale="da-DK"
-                                />
-                            )}
-                        </>
-                    )}
-                </Animated.View>
+                      {showEndTimePicker && (
+                        <DateTimePicker
+                          value={tempEndTime}
+                          mode="time"
+                          is24Hour={true}
+                          display="spinner"
+                          onChange={onEndTimeChange}
+                          textColor="black"
+                          themeVariant="light"
+                          style={{ width: '100%' }}
+                          locale="da-DK"
+                        />
+                      )}
+                    </>
+                  )}
+                </View>
+              </ScrollView>
             </Animated.View>
-        </Modal>
-    );
+          </Animated.View>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
+  </Modal>
+);
+ 
 
     const renderAppointment = (appointment: Appointment) => {
         const hasLog = appointmentsWithLogs[appointment.id];

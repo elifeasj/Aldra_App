@@ -425,22 +425,25 @@ const Profil = () => {
         <View style={styles.settingsSection}>
         <TouchableOpacity 
           style={styles.settingsItem}
-          onPress={() => router.push('../../..')}
+          onPress={() => router.push('/feedback')}
         >
           <View style={styles.settingsIcon}>
             <Ionicons name="create-outline" size={24} color="#000" />
           </View>
           <Text style={styles.settingsText}>Giv os feedback</Text>
           <Ionicons name="chevron-forward" size={24} color="#707070" />
-          </TouchableOpacity>
+        </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingsItem}>
+        <TouchableOpacity 
+          style={styles.settingsItem}
+          onPress={() => router.push('../../..')}
+        >
             <View style={styles.settingsIcon}>
               <Ionicons name="document-text-outline" size={24} color="#000" />
             </View>
             <Text style={styles.settingsText}>Vilkår og betingelser</Text>
             <Ionicons name="chevron-forward" size={24} color="#707070" />
-          </TouchableOpacity>
+        </TouchableOpacity>
         </View>
       </View>
 

@@ -1371,6 +1371,39 @@ app.delete('/user/:id/delete-account', async (req, res) => {
 });
 
 
+// Feedback endpoint
+app.post('/submit-feedback', async (req, res) => {
+  try {
+    const { user_id, rating, comment } = req.body;
+
+    if (!user_id || !rating || !comment) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Invalid rating' });
+    }
+
+    const { error: insertError } = await supabase
+      .from('feedback')
+      .insert([{
+        user_id,
+        rating,
+        comment
+      }]);
+
+    if (insertError) {
+      console.error('Error inserting feedback:', insertError);
+      throw insertError;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error in submit-feedback route:', error);
+    res.status(500).json({ error: 'Der opstod en fejl ved indsendelse af feedback' });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 10000;
 
