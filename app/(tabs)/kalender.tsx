@@ -391,6 +391,8 @@ export default function Kalender() {
     const onDayPress = (day: DateData) => {
         console.log('Selected date:', day.dateString);
         setSelectedDate(day.dateString);
+        setTempDate(new Date(day.dateString)); // 👈 sæt tempDate til valgt dato
+        setNewAppointment(prev => ({ ...prev, date: day.dateString })); // 👈 også sæt i newAppointment
         fetchAppointments(day.dateString);
     };
 
@@ -697,8 +699,24 @@ export default function Kalender() {
                         </KeyboardAvoidingView>
 
                         <TouchableOpacity
-                            style={styles.dateButton}
-                            onPress={() => setShowDatePicker(true)}
+                        style={styles.dateButton}
+                        onPress={() => {
+                            const now = new Date();
+                            if (newAppointment.start_time) {
+                              const [hours, minutes] = newAppointment.start_time.split(':').map(Number);
+                              const selected = new Date();
+                              selected.setHours(hours);
+                              selected.setMinutes(minutes);
+                              selected.setSeconds(0);
+                              selected.setMilliseconds(0);
+                              setTempStartTime(selected);
+                            } else {
+                              now.setSeconds(0);
+                              now.setMilliseconds(0);
+                              setTempStartTime(now);
+                            }
+                            setShowStartTimePicker(true);
+                          }}
                         >
                             <Text style={[styles.dateButtonText, !newAppointment.date && { color: '#8F9BB3' }]}>
                                 {newAppointment.date 
@@ -730,7 +748,23 @@ export default function Kalender() {
 
                             <TouchableOpacity
                                 style={[styles.timeButton, { marginLeft: 8 }]}
-                                onPress={() => setShowEndTimePicker(true)}
+                                onPress={() => {
+                                    const now = new Date();
+                                    if (newAppointment.end_time) {
+                                      const [hours, minutes] = newAppointment.end_time.split(':').map(Number);
+                                      const selected = new Date();
+                                      selected.setHours(hours);
+                                      selected.setMinutes(minutes);
+                                      selected.setSeconds(0);
+                                      selected.setMilliseconds(0);
+                                      setTempEndTime(selected);
+                                    } else {
+                                      now.setSeconds(0);
+                                      now.setMilliseconds(0);
+                                      setTempEndTime(now);
+                                    }
+                                    setShowEndTimePicker(true);
+                                  }}   
                             >
                                 <Text style={[styles.timeButtonText, !newAppointment.end_time && { color: '#8F9BB3' }]}>
                                     {newAppointment.end_time || 'Slut tid'}
@@ -771,16 +805,17 @@ export default function Kalender() {
                                         </TouchableOpacity>
                                     </View>
                                     <DateTimePicker
-                                        value={tempDate}
-                                        mode="date"
-                                        is24Hour={true}
-                                        display="spinner"
-                                        onChange={onDateChange}
-                                        textColor="black"
-                                        themeVariant="light"
-                                        style={{ width: '100%' }}
-                                        locale="da-DK"
-                                        accessibilityRole="adjustable"
+                                    value={tempDate}
+                                    mode="date"
+                                    is24Hour={true}
+                                    display="spinner"
+                                    onChange={onDateChange}
+                                    minimumDate={new Date(2000, 0, 1)} // ⚠️ kan tilpasses
+                                    textColor="black"
+                                    themeVariant="light"
+                                    style={{ width: '100%' }}
+                                    locale="da-DK"
+                                    accessibilityRole="adjustable"
                                     />
                                 </View>
                             )}
