@@ -1341,7 +1341,29 @@ app.delete('/user/:id/delete-account', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Delete user's data from Supabase
+    // 1. Slet afhængige data først
+    const { error: appointmentsError } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('user_id', id);
+
+    if (appointmentsError) {
+      console.error('Error deleting appointments:', appointmentsError);
+      return res.status(500).json({ error: 'Kunne ikke slette tilknyttede aftaler' });
+    }
+
+    // 2. Slet andre afhængige data (fx email_change_requests)
+    const { error: emailError } = await supabase
+      .from('email_change_requests')
+      .delete()
+      .eq('user_id', id);
+
+    if (emailError) {
+      console.error('Error deleting email change requests:', emailError);
+      return res.status(500).json({ error: 'Kunne ikke slette e-mail ændringer' });
+    }
+
+    // 3. Slet selve brugeren
     const { error: deleteError } = await supabase
       .from('users')
       .delete()
@@ -1352,18 +1374,13 @@ app.delete('/user/:id/delete-account', async (req, res) => {
       return res.status(500).json({ error: 'Kunne ikke slette kontoen' });
     }
 
-    // Delete related data (preferences, linked devices, etc.)
-    await Promise.all([
-      supabase.from('email_change_requests').delete().eq('user_id', id),
-      // Add more delete operations for other related tables as needed
-    ]);
-
     res.json({ success: true, message: 'Konto slettet' });
   } catch (error) {
     console.error('Error in delete-account route:', error);
     res.status(500).json({ error: 'Der opstod en fejl ved sletning af kontoen' });
   }
 });
+
 
 // Start server
 const PORT = process.env.PORT || 10000;
