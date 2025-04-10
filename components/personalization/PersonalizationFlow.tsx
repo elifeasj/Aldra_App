@@ -47,9 +47,25 @@ export const PersonalizationFlow: React.FC = () => {
 
   );
 
-  const [otherText, setOtherText] = useState('');
-  const [showOtherInput, setShowOtherInput] = useState(false);
-  const [currentField, setCurrentField] = useState<keyof typeof answers | null>(null);
+  const [currentFieldMap, setCurrentFieldMap] = useState<Record<number, keyof typeof answers | null>>({});
+  const [otherInputMap, setOtherInputMap] = useState<Record<number, boolean>>({});
+
+
+  const getOtherInputState = (step: number): boolean => !!otherInputMap[step];
+  const getCurrentField = (step: number): keyof typeof answers | null => currentFieldMap[step] || null;
+
+
+  const openOtherInput = (step: number, field: keyof typeof answers) => {
+    setOtherInputMap(prev => ({ ...prev, [step]: true }));
+    setCurrentFieldMap(prev => ({ ...prev, [step]: field }));
+  };
+
+const closeOtherInput = (step: number) => {
+  setOtherInputMap(prev => ({ ...prev, [step]: false }));
+  setCurrentFieldMap(prev => ({ ...prev, [step]: null }));
+};
+
+
 
   const handleNext = async () => {
     if (!isStepValid()) {
@@ -96,9 +112,7 @@ export const PersonalizationFlow: React.FC = () => {
     const multiSelect = key === 'main_challenges' || key === 'help_needs';
   
     if (option === 'Andet') {
-      setShowOtherInput(true);
-      setCurrentField(key);
-      setOtherText(getOtherValue());
+      openOtherInput(currentStep, key);
   
       // ✅ markér "Andet" som valgt – ligesom de andre
       if (multiSelect) {
@@ -114,9 +128,7 @@ export const PersonalizationFlow: React.FC = () => {
     }
   
     // Hvis man vælger noget andet, luk inputfelt
-    setShowOtherInput(false);
-    setCurrentField(null);
-    setOtherText('');
+    closeOtherInput(currentStep);
   
     if (multiSelect) {
       const currentValues = answers[key] as string[];
@@ -132,28 +144,27 @@ export const PersonalizationFlow: React.FC = () => {
   
 
   const handleOtherTextChange = (text: string) => {
-    setOtherText(text);
-    if (!currentField) return;
+    if (!currentFieldMap[currentStep]) return;
   
     const formatted = text.trim() ? `Andet: ${text.trim()}` : 'Andet';
   
-    if (currentField === 'main_challenges' || currentField === 'help_needs') {
-      const current = answers[currentField] as string[];
+    if (currentFieldMap[currentStep] === 'main_challenges' || currentFieldMap[currentStep] === 'help_needs') {
+      const current = answers[currentFieldMap[currentStep]] as string[];
       const filtered = current.filter(item => !item.startsWith('Andet'));
-      updateAnswer(currentField, [...filtered, formatted]);
+      updateAnswer(currentFieldMap[currentStep], [...filtered, formatted]);
     } else {
-      updateAnswer(currentField, formatted);
+      updateAnswer(currentFieldMap[currentStep], formatted);
     }
   };
   
 
   const getOtherValue = () => {
-    if (!currentField) return '';
-    const value = answers[currentField];
+    if (!currentFieldMap[currentStep]) return '';
+    const value = answers[currentFieldMap[currentStep]];
     if (Array.isArray(value)) {
-      const other = value.find(item => item.startsWith('Andet:'));
+      const other = value.find(v => v.startsWith('Andet: '));
       return other ? other.replace('Andet: ', '') : '';
-    } else if (typeof value === 'string' && value.startsWith('Andet:')) {
+    } else if (typeof value === 'string' && value.startsWith('Andet: ')) {
       return value.replace('Andet: ', '');
     }
     return '';
@@ -204,7 +215,9 @@ export const PersonalizationFlow: React.FC = () => {
       <>
         {options.map((option, index) => {
           const isSelected = isOptionSelected(option, answerKey);
-          const isOtherSelected = option === 'Andet' && showOtherInput && currentField === answerKey;
+          const isOtherSelected = option === 'Andet' && getOtherInputState(currentStep) && getCurrentField(currentStep) === answerKey;
+          const isOtherValue = option === 'Andet' && isSelected && !isOtherSelected;
+          const otherTextValue = getOtherValue();
 
           return (
             <TouchableOpacity
@@ -221,6 +234,7 @@ export const PersonalizationFlow: React.FC = () => {
               onPress={() => handleOptionSelect(option, answerKey)}
               disabled={isOtherSelected}
             >
+              {/* Hvis man er i gang med at skrive i "Andet" */}
               {isOtherSelected ? (
                 <View style={{ flex: 1 }}>
                   <TextInput
@@ -234,12 +248,26 @@ export const PersonalizationFlow: React.FC = () => {
                     }}
                     placeholder="Indtast dit svar"
                     placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                    value={otherText}
+                    value={otherTextValue}
                     onChangeText={handleOtherTextChange}
                     autoFocus
                   />
                 </View>
+              ) : isOtherValue ? (
+                // Hvis "Andet" er valgt og der allerede er skrevet noget
+                <Text
+                  style={[
+                    styles.optionText,
+                    {
+                      color: '#FFFFFF',
+                      fontWeight: 'bold',
+                    },
+                  ]}
+                >
+                  {otherTextValue}
+                </Text>
               ) : (
+                // Normale valgmuligheder (inkl. "Andet" før man har valgt det)
                 <Text
                   style={[
                     styles.optionText,
@@ -247,7 +275,7 @@ export const PersonalizationFlow: React.FC = () => {
                       color: isSelected ? '#FFFFFF' : '#2D6B4F',
                       fontWeight: isSelected ? 'bold' : 'normal',
                     },
-                  ]}
+                    ]}
                 >
                   {option}
                 </Text>
