@@ -7,6 +7,8 @@ import { ProgressIndicator } from './ProgressIndicator';
 import { usePersonalization } from '../../context/PersonalizationContext';
 import supabase from '../../config/supabase';
 import { API_URL } from '../../config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/auth';
 
 const STEPS = {
@@ -21,29 +23,16 @@ const STEPS = {
 export const PersonalizationFlow: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation();
+  const router = useRouter();
   const { currentStep, setCurrentStep, answers, updateAnswer } = usePersonalization();
-  const { user } = useAuth(); 
-  console.log('AUTH USER:', user);
-
-
+  const { user } = useAuth();
 
   const saveAnswers = async () => {
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-  
-    if (sessionError || !session?.user?.id) {
-      throw new Error('Bruger ikke fundet');
-    }
-  
-    const user_id = session.user.id;
-  
-    console.log('Gemmer til Supabase:', { user_id, ...answers });
-  
+    console.log('Gemmer svar:', answers);
+    
     const { data, error } = await supabase
       .from('user_profile_answers')
-      .insert([{ user_id, ...answers }])
+      .insert([{ user_id: user?.id, ...answers }])
       .single();
   
     if (error) {
@@ -52,24 +41,48 @@ export const PersonalizationFlow: React.FC = () => {
     }
   };
   
+  const handleFinish = async () => {
+    try {
+      await AsyncStorage.setItem('personalizationCompleted', 'true');
+      router.replace('/oversigt');
+    } catch (error) {
+      console.error('Kunne ikke gemme personalization-completed:', error);
+    }
+  };
+
+  const finalButtonContentStyle = StyleSheet.create({
+    container: {
+      flexDirection: 'row' as const,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      width: '100%',
+    }
+  });
+  
   if (currentStep > 5) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.welcomeTitle}>Tak for dine svar!</Text>
-        <Text style={styles.welcomeText}>
-          Vi tilpasser dit dashboard og vejledning, så det passer til dine behov.
-        </Text>
-        <TouchableOpacity
-          style={[styles.navigationButton, styles.nextButton]}
-          onPress={() => navigation.navigate('oversigt' as never)}
-        >
-          <Text style={[styles.navigationButtonText, styles.nextButtonText]}>
-            Til din oversigt
+      <View style={styles.welcomeContainer}>
+        <View style={styles.header}>
+          <Image
+            source={require('../../assets/images/aldra_logo.png')}
+            style={styles.headerLogo}
+          />
+        </View>
+
+        <View style={styles.introWrapper}>
+          <Text style={styles.welcomeTitle}>Tak for dine svar!</Text>
+          <Text style={styles.welcomeText}>
+            Vi tilpasser dit dashboard og vejledning, så det passer til dine behov.
           </Text>
-        </TouchableOpacity>
+        </View>
+    
+        <TouchableOpacity onPress={handleFinish} style={styles.finalButton}>
+  <Text style={styles.finalButtonText}>Til din oversigt</Text>
+</TouchableOpacity>
       </View>
     );
   }
+  
 
   const renderWelcomeScreen = () => (
     <View style={styles.welcomeContainer}>
@@ -94,6 +107,7 @@ export const PersonalizationFlow: React.FC = () => {
     </View>
 
   );
+
 
   const [currentFieldMap, setCurrentFieldMap] = useState<Record<number, keyof typeof answers | null>>({});
   const [otherInputMap, setOtherInputMap] = useState<Record<number, boolean>>({});
@@ -130,16 +144,6 @@ const closeOtherInput = (step: number) => {
       }
     } else {
       setCurrentStep(currentStep + 1);
-    }
-    if (currentStep === 5) {
-      try {
-        console.log('Gemmer svar:', answers); // 👀 Se hvad du prøver at gemme
-        await saveAnswers();
-        setCurrentStep(6);
-      } catch (error) {
-        console.error('Fejl i saveAnswers:', error); // 👈 Viser fejl i terminalen
-        Alert.alert('Fejl', 'Der opstod en fejl ved gem af dine svar. Prøv igen.');
-      }
     }
   };
 
@@ -568,6 +572,29 @@ const styles = StyleSheet.create({
   nextButtonText: {
     color: '#42865F',
   },
+  finalButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    width: '100%',
+    bottom: 40,
+  },
+  
+  finalButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  
+  finalButtonText: {
+    textAlign: 'center',
+    fontSize: 20,
+    color: '#42865F',
+    fontFamily: 'RedHatDisplay_700Bold',
+  },
+  
   
   // Welcome screen styles
   welcomeContainer: {

@@ -11,10 +11,22 @@ import { useIsFocused } from '@react-navigation/native';
 export default function Oversigt() {
     const { userName } = useLocalSearchParams();
     const router = useRouter();
-    const [hasCompletedPersonalization, setHasCompletedPersonalization] = useState(false);
     const [userId, setUserId] = useState('');
     const isFocused = useIsFocused();
 
+
+    // State for personalization completion check
+    const [hasCompletedPersonalization, setHasCompletedPersonalization] = useState(false);
+
+    useEffect(() => {
+        const check = async () => {
+            const completed = await AsyncStorage.getItem('personalizationCompleted');
+            setHasCompletedPersonalization(completed === 'true');
+          };
+          check();
+    }, []);
+
+      
     // Funktion til at formatere navn med stort første bogstav
     const formatName = (name: string) => {
         return name
@@ -22,6 +34,9 @@ export default function Oversigt() {
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(' ');
     };
+
+
+
     // Kommende besøg
     interface Appointment {
         id: number;
@@ -96,6 +111,38 @@ export default function Oversigt() {
         }
       }, [isFocused]);
       
+    const ProfileCompletion = () => {
+        if (!hasCompletedPersonalization) {
+          return (
+            <TouchableOpacity 
+              style={[styles.card, styles.progressCard]}
+              onPress={() => router.push('/personalization')}
+            >
+              <View style={styles.progressContainer}>
+                <View style={styles.progressCircle}>
+                  <Progress.Circle
+                    progress={0.2}
+                    size={60}
+                    thickness={8}
+                    color="#FFFF"
+                    unfilledColor="#D1D5DB"
+                    borderWidth={0}
+                    strokeCap="round"
+                    style={styles.progressRing}
+                  />
+                  <Text style={styles.progressText}>20%</Text>
+                </View>
+                <View style={styles.progressTextContainer}>
+                  <Text style={styles.progressTitle}>Færdiggør din profil</Text>
+                  <Text style={styles.progressSubtext}>Udfyld din profil for at tilpasse appen til dine behov.</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="white" style={styles.progressArrow} />
+              </View>
+            </TouchableOpacity>
+          );
+        }
+        return null;
+    };
 
    // Personalization   
     const [displayName, setDisplayName] = useState('Bruger');
@@ -171,35 +218,8 @@ export default function Oversigt() {
               </View>
             </View>
       
-            {/* Færdiggør profil kort */}
-            {!hasCompletedPersonalization && (
-              <TouchableOpacity 
-                style={[styles.card, styles.progressCard]}
-                onPress={() => router.push('/personalization')}
-              >
-                <View style={styles.progressContainer}>
-                  <View style={styles.progressCircle}>
-                    <Progress.Circle
-                      progress={0.2}
-                      size={60}
-                      thickness={8}
-                      color="#FFFF"
-                      unfilledColor="#D1D5DB"
-                      borderWidth={0}
-                      strokeCap="round"
-                      style={styles.progressRing}
-                    />
-                    <Text style={styles.progressText}>20%</Text>
-                  </View>
-                  <View style={styles.progressTextContainer}>
-                    <Text style={styles.progressTitle}>Færdiggør din profil</Text>
-                    <Text style={styles.progressSubtext}>Udfyld din profil for at tilpasse appen til dine behov.</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="white" style={styles.progressArrow} />
-                </View>
-              </TouchableOpacity>
-            )}
-      
+            <ProfileCompletion />
+    
             {/* Kommende besøg sektion */}
             <View style={styles.visitsSection}>
               <Text style={styles.sectionTitle}>Kommende besøg</Text>
@@ -301,7 +321,8 @@ export default function Oversigt() {
           </View>
         </ScrollView>
       );
-    }      
+    };
+
 
 const styles = StyleSheet.create({
     container: {

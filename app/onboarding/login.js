@@ -10,6 +10,7 @@ export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [hasCompletedPersonalization, setHasCompletedPersonalization] = useState(false);
 
     const handleLogin = async () => {
         try {
@@ -57,6 +58,7 @@ export default function Login() {
                 
                 // Gem i AsyncStorage
                 await AsyncStorage.setItem('userData', JSON.stringify(userData));
+                await AsyncStorage.setItem('personalizationCompleted', 'true');
                 
                 router.push({
                     pathname: '/(tabs)/oversigt',
@@ -69,7 +71,9 @@ export default function Login() {
             console.error('Fejl under login:', error);
             Alert.alert('Fejl', error.message || 'Noget gik galt. Prøv venligst igen.');
         }
+
     };
+
     
 
     return (
