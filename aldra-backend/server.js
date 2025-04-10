@@ -808,6 +808,23 @@ app.get('/appointments/dates/all', async (req, res) => {
   }
 });
 
+
+// Get logs for a specific user
+app.get('/logs/user/:user_id', async (req, res) => {
+  const { user_id } = req.params;
+  try {
+    const result = await client.query(
+      `SELECT id, appointment_id FROM logs WHERE user_id = $1`,
+      [user_id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching logs for user:', error);
+    res.status(500).json({ error: 'Error fetching logs for user' });
+  }
+});
+
+
 // Get logs for a specific appointment
 app.get('/logs/:appointment_id', async (req, res) => {
   try {

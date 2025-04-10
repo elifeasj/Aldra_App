@@ -34,56 +34,68 @@ export default function Oversigt() {
         reminder?: boolean;
     }
 
-    // ⬇️ State for kommende besøg
+    // State for kommende besøg
     const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+
+    // State for logs
+    const [appointmentsWithLogs, setAppointmentsWithLogs] = useState<Record<number, number>>({});
 
     // ⬇️ Effekt ved load
     useEffect(() => {
         const fetchUpcomingAppointments = async () => {
-            try {
-                const userDataString = await AsyncStorage.getItem('userData');
-                if (!userDataString) return;
-
-                const userData = JSON.parse(userDataString);
-                console.log("🔐 Bruger-ID:", userData.id);
-                console.log("📡 Fetch URL:", `${API_URL}/appointments/all?user_id=${userData.id}`);
-
-                const response = await fetch(`${API_URL}/appointments/all?user_id=${userData.id}`);
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('❌ Server-fejl:', errorText);
-                    return;
-                }
-
-                const allAppointments: Appointment[] = await response.json();
-                const today = new Date().toISOString().split('T')[0];
-
-                console.log("📆 today:", today);
-                console.log("📋 Alle aftaler fra server:", allAppointments);
-                console.log("🔎 Sammenligningsgrundlag:", allAppointments.map((a) => ({
-                    raw: a.date,
-                    parsed: new Date(a.date).toISOString().split('T')[0],
-                    sammenlignesMed: today
-                })));
-
-                const upcoming = allAppointments
-                    .filter((a) => {
-                        const appointmentDate = new Date(a.date).toISOString().split('T')[0];
-                        return appointmentDate >= today;
-                    })
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                    .slice(0, 2);
-
-                setUpcomingAppointments(upcoming);
-                console.log("✅ upcomingAppointments sat til:", upcoming);
-            } catch (err) {
-                console.error('Fejl ved hentning af kommende besøg:', err);
+          try {
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (!userDataString) return;
+      
+            const userData = JSON.parse(userDataString);
+            console.log("🔐 Bruger-ID:", userData.id);
+      
+            // Fetch aftaler
+            const response = await fetch(`${API_URL}/appointments/all?user_id=${userData.id}`);
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('❌ Server-fejl:', errorText);
+              return;
             }
+      
+            const allAppointments: Appointment[] = await response.json();
+            const today = new Date().toISOString().split('T')[0];
+      
+            const upcoming = allAppointments
+              .filter((a) => {
+                const appointmentDate = new Date(a.date).toISOString().split('T')[0];
+                return appointmentDate >= today;
+              })
+              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+              .slice(0, 2);
+      
+            setUpcomingAppointments(upcoming);
+            console.log("✅ upcomingAppointments sat til:", upcoming);
+      
+            // 🔽 Fetch logs
+            const logsResponse = await fetch(`${API_URL}/logs/user/${userData.id}`);
+            const logs = await logsResponse.json();
+      
+            const mapping: Record<number, number> = {};
+            logs.forEach((log: any) => {
+              if (log.appointment_id) {
+                mapping[log.appointment_id] = log.id;
+              }
+            });
+      
+            setAppointmentsWithLogs(mapping);
+            console.log("📚 Logs mapping:", mapping);
+      
+          } catch (err) {
+            console.error('Fejl ved hentning:', err);
+          }
         };
-
+      
         fetchUpcomingAppointments();
-    }, []);
+      }, []);
+      
 
+      
       
     const [displayName, setDisplayName] = useState('Bruger');
 
@@ -123,149 +135,172 @@ export default function Oversigt() {
 
     return (
         <ScrollView style={styles.container}>
-            <View style={styles.content}>
-                <Text style={styles.title}>Hej, {displayName}!</Text>
-                <Text style={styles.subtitle}>Din oversigt</Text>
-
-                {/* Top kort række */}
-                <View style={styles.cardRow}>
-                    {/* Familie kort */}
-                    <View style={[styles.card, styles.halfCard]}>
-                        <View style={styles.cardHeader}>
-                            <Text style={styles.cardTitle}>Familie</Text>
-                            <Ionicons name="people" size={22} color="white" />
-                        </View>
-                        <TouchableOpacity style={styles.cardButton}>
-                            <Text style={styles.cardButtonText}>Opret Aldra-link</Text>
-                            <Ionicons name="chevron-forward" size={16} color="#42865F" />
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Minder kort */}
-                    <View style={[styles.card, styles.halfCard]}>
-                        <View style={styles.cardHeader}>
-                            <Text style={styles.cardTitle}>Minder</Text>
-                            <Ionicons name="images" size={22} color="white" />
-                        </View>
-                        <View style={styles.cardContent}>
-                            <Text style={styles.cardSubtext}>5 minder tilføjet</Text>
-                            <Text style={styles.cardSubtext}>Se eller tilføj flere.</Text>
-                        </View>
-                        <TouchableOpacity style={styles.cardButton}>
-                            <Text style={styles.cardButtonText}>Tilføj ny minde</Text>
-                            <Ionicons name="chevron-forward" size={16} color="#42865F" />
-                        </TouchableOpacity>
-                    </View>
+          <View style={styles.content}>
+            <Text style={styles.title}>Hej, {displayName}!</Text>
+            <Text style={styles.subtitle}>Din oversigt</Text>
+      
+            {/* Top kort række */}
+            <View style={styles.cardRow}>
+              {/* Familie kort */}
+              <View style={[styles.card, styles.halfCard]}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>Familie</Text>
+                  <Ionicons name="people" size={22} color="white" />
                 </View>
-
-                {/* Færdiggør profil kort */}
-                {!hasCompletedPersonalization && (
-                    <TouchableOpacity 
-                        style={[styles.card, styles.progressCard]}
-                        onPress={() => router.push('/personalization')}
-                    >
-                        <View style={styles.progressContainer}>
-                            <View style={styles.progressCircle}>
-                                <Progress.Circle
-                                    progress={0.2}
-                                    size={60}
-                                    thickness={8}
-                                    color="#FFFF"
-                                    unfilledColor="#D1D5DB"
-                                    borderWidth={0}
-                                    strokeCap="round"
-                                    style={styles.progressRing}
-                                />
-                                <Text style={styles.progressText}>20%</Text>
-                            </View>
-                            <View style={styles.progressTextContainer}>
-                                <Text style={styles.progressTitle}>Færdiggør din profil</Text>
-                                <Text style={styles.progressSubtext}>Udfyld din profil for at tilpasse appen til dine behov.</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="white" style={styles.progressArrow} />
-                        </View>
-                    </TouchableOpacity>
-                )}
-
-                {/* Kommende besøg sektion */}
-                <View style={styles.visitsSection}>
-                    <Text style={styles.sectionTitle}>Kommende besøg</Text>
-                    <Text style={{ color: 'blue' }}>
-                        {JSON.stringify(upcomingAppointments, null, 2)}
-                    </Text>
-
-                    {upcomingAppointments.length === 0 ? (
-                        <Text style={styles.noVisitsText}>Ingen kommende besøg</Text>
-                    ) : (
-                        upcomingAppointments.map((appointment, index) => {
-                            console.log("VISER appointment:", appointment);
-                            return (
-                                <View key={`${appointment.id}-${index}`} style={styles.visitCard}>
-                                    <View style={styles.visitInfo}>
-                                        <Text style={{ color: '#000' }}>{appointment.title}</Text>
-                                        <Text style={{ color: '#000' }}>
-                                            {new Date(appointment.date).toLocaleDateString('da-DK', {
-                                                day: 'numeric',
-                                                month: 'long',
-                                                year: 'numeric',
-                                            })}
-                                        </Text>
-                                    </View>
-                                    <TouchableOpacity
-                                        style={styles.addLogButton}
-                                        onPress={() => {
-                                            router.push({
-                                                pathname: '/ny-log',
-                                                params: {
-                                                    date: appointment.date,
-                                                    appointment_id: appointment.id
-                                                }
-                                            });
-                                        }}
-                                    >
-                                        <Text style={styles.addLogButtonText}>Tilføj log</Text>
-                                        <View style={styles.addIconContainer}>
-                                            <Ionicons name="add" size={20} color="#42865F" />
-                                           </View>
-                                    </TouchableOpacity>
-                                </View>
-                            );
-                        })
-                    )}
+                <TouchableOpacity style={styles.cardButton}>
+                  <Text style={styles.cardButtonText}>Opret Aldra-link</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#42865F" />
+                </TouchableOpacity>
+              </View>
+      
+              {/* Minder kort */}
+              <View style={[styles.card, styles.halfCard]}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>Minder</Text>
+                  <Ionicons name="images" size={22} color="white" />
                 </View>
-
-
-                {/* Vejledninger sektion */}
-                <View style={styles.guidanceSection}>
-                    <Text style={styles.sectionTitle}>Vejledninger</Text>
-                    <Text style={styles.guidanceSubtitle}>Effektiv Kommunikation</Text>
-                    
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardScroll}>
-                        <TouchableOpacity style={styles.guidanceCard}>
-                            <Image 
-                                source={require('../../assets/images/frame_1.png')} 
-                                style={styles.guidanceImage}
-                            />
-                            <View style={styles.guidanceOverlay}>
-                                <Text style={styles.guidanceCardText}>Tal Langsomt og Klar</Text>
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.guidanceCard}>
-                            <Image 
-                                source={require('../../assets/images/frame_1.png')} 
-                                style={styles.guidanceImage}
-                            />
-                            <View style={styles.guidanceOverlay}>
-                                <Text style={styles.guidanceCardText}>Ikke Afbryd</Text>
-                            </View>
-                        </TouchableOpacity>
-                    </ScrollView>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardSubtext}>5 minder tilføjet</Text>
+                  <Text style={styles.cardSubtext}>Se eller tilføj flere.</Text>
                 </View>
+                <TouchableOpacity style={styles.cardButton}>
+                  <Text style={styles.cardButtonText}>Tilføj ny minde</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#42865F" />
+                </TouchableOpacity>
+              </View>
             </View>
+      
+            {/* Færdiggør profil kort */}
+            {!hasCompletedPersonalization && (
+              <TouchableOpacity 
+                style={[styles.card, styles.progressCard]}
+                onPress={() => router.push('/personalization')}
+              >
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressCircle}>
+                    <Progress.Circle
+                      progress={0.2}
+                      size={60}
+                      thickness={8}
+                      color="#FFFF"
+                      unfilledColor="#D1D5DB"
+                      borderWidth={0}
+                      strokeCap="round"
+                      style={styles.progressRing}
+                    />
+                    <Text style={styles.progressText}>20%</Text>
+                  </View>
+                  <View style={styles.progressTextContainer}>
+                    <Text style={styles.progressTitle}>Færdiggør din profil</Text>
+                    <Text style={styles.progressSubtext}>Udfyld din profil for at tilpasse appen til dine behov.</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="white" style={styles.progressArrow} />
+                </View>
+              </TouchableOpacity>
+            )}
+      
+            {/* Kommende besøg sektion */}
+            <View style={styles.visitsSection}>
+              <Text style={styles.sectionTitle}>Kommende besøg</Text>
+      
+              {upcomingAppointments.map((appointment, index) => (
+                <View key={`${appointment.id}-${index}`} style={styles.appointmentItem}>
+                  <View style={styles.appointmentContent}>
+                  <View style={styles.topRow} />
+                    <View style={styles.titleRow}>
+                      <View style={styles.titleAndDescription}>
+                        <Text style={styles.appointmentTitle} numberOfLines={1}>
+                          {appointment.title}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                          <Text style={styles.appointmentDescription}>
+                            {new Date(appointment.date).toLocaleDateString('da-DK', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                            })}
+                          </Text>
+                          <View style={{ width: 8 }} />
+                          <View style={styles.greenDot} />
+                          <View style={{ width: 8 }} />
+                          <Text style={styles.timeText}>
+                            {`${appointment.start_time?.substring(0, 5)}–${appointment.end_time?.substring(0, 5)}`}
+                          </Text>
+                        </View>
+                      </View>
+      
+                      <TouchableOpacity style={[styles.addLogButton,appointmentsWithLogs[appointment.id] ? styles.editLogButton : styles.addLogButton]}
+                        onPress={() => {
+                            if (appointmentsWithLogs[appointment.id]) {
+                              router.push({
+                                pathname: '/ny-log',
+                                params: { 
+                                  date: appointment.date,
+                                  appointment_id: appointment.id,
+                                  logId: appointmentsWithLogs[appointment.id]
+                                }
+                              });
+                            } else {
+                              router.push({
+                                pathname: '/ny-log',
+                                params: { 
+                                  date: appointment.date,
+                                  appointment_id: appointment.id
+                                }
+                              });
+                            }
+                          }}
+                        >
+                          {appointmentsWithLogs[appointment.id] ? (
+                            <>
+                              <Ionicons name="pencil" size={16} color="#42865F" />
+                              <Text style={styles.editLogText}>Rediger</Text>
+                            </>
+                          ) : (
+                            <>
+                              <Ionicons name="add" size={16} color="#FFFFFF" />
+                              <Text style={styles.addLogText}>Tilføj log</Text>
+                            </>
+                          )}
+                    </TouchableOpacity>
+                    </View>
+      
+                  </View>
+                </View>
+              ))}
+            </View>
+      
+            {/* Vejledninger sektion */}
+            <View style={styles.guidanceSection}>
+              <Text style={styles.sectionTitle}>Vejledninger</Text>
+              <Text style={styles.guidanceSubtitle}>Effektiv Kommunikation</Text>
+      
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardScroll}>
+                <TouchableOpacity style={styles.guidanceCard}>
+                  <Image 
+                    source={require('../../assets/images/frame_1.png')} 
+                    style={styles.guidanceImage}
+                  />
+                  <View style={styles.guidanceOverlay}>
+                    <Text style={styles.guidanceCardText}>Tal Langsomt og Klar</Text>
+                  </View>
+                </TouchableOpacity>
+      
+                <TouchableOpacity style={styles.guidanceCard}>
+                  <Image 
+                    source={require('../../assets/images/frame_1.png')} 
+                    style={styles.guidanceImage}
+                  />
+                  <View style={styles.guidanceOverlay}>
+                    <Text style={styles.guidanceCardText}>Ikke Afbryd</Text>
+                  </View>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
         </ScrollView>
-    );
-}
+      );
+    }      
 
 const styles = StyleSheet.create({
     container: {
@@ -431,35 +466,15 @@ const styles = StyleSheet.create({
         paddingLeft: 8,
     },
     visitsSection: {
-        marginTop: 32,
-        paddingHorizontal: 4,
+        marginTop: 50,
+        paddingHorizontal: 0,
     },
     sectionTitle: {
         fontSize: 20,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#333',
-        marginBottom: 16,
+        marginBottom: 20,
         letterSpacing: 0,
-    },
-    visitCard: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        marginBottom: 8,
-        borderWidth: 1,
-        borderColor: '#EAEAEA',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 1,
-        },
-        shadowOpacity: 0.04,
-        shadowRadius: 2,
-        elevation: 1,
     },
     visitInfo: {
         flex: 1,
@@ -483,11 +498,92 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 16,
     },
+    appointmentItem: {
+        position: 'relative',
+        height: 90,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderWidth: 0.3,
+        borderRadius: 12,
+        borderColor: '#D6D6D6',
+        marginBottom: 20,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    appointmentContent: {
+        flexDirection: 'column',
+        gap: 10,
+        height: '100%',
+        justifyContent: 'space-between',
+    },
+    topRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 0,
+        height: 0,
+    },
+    leftContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: 30,
+    },
+    timeWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        height: 30,
+    },
+    greenDot: {
+        width: 5,
+        height: 5,
+        borderRadius: 4,
+        backgroundColor: '#42865F',
+    },
+    timeText: {
+        color: '#42865F',
+        fontFamily: 'RedHatDisplay_500Medium',
+        fontSize: 14,
+    },
+    menuButton: {
+        padding: 5,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        paddingHorizontal: 6,
+        paddingBottom: 20,
+        height: 60,
+    },
+    titleAndDescription: {
+        flex: 1,
+        marginRight: 10,
+        maxWidth: '70%',
+        height: '100%',
+        justifyContent: 'center',
+    },
+    appointmentTitle: {
+        fontSize: 20,
+        fontFamily: 'RedHatDisplay_500Medium',
+        color: '#000',
+        marginTop: 0,
+    },
+    appointmentDescription: {
+        fontSize: 16,
+        fontFamily: 'RedHatDisplay_400Regular',
+        color: '#666666',
+        marginTop: 0,
+      },
     addLogButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#F7F7F7',
+        backgroundColor: '#42865F',
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 8,
@@ -498,6 +594,30 @@ const styles = StyleSheet.create({
         color: '#42865F',
         letterSpacing: 0.1,
     },
+    addLogText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontFamily: 'RedHatDisplay_500Medium',
+        marginLeft: 4,
+      },
+      editLogButton: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#42865F',
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+      },
+      
+      editLogText: {
+        fontSize: 16,
+        fontFamily: 'RedHatDisplay_700Bold',
+        color: '#42865F',
+        letterSpacing: 0.1,
+        marginLeft: 4,
+      },
     addIconContainer: {
         width: 20,
         height: 20,
