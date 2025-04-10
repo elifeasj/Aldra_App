@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { API_URL } from '../../config';
+import { API_URL } from '../../config/api';
 import supabase from '../../config/supabase';
 import * as Progress from 'react-native-progress';
 
@@ -41,7 +41,8 @@ export default function Oversigt() {
             const userDataString = await AsyncStorage.getItem('userData');
             if (!userDataString) return;
             const userData = JSON.parse(userDataString);
-      
+            console.log("🔐 Bruger-ID:", userData.id);
+            console.log("📡 Fetch URL:", `${API_URL}/appointments/all?user_id=${userData.id}`);
             const response = await fetch(`${API_URL}/appointments/all?user_id=${userData.id}`);
             if (!response.ok) {
               console.error('Fejl ved hentning af alle kommende aftaler');
@@ -58,10 +59,12 @@ export default function Oversigt() {
               .slice(0, 2); // maks 2
       
             setUpcomingAppointments(upcoming);
+            console.log("✅ upcomingAppointments sat til:", upcoming);
           } catch (err) {
             console.error('Fejl ved hentning af kommende besøg:', err);
           }
         };
+        console.log("📦 Render - upcomingAppointments:", upcomingAppointments);
       
         fetchUpcomingAppointments();
       }, []);
@@ -175,37 +178,40 @@ export default function Oversigt() {
                     {upcomingAppointments.length === 0 ? (
                         <Text style={styles.noVisitsText}>Ingen kommende besøg</Text>
                     ) : (
-                        upcomingAppointments.map((appointment) => (
-                            <View key={appointment.id} style={styles.visitCard}>
-                                <View style={styles.visitInfo}>
-                                    <Text style={styles.visitTitle}>{appointment.title}</Text>
-                                    <Text style={styles.visitDate}>
-                                        {new Date(appointment.date).toLocaleDateString('da-DK', {
-                                            day: 'numeric',
-                                            month: 'long',
-                                            year: 'numeric',
-                                        })}
-                                    </Text>
-                                </View>
-                                <TouchableOpacity
-                                    style={styles.addLogButton}
-                                    onPress={() => {
-                                        router.push({
-                                            pathname: '/ny-log',
-                                            params: {
-                                                date: appointment.date,
-                                                appointment_id: appointment.id
-                                            }
-                                        });
-                                    }}
-                                >
-                                    <Text style={styles.addLogButtonText}>Tilføj log</Text>
-                                    <View style={styles.addIconContainer}>
-                                        <Ionicons name="add" size={20} color="#42865F" />
+                        upcomingAppointments.map((appointment, index) => {
+                            console.log("VISER appointment:", appointment);
+                            return (
+                                <View key={`${appointment.id}-${index}`} style={styles.visitCard}>
+                                    <View style={styles.visitInfo}>
+                                        <Text style={{ color: '#000' }}>{appointment.title}</Text>
+                                        <Text style={{ color: '#000' }}>
+                                            {new Date(appointment.date).toLocaleDateString('da-DK', {
+                                                day: 'numeric',
+                                                month: 'long',
+                                                year: 'numeric',
+                                            })}
+                                        </Text>
                                     </View>
-                                </TouchableOpacity>
-                            </View>
-                        ))
+                                    <TouchableOpacity
+                                        style={styles.addLogButton}
+                                        onPress={() => {
+                                            router.push({
+                                                pathname: '/ny-log',
+                                                params: {
+                                                    date: appointment.date,
+                                                    appointment_id: appointment.id
+                                                }
+                                            });
+                                        }}
+                                    >
+                                        <Text style={styles.addLogButtonText}>Tilføj log</Text>
+                                        <View style={styles.addIconContainer}>
+                                            <Ionicons name="add" size={20} color="#42865F" />
+                                           </View>
+                                    </TouchableOpacity>
+                                </View>
+                            );
+                        })
                     )}
                 </View>
 

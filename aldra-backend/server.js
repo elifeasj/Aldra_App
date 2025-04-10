@@ -923,23 +923,26 @@ app.post('/appointments', async (req, res) => {
 app.get('/appointments/all', async (req, res) => {
   try {
     const { user_id } = req.query;
+    console.log("👉 GET /appointments/all kaldes med user_id:", user_id);
 
     if (!user_id) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
+    const today = new Date().toISOString().split('T')[0];
+
     const result = await client.query(
       `SELECT * FROM appointments 
-       WHERE user_id = $1 
-       ORDER BY date ASC, start_time ASC`,
-      [user_id]
+       WHERE user_id = $1 AND DATE(date) >= $2
+       ORDER BY date ASC`,
+      [user_id, today]
     );
 
-    console.log('Fetched all appointments for user:', user_id, result.rows);
+    console.log('Fetched all future appointments:', result.rows);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching all appointments:', error);
-    res.status(500).json({ error: 'Error fetching all appointments' });
+    console.error('‼️ FEJL ved fetch af alle appointments:', error.message, error.stack);
+    res.status(500).json({ error: 'Error fetching appointments', detail: error.message });
   }
 });
 
