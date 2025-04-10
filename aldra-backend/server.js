@@ -945,11 +945,11 @@ app.get('/appointments/all', async (req, res) => {
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching all appointments:', error.message, error.stack);
+    console.error('💥 Fejl i /appointments/all:', error);
+    
     res.status(500).json({ 
-      error: 'Error fetching appointments',
-      message: error.message,
-      stack: error.stack
+      error: 'Fejl i /appointments/all',
+      full: JSON.stringify(error, Object.getOwnPropertyNames(error))
     });
   }
 });

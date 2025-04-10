@@ -34,7 +34,6 @@ export default function Oversigt() {
 
 
    const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
-
     useEffect(() => {
         const fetchUpcomingAppointments = async () => {
           try {
@@ -45,8 +44,9 @@ export default function Oversigt() {
             console.log("📡 Fetch URL:", `${API_URL}/appointments/all?user_id=${userData.id}`);
             const response = await fetch(`${API_URL}/appointments/all?user_id=${userData.id}`);
             if (!response.ok) {
-              console.error('Fejl ved hentning af alle kommende aftaler');
-              return;
+                const errorText = await response.text();
+                console.error('❌ Server-fejl:', errorText);
+                return;
             }
       
             const allAppointments = await response.json();
