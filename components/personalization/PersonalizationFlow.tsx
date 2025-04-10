@@ -18,13 +18,8 @@ const STEPS = {
 export const PersonalizationFlow: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation();
-  const {
-    currentStep,
-    setCurrentStep,
-    answers,
-    updateAnswer,
-    saveAnswers,
-  } = usePersonalization();
+  const { currentStep, setCurrentStep, answers, updateAnswer, saveAnswers } = usePersonalization();  // Brug usePersonalization hooket
+
 
   const renderWelcomeScreen = () => (
     <View style={styles.welcomeContainer}>
@@ -96,60 +91,71 @@ export const PersonalizationFlow: React.FC = () => {
   };
 
   const handleOptionSelect = (option: string, key: keyof typeof answers) => {
-  if (currentStep === STEPS.CHALLENGES || currentStep === STEPS.HELP_NEEDS) {
-    const currentArray = answers[key] as string[];
-    
-    // Hvis 'Andet' vælges, skal vi vise inputfeltet
-    if (option === 'Andet') {
-      setShowOtherInput(true);  // Gør inputfeltet synligt
-      setCurrentField(key);
-      setOtherText(getOtherValue()); // Hent tidligere input hvis eksisterende
-      updateAnswer(key, [...currentArray, option]); // Gem 'Andet' i answers
-    } else {
-      // Opdater valgt svar hvis ikke 'Andet'
-      updateAnswer(key, currentArray.includes(option)
-        ? currentArray.filter(item => item !== option)
-        : [...currentArray, option]);
-    }
-  } else {
+    const multiSelect = key === 'main_challenges' || key === 'help_needs';
+  
     if (option === 'Andet') {
       setShowOtherInput(true);
       setCurrentField(key);
       setOtherText(getOtherValue());
-      updateAnswer(key, option);  // Gem 'Andet' i answers
-    } else {
-      setShowOtherInput(false);
-      setCurrentField(null);
-      setOtherText('');
-      updateAnswer(key, option);  // Gem den valgte værdi i answers
-    }
-  }
-};
-
   
-  const getOtherValue = () => {
-    if (currentStep === STEPS.DEMENTIA_TYPE && answers.relation_to_person.startsWith('Andet:')) {
-      return answers.relation_to_person.replace('Andet: ', ''); // Vis input fra relation
+      // ✅ markér "Andet" som valgt – ligesom de andre
+      if (multiSelect) {
+        const current = answers[key] as string[];
+        if (!current.includes('Andet')) {
+          updateAnswer(key, [...current, 'Andet']);
+        }
+      } else {
+        updateAnswer(key, 'Andet');
+      }
+  
+      return;
     }
-    return '';
+  
+    // Hvis man vælger noget andet, luk inputfelt
+    setShowOtherInput(false);
+    setCurrentField(null);
+    setOtherText('');
+  
+    if (multiSelect) {
+      const currentValues = answers[key] as string[];
+      const isSelected = currentValues.includes(option);
+      const updated = isSelected
+        ? currentValues.filter(val => val !== option)
+        : [...currentValues, option];
+      updateAnswer(key, updated);
+    } else {
+      updateAnswer(key, option);
+    }
   };
+  
 
   const handleOtherTextChange = (text: string) => {
     setOtherText(text);
     if (!currentField) return;
   
-    if (currentStep === STEPS.CHALLENGES || currentStep === STEPS.HELP_NEEDS) {
-      const currentArray = answers[currentField] as string[];
-      const newArray = currentArray.filter(item => !item.startsWith('Andet:'));
-      if (text.trim()) {
-        newArray.push(`Andet: ${text.trim()}`);
-      }
-      updateAnswer(currentField, newArray);
+    const formatted = text.trim() ? `Andet: ${text.trim()}` : 'Andet';
+  
+    if (currentField === 'main_challenges' || currentField === 'help_needs') {
+      const current = answers[currentField] as string[];
+      const filtered = current.filter(item => !item.startsWith('Andet'));
+      updateAnswer(currentField, [...filtered, formatted]);
     } else {
-      updateAnswer(currentField, text.trim() ? `Andet: ${text.trim()}` : 'Andet');
+      updateAnswer(currentField, formatted);
     }
   };
+  
 
+  const getOtherValue = () => {
+    if (!currentField) return '';
+    const value = answers[currentField];
+    if (Array.isArray(value)) {
+      const other = value.find(item => item.startsWith('Andet:'));
+      return other ? other.replace('Andet: ', '') : '';
+    } else if (typeof value === 'string' && value.startsWith('Andet:')) {
+      return value.replace('Andet: ', '');
+    }
+    return '';
+  };
 
   const renderOptions = () => {
     let options: string[] = [];
@@ -194,72 +200,61 @@ export const PersonalizationFlow: React.FC = () => {
 
     return (
       <>
-      {options.map((option, index) => {
-        const isSelected = isOptionSelected(option, answerKey);
-        const isOtherSelected = (option === 'Andet') && isSelected;
+        {options.map((option, index) => {
+          const isSelected = isOptionSelected(option, answerKey);
+          const isOtherSelected = option === 'Andet' && showOtherInput && currentField === answerKey;
 
-        return (
-          <TouchableOpacity
-            key={index}
-            activeOpacity={1}
-            style={[
-              styles.option,
-              {
-                backgroundColor: isSelected ? '#2D6B4F' : '#FFFFFF',
-                borderColor: isSelected ? '#2D6B4F' : '#FFFFFF',
-                borderWidth: 1,
-              },
-            ]}
-            onPress={() => handleOptionSelect(option, answerKey)}
-          >
-            {isOtherSelected ? (
-              <TextInput
-                style={[
-                  styles.optionText,
-                  {
-                    color: '#FFFFFF',
-                    fontWeight: 'bold',
-                  },
-                ]}
-                placeholder="Indtast dit svar"
-                placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                value={otherText}
-                onChangeText={handleOtherTextChange}
-                onBlur={() => {
-                  if (!currentField) return;
-                  
-                  if (currentStep === STEPS.CHALLENGES || currentStep === STEPS.HELP_NEEDS) {
-                    const currentArray = answers[currentField] as string[];
-                    const newArray = currentArray.filter(item => !item.startsWith('Andet:'));
-                    if (otherText.trim()) {
-                      newArray.push(`Andet: ${otherText.trim()}`);
-                    }
-                    updateAnswer(currentField, newArray);
-                  } else {
-                    updateAnswer(currentField, otherText.trim() ? `Andet: ${otherText.trim()}` : 'Andet');
-                  }
-                }}
-                autoFocus
-              />
-            ) : (
-              <Text
-                style={[
-                  styles.optionText,
-                  {
-                    color: isSelected ? '#FFFFFF' : '#42865F',
-                    fontWeight: isSelected ? 'bold' : 'normal',
-                  },
-                ]}
-              >
-                {option}
-              </Text>
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </>
-  );
-};
+          return (
+            <TouchableOpacity
+              key={index}
+              activeOpacity={1}
+              style={[
+                styles.option,
+                {
+                  backgroundColor: isSelected ? '#2D6B4F' : '#FFFFFF',
+                  borderColor: isSelected ? '#2D6B4F' : '#FFFFFF',
+                  borderWidth: 1,
+                },
+              ]}
+              onPress={() => handleOptionSelect(option, answerKey)}
+              disabled={isOtherSelected}
+            >
+              {isOtherSelected ? (
+                <View style={{ flex: 1 }}>
+                  <TextInput
+                    style={[
+                      styles.optionText,
+                      {
+                        color: '#FFFFFF',
+                        fontWeight: 'bold',
+                      },
+                    ]}
+                    placeholder="Indtast dit svar"
+                    placeholderTextColor="rgba(255, 255, 255  , 0.7)"
+                    value={otherText}
+                    onChangeText={handleOtherTextChange}
+                    autoFocus
+                  />
+                </View>
+              ) : (
+                <Text
+                   style={[
+                    styles.optionText,
+                    {
+                      color: isSelected ? '#FFFFFF' : '#2D6B4F',
+                      fontWeight: isSelected ? 'bold' : 'normal',
+                    },
+                  ]}
+                >
+                  {option}
+                </Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </>
+    );
+  };
 
   const isOptionSelected = (option: string, key: keyof typeof answers) => {
     const value = answers[key];
@@ -290,83 +285,67 @@ export const PersonalizationFlow: React.FC = () => {
     return renderWelcomeScreen();
   }
 
-  if (currentStep > 5) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.welcomeTitle}>
-          Tak for dine svar!
-        </Text>
-        <Text style={styles.welcomeText}>
-          Vi tilpasser dit dashboard og vejledning, så det passer til dine behov.
-        </Text>
-        <TouchableOpacity
-          style={[styles.navigationButton, styles.nextButton]}
-          onPress={() => navigation.navigate('oversigt' as never)}
-        >
-          <Text style={[styles.navigationButtonText, styles.nextButtonText]}>
-            Til din oversigt
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
+  const marginBottomForTitle = currentStep === STEPS.CHALLENGES || currentStep === STEPS.HELP_NEEDS ? 10 : 30;
+  const marginBottomForSubtext = currentStep === STEPS.CHALLENGES || currentStep === STEPS.HELP_NEEDS ? 20 : 10;
+  
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
-      keyboardVerticalOffset={0}
     >
-      <View style={styles.container}>
-      <View style={styles.header}>
-        <Image
-          source={require('../../assets/images/aldra_logo.png')}
-          style={styles.headerLogo}
-        />
-        <ProgressIndicator totalSteps={5} currentStep={currentStep} />
-      </View>
-      
-      <View style={styles.mainContent}>
-        <Text style={styles.questionTitle}>{getStepTitle()}</Text>
-        
-        <ScrollView 
-          style={styles.optionsScroll}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.optionsContainer}>
-            {renderOptions()}
-            
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Image
+              source={require('../../assets/images/aldra_logo.png')}
+              style={styles.headerLogo}
+            />
+            <ProgressIndicator totalSteps={5} currentStep={currentStep} />
           </View>
-        </ScrollView>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.navigationButton, styles.backButton]}
-            onPress={handleBack}
-          >
-            <View style={styles.backButtonContent}>
-              <Ionicons name="chevron-back-outline" size={20} color="#FFFFFF" />
-              <Text style={[styles.navigationButtonText, { color: '#FFFFFF' }]}>Forrige</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.navigationButton, styles.nextButton]}
-            onPress={handleNext}
-          >
-            <View style={styles.nextButtonContent}>
-              <Text style={[styles.navigationButtonText, styles.nextButtonText]}>
-                {currentStep === 5 ? 'Afslut' : 'Næste'}
+          
+          <View style={styles.mainContent}>
+            <Text style={[styles.questionTitle, { marginBottom: marginBottomForTitle }]}>{getStepTitle()}</Text>
+            {(currentStep === STEPS.CHALLENGES || currentStep === STEPS.HELP_NEEDS) && (
+              <Text style={[styles.optionSubtext, { marginBottom: marginBottomForSubtext }]}>
+                Vælg én eller flere muligheder.
               </Text>
-              <Ionicons name="chevron-forward-outline" size={20} color="#42865F" />
+            )}
+            <ScrollView 
+              style={styles.optionsScroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"  
+            >
+              <View style={styles.optionsContainer}>
+                {renderOptions()}
+              </View>
+            </ScrollView>
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.navigationButton, styles.backButton]}
+                onPress={handleBack}
+              >
+                <View style={styles.backButtonContent}>
+                  <Ionicons name="chevron-back-outline" size={20} color="#FFFFFF" />
+                  <Text style={[styles.navigationButtonText, { color: '#FFFFFF' }]}>Forrige</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.navigationButton, styles.nextButton]}
+                onPress={handleNext}
+              >
+                <View style={styles.nextButtonContent}>
+                  <Text style={[styles.navigationButtonText, styles.nextButtonText]}>
+                    {currentStep === 5 ? 'Afslut' : 'Næste'}
+                  </Text>
+                  <Ionicons name="chevron-forward-outline" size={20} color="#42865F" />
+                </View>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </View>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
   );
 };
 
@@ -400,8 +379,15 @@ const styles = StyleSheet.create({
     fontFamily: 'RedHatDisplay_700Bold',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 30,
     lineHeight: 32,
+  },
+  
+  optionSubtext: {
+    fontSize: 18,
+    fontFamily: 'RedHatDisplay_400Regular',
+    color: '#FFFFFF', // En blød gråfarve for underteksten
+    marginBottom: 20, // Lidt afstand fra spørgsmålstitlen
+    textAlign: 'center',
   },
   
   // Options styles
