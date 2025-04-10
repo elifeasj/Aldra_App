@@ -6,12 +6,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../config';
 import supabase from '../../config/supabase';
 import * as Progress from 'react-native-progress';
+import { useIsFocused } from '@react-navigation/native';
 
 export default function Oversigt() {
     const { userName } = useLocalSearchParams();
     const router = useRouter();
     const [hasCompletedPersonalization, setHasCompletedPersonalization] = useState(false);
     const [userId, setUserId] = useState('');
+    const isFocused = useIsFocused();
 
     // Funktion til at formatere navn med stort første bogstav
     const formatName = (name: string) => {
@@ -20,9 +22,6 @@ export default function Oversigt() {
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(' ');
     };
-
-  
-  
     // Kommende besøg
     interface Appointment {
         id: number;
@@ -39,6 +38,7 @@ export default function Oversigt() {
 
     // State for logs
     const [appointmentsWithLogs, setAppointmentsWithLogs] = useState<Record<number, number>>({});
+
 
     // ⬇️ Effekt ved load
     useEffect(() => {
@@ -72,7 +72,7 @@ export default function Oversigt() {
             setUpcomingAppointments(upcoming);
             console.log("✅ upcomingAppointments sat til:", upcoming);
       
-            // 🔽 Fetch logs
+            // Fetch logs bagefter
             const logsResponse = await fetch(`${API_URL}/logs/user/${userData.id}`);
             const logs = await logsResponse.json();
       
@@ -91,12 +91,13 @@ export default function Oversigt() {
           }
         };
       
-        fetchUpcomingAppointments();
-      }, []);
+        if (isFocused) {
+          fetchUpcomingAppointments();
+        }
+      }, [isFocused]);
       
 
-      
-      
+   // Personalization   
     const [displayName, setDisplayName] = useState('Bruger');
 
     useEffect(() => {
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 0,
     },
     sectionTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#333',
         marginBottom: 20,
@@ -501,8 +502,8 @@ const styles = StyleSheet.create({
     appointmentItem: {
         position: 'relative',
         height: 90,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
+        paddingHorizontal: 16,
+        paddingVertical: 16,
         borderWidth: 0.3,
         borderRadius: 12,
         borderColor: '#D6D6D6',
@@ -584,7 +585,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 6,
         backgroundColor: '#42865F',
-        paddingVertical: 8,
+        paddingVertical: 10,
         paddingHorizontal: 12,
         borderRadius: 8,
     },
@@ -596,7 +597,7 @@ const styles = StyleSheet.create({
     },
     addLogText: {
         color: '#FFFFFF',
-        fontSize: 14,
+        fontSize: 16,
         fontFamily: 'RedHatDisplay_500Medium',
         marginLeft: 4,
       },
@@ -606,7 +607,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 8,
+        paddingVertical: 10,
         paddingHorizontal: 12,
         borderRadius: 8,
       },

@@ -28,7 +28,7 @@ const defaultAnswers: PersonalizationAnswer = {
 const PersonalizationContext = createContext<PersonalizationContextType | undefined>(undefined);
 
 export const PersonalizationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<PersonalizationAnswer>(defaultAnswers);
 
   const updateAnswer = (key: keyof PersonalizationAnswer, value: any) => {
