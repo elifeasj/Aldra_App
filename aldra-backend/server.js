@@ -933,9 +933,10 @@ app.get('/appointments/all', async (req, res) => {
 
     const result = await client.query(
       `SELECT * FROM appointments 
-       WHERE user_id = $1 AND DATE(date) >= $2
-       AND start_time IS NOT NULL
-       AND end_time IS NOT NULL
+       WHERE user_id = $1 
+       AND DATE(date) >= $2 
+       AND start_time IS NOT NULL 
+       AND end_time IS NOT NULL 
        ORDER BY date ASC`,
       [user_id, today]
     );
@@ -944,12 +945,14 @@ app.get('/appointments/all', async (req, res) => {
     res.json(result.rows);
 
   } catch (error) {
-    const fullError = JSON.stringify(error, Object.getOwnPropertyNames(error));
-    console.error('💥 FEJL i /appointments/all:', fullError);
-
+    console.error('❌ Fejl i /appointments/all:');
+    console.error('📭 Message:', error.message);
+    console.error('🧱 Stack:', error.stack);
+  
     res.status(500).json({ 
-      error: 'Fejl i /appointments/all',
-      full: fullError
+      error: 'Error fetching appointments',
+      message: error.message,
+      stack: error.stack
     });
   }
 });

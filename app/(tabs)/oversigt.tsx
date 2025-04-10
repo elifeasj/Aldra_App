@@ -49,23 +49,26 @@ export default function Oversigt() {
                 return;
             }
       
-            const allAppointments = await response.json();
-      
-            // Filtrér kun dem i fremtiden
+            const allAppointments: Appointment[] = await response.json();
+
             const today = new Date().toISOString().split('T')[0];
+
+            // 👇 Debug-log her
+            console.log("📆 today:", today);
+            console.log("📋 Alle aftaler fra server:", allAppointments);
+            console.log("🔎 appointment datoer:", allAppointments.map((a: Appointment) => a.date));
+
             const upcoming = allAppointments
               .filter((a: Appointment) => a.date >= today)
               .sort((a: Appointment, b: Appointment) => a.date.localeCompare(b.date))
-              .slice(0, 2); // maks 2
-      
+              .slice(0, 2);
+
             setUpcomingAppointments(upcoming);
             console.log("✅ upcomingAppointments sat til:", upcoming);
           } catch (err) {
             console.error('Fejl ved hentning af kommende besøg:', err);
           }
         };
-        console.log("📦 Render - upcomingAppointments:", upcomingAppointments);
-      
         fetchUpcomingAppointments();
       }, []);
 
@@ -418,11 +421,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontFamily: 'RedHatDisplay_700Bold',
+        fontSize: 20,
+        fontFamily: 'RedHatDisplay_400Regular',
         color: '#333',
         marginBottom: 16,
-        letterSpacing: 0.1,
+        letterSpacing: 0,
     },
     visitCard: {
         flexDirection: 'row',
@@ -448,8 +451,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     visitTitle: {
-        fontSize: 16,
-        fontFamily: 'RedHatDisplay_700Bold',
+        fontSize: 18,
+        fontFamily: 'RedHatDisplay_400Regular',
         color: '#333',
         marginBottom: 4,
         letterSpacing: 0.1,
