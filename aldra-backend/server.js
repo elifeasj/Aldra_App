@@ -940,19 +940,20 @@ app.get('/appointments/all', async (req, res) => {
       [user_id, today]
     );
 
-    console.log('Fetched all future appointments:', result.rows);
-    console.log('Fetched future appointments:', result.rows.length);
-
+    console.log('📅 Appointments fundet:', result.rows);
     res.json(result.rows);
+
   } catch (error) {
-    console.error('💥 Fejl i /appointments/all:', error);
-    
+    const fullError = JSON.stringify(error, Object.getOwnPropertyNames(error));
+    console.error('💥 FEJL i /appointments/all:', fullError);
+
     res.status(500).json({ 
       error: 'Fejl i /appointments/all',
-      full: JSON.stringify(error, Object.getOwnPropertyNames(error))
+      full: fullError
     });
   }
 });
+
 
 // PUT update appointment
 app.put('/appointments/:id', async (req, res) => {
