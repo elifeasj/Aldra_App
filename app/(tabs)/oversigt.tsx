@@ -13,6 +13,16 @@ export default function Oversigt() {
     const [hasCompletedPersonalization, setHasCompletedPersonalization] = useState(false);
     const [userId, setUserId] = useState('');
 
+    // Funktion til at formatere navn med stort første bogstav
+    const formatName = (name: string) => {
+        return name
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    };
+
+  
+  
     // Kommende besøg
     interface Appointment {
         id: number;
@@ -24,54 +34,55 @@ export default function Oversigt() {
         reminder?: boolean;
     }
 
-    // Funktion til at formatere navn med stort første bogstav
-    const formatName = (name: string) => {
-        return name
-            .split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ');
-    };
+    // ⬇️ State for kommende besøg
+    const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
 
-
-   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+    // ⬇️ Effekt ved load
     useEffect(() => {
         const fetchUpcomingAppointments = async () => {
-          try {
-            const userDataString = await AsyncStorage.getItem('userData');
-            if (!userDataString) return;
-            const userData = JSON.parse(userDataString);
-            console.log("🔐 Bruger-ID:", userData.id);
-            console.log("📡 Fetch URL:", `${API_URL}/appointments/all?user_id=${userData.id}`);
-            const response = await fetch(`${API_URL}/appointments/all?user_id=${userData.id}`);
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ Server-fejl:', errorText);
-                return;
+            try {
+                const userDataString = await AsyncStorage.getItem('userData');
+                if (!userDataString) return;
+
+                const userData = JSON.parse(userDataString);
+                console.log("🔐 Bruger-ID:", userData.id);
+                console.log("📡 Fetch URL:", `${API_URL}/appointments/all?user_id=${userData.id}`);
+
+                const response = await fetch(`${API_URL}/appointments/all?user_id=${userData.id}`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ Server-fejl:', errorText);
+                    return;
+                }
+
+                const allAppointments: Appointment[] = await response.json();
+                const today = new Date().toISOString().split('T')[0];
+
+                console.log("📆 today:", today);
+                console.log("📋 Alle aftaler fra server:", allAppointments);
+                console.log("🔎 Sammenligningsgrundlag:", allAppointments.map((a) => ({
+                    raw: a.date,
+                    parsed: new Date(a.date).toISOString().split('T')[0],
+                    sammenlignesMed: today
+                })));
+
+                const upcoming = allAppointments
+                    .filter((a) => {
+                        const appointmentDate = new Date(a.date).toISOString().split('T')[0];
+                        return appointmentDate >= today;
+                    })
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                    .slice(0, 2);
+
+                setUpcomingAppointments(upcoming);
+                console.log("✅ upcomingAppointments sat til:", upcoming);
+            } catch (err) {
+                console.error('Fejl ved hentning af kommende besøg:', err);
             }
-      
-            const allAppointments: Appointment[] = await response.json();
-
-            const today = new Date().toISOString().split('T')[0];
-
-            // 👇 Debug-log her
-            console.log("📆 today:", today);
-            console.log("📋 Alle aftaler fra server:", allAppointments);
-            console.log("🔎 appointment datoer:", allAppointments.map((a: Appointment) => a.date));
-
-            const upcoming = allAppointments
-              .filter((a: Appointment) => a.date >= today)
-              .sort((a: Appointment, b: Appointment) => a.date.localeCompare(b.date))
-              .slice(0, 2);
-
-            setUpcomingAppointments(upcoming);
-            console.log("✅ upcomingAppointments sat til:", upcoming);
-          } catch (err) {
-            console.error('Fejl ved hentning af kommende besøg:', err);
-          }
         };
-        fetchUpcomingAppointments();
-      }, []);
 
+        fetchUpcomingAppointments();
+    }, []);
 
       
     const [displayName, setDisplayName] = useState('Bruger');
@@ -179,6 +190,9 @@ export default function Oversigt() {
                 {/* Kommende besøg sektion */}
                 <View style={styles.visitsSection}>
                     <Text style={styles.sectionTitle}>Kommende besøg</Text>
+                    <Text style={{ color: 'blue' }}>
+                        {JSON.stringify(upcomingAppointments, null, 2)}
+                    </Text>
 
                     {upcomingAppointments.length === 0 ? (
                         <Text style={styles.noVisitsText}>Ingen kommende besøg</Text>
@@ -271,7 +285,7 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         fontSize: 20,
-        fontFamily: 'RedHatDisplay_700Bold',
+        fontFamily: 'RedHatDisplay_400Regular',
         color: '#333',
         marginBottom: 24,
     },

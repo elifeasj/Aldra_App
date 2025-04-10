@@ -872,6 +872,46 @@ app.post('/logs', async (req, res) => {
   }
 });
 
+// Get ALL appointments for a user (Oversigt.tsx)
+app.get('/appointments/all', async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    console.log("👉 GET /appointments/all kaldes med user_id:", user_id);
+
+    if (!user_id || isNaN(Number(user_id))) {
+      return res.status(400).json({ error: 'User ID is invalid or missing' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    console.log("📆 Dagens dato:", today);
+
+    const query = `
+      SELECT * FROM appointments 
+      WHERE user_id = $1 
+      AND DATE(date) >= $2 
+      AND start_time IS NOT NULL 
+      AND end_time IS NOT NULL 
+      ORDER BY date ASC
+    `;
+
+    const result = await client.query(query, [user_id, today]);
+
+    console.log('📅 Appointments fundet:', result.rows.length);
+    res.json(result.rows);
+
+  } catch (error) {
+    console.error('❌ Fejl i /appointments/all:');
+    console.error('📭 Message:', error.message);
+    console.error('🧱 Stack:', error.stack);
+  
+    res.status(500).json({ 
+      error: 'Error fetching appointments',
+      message: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Get appointments for a specific date
 app.get('/appointments/:date', async (req, res) => {
   try {
@@ -916,44 +956,6 @@ app.post('/appointments', async (req, res) => {
   } catch (error) {
     console.error('Error creating appointment:', error);
     res.status(500).json({ error: 'Error creating appointment' });
-  }
-});
-
-// Get ALL appointments for a user (Oversigt.tsx)
-app.get('/appointments/all', async (req, res) => {
-  try {
-    const { user_id } = req.query;
-    console.log("👉 GET /appointments/all kaldes med user_id:", user_id);
-
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-
-    const result = await client.query(
-      `SELECT * FROM appointments 
-       WHERE user_id = $1 
-       AND DATE(date) >= $2 
-       AND start_time IS NOT NULL 
-       AND end_time IS NOT NULL 
-       ORDER BY date ASC`,
-      [user_id, today]
-    );
-
-    console.log('📅 Appointments fundet:', result.rows);
-    res.json(result.rows);
-
-  } catch (error) {
-    console.error('❌ Fejl i /appointments/all:');
-    console.error('📭 Message:', error.message);
-    console.error('🧱 Stack:', error.stack);
-  
-    res.status(500).json({ 
-      error: 'Error fetching appointments',
-      message: error.message,
-      stack: error.stack
-    });
   }
 });
 
