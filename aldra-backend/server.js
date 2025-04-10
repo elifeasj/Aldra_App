@@ -872,6 +872,30 @@ app.post('/logs', async (req, res) => {
   }
 });
 
+// Get ALL appointments for a user (Oversigt.tsx)
+app.get('/appointments/all', async (req, res) => {
+  try {
+    const { user_id } = req.query;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const result = await client.query(
+      `SELECT * FROM appointments 
+       WHERE user_id = $1 
+       ORDER BY date ASC, start_time ASC`,
+      [user_id]
+    );
+
+    console.log('Fetched all appointments for user:', user_id, result.rows);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching all appointments:', error);
+    res.status(500).json({ error: 'Error fetching all appointments' });
+  }
+});
+
 // Get appointments for a specific date
 app.get('/appointments/:date', async (req, res) => {
   try {
