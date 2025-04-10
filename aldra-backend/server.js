@@ -934,15 +934,23 @@ app.get('/appointments/all', async (req, res) => {
     const result = await client.query(
       `SELECT * FROM appointments 
        WHERE user_id = $1 AND DATE(date) >= $2
+       AND start_time IS NOT NULL
+       AND end_time IS NOT NULL
        ORDER BY date ASC`,
       [user_id, today]
     );
 
     console.log('Fetched all future appointments:', result.rows);
+    console.log('Fetched future appointments:', result.rows.length);
+
     res.json(result.rows);
   } catch (error) {
-    console.error('‼️ FEJL ved fetch af alle appointments:', error.message, error.stack);
-    res.status(500).json({ error: 'Error fetching appointments', detail: error.message });
+    console.error('Error fetching all appointments:', error.message, error.stack);
+    res.status(500).json({ 
+      error: 'Error fetching appointments',
+      message: error.message,
+      stack: error.stack
+    });
   }
 });
 

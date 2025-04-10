@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { API_URL } from '../../config/api';
+import { API_URL } from '../../config';
 import supabase from '../../config/supabase';
 import * as Progress from 'react-native-progress';
 
@@ -68,6 +68,8 @@ export default function Oversigt() {
       
         fetchUpcomingAppointments();
       }, []);
+
+
       
     const [displayName, setDisplayName] = useState('Bruger');
 
