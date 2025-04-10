@@ -21,6 +21,8 @@ export const PersonalizationFlow: React.FC = () => {
   const { currentStep, setCurrentStep, answers, updateAnswer, saveAnswers } = usePersonalization();  // Brug usePersonalization hooket
 
 
+  
+
   const renderWelcomeScreen = () => (
     <View style={styles.welcomeContainer}>
       <View style={styles.header}>
@@ -222,15 +224,16 @@ export const PersonalizationFlow: React.FC = () => {
               {isOtherSelected ? (
                 <View style={{ flex: 1 }}>
                   <TextInput
-                    style={[
-                      styles.optionText,
-                      {
-                        color: '#FFFFFF',
-                        fontWeight: 'bold',
-                      },
-                    ]}
+                    style={{
+                      color: '#FFFFFF',
+                      fontSize: 18,
+                      fontFamily: 'RedHatDisplay_500Medium',
+                      fontWeight: 'bold',
+                      textAlign: 'center',
+                      paddingVertical: 0,
+                    }}
                     placeholder="Indtast dit svar"
-                    placeholderTextColor="rgba(255, 255, 255  , 0.7)"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
                     value={otherText}
                     onChangeText={handleOtherTextChange}
                     autoFocus
@@ -238,7 +241,7 @@ export const PersonalizationFlow: React.FC = () => {
                 </View>
               ) : (
                 <Text
-                   style={[
+                  style={[
                     styles.optionText,
                     {
                       color: isSelected ? '#FFFFFF' : '#2D6B4F',
@@ -258,11 +261,23 @@ export const PersonalizationFlow: React.FC = () => {
 
   const isOptionSelected = (option: string, key: keyof typeof answers) => {
     const value = answers[key];
+  
     if (Array.isArray(value)) {
+      // Gælder for multi-select
+      if (option === 'Andet') {
+        return value.some(v => v.startsWith('Andet'));
+      }
       return value.includes(option);
     }
+  
+    // Gælder for single-select
+    if (option === 'Andet') {
+      return typeof value === 'string' && value.startsWith('Andet');
+    }
+  
     return value === option;
   };
+  
 
   const getStepTitle = () => {
     switch (currentStep) {
