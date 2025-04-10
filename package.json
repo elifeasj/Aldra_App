@@ -57,7 +57,8 @@
     "react-native-modal-dropdown": "^1.0.2",
     "react-native-progress": "^5.0.1",
     "react-native-select-dropdown": "^4.0.1",
-    "react-native-web": "~0.19.13"
+    "react-native-web": "~0.19.13",
+    "expo-linear-gradient": "~14.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

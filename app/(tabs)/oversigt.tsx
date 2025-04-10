@@ -274,12 +274,12 @@ export default function Oversigt() {
                         >
                           {appointmentsWithLogs[appointment.id] ? (
                             <>
-                              <Ionicons name="pencil" size={16} color="#42865F" />
+                              <Ionicons name="pencil" size={14} color="#42865F" />
                               <Text style={styles.editLogText}>Rediger</Text>
                             </>
                           ) : (
                             <>
-                              <Ionicons name="add" size={16} color="#FFFFFF" />
+                              <Ionicons name="add" size={14} color="#FFFFFF" />
                               <Text style={styles.addLogText}>Tilføj log</Text>
                             </>
                           )}
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
         gap: 6,
         backgroundColor: '#42865F',
         paddingVertical: 10,
-        paddingHorizontal: 12,
+        paddingHorizontal: 8,
         borderRadius: 8,
     },
     addLogButtonText: {
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 10,
-        paddingHorizontal: 12,
+        paddingHorizontal: 8,
         borderRadius: 8,
       },
       
