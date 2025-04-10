@@ -23,33 +23,34 @@ export const PersonalizationFlow: React.FC = () => {
   const navigation = useNavigation();
   const { currentStep, setCurrentStep, answers, updateAnswer } = usePersonalization();
   const { user } = useAuth(); 
+  console.log('AUTH USER:', user);
+
 
 
   const saveAnswers = async () => {
-    if (!user || !user.id) {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+  
+    if (sessionError || !session?.user?.id) {
       throw new Error('Bruger ikke fundet');
     }
   
-    const user_id = user.id;
+    const user_id = session.user.id;
   
-    console.log('Gemmer til Supabase:', answers);
+    console.log('Gemmer til Supabase:', { user_id, ...answers });
   
-    // Hvis du bruger din egen backend (fx /save-answers)
-    await fetch(`${API_URL}/save-answers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id, answers }),
-    });
-  
-    // Eller hvis du skriver direkte til Supabase (client-side)
     const { data, error } = await supabase
-      .from('personalization')
+      .from('user_profile_answers')
       .insert([{ user_id, ...answers }])
       .single();
   
-    if (error) throw error;
+    if (error) {
+      console.error('Fejl i saveAnswers:', error);
+      throw new Error(error.message || 'Fejl ved gem af svar');
+    }
   };
-  
   
   if (currentStep > 5) {
     return (
