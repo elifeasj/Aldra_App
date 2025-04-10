@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { API_URL } from '../../config';
+import supabase from '../../config/supabase';
+import * as Progress from 'react-native-progress';
 
 export default function Oversigt() {
     const { userName } = useLocalSearchParams();
+    const router = useRouter();
+    const [hasCompletedPersonalization, setHasCompletedPersonalization] = useState(false);
+    const [userId, setUserId] = useState('');
+
+    // Kommende besøg
+    interface Appointment {
+        id: number;
+        title: string;
+        date: string;
+        description?: string;
+        start_time?: string;
+        end_time?: string;
+        reminder?: boolean;
+    }
 
     // Funktion til at formatere navn med stort første bogstav
     const formatName = (name: string) => {
@@ -15,9 +32,62 @@ export default function Oversigt() {
             .join(' ');
     };
 
+
+   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+
+    useEffect(() => {
+        const fetchUpcomingAppointments = async () => {
+          try {
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (!userDataString) return;
+            const userData = JSON.parse(userDataString);
+      
+            const response = await fetch(`${API_URL}/appointments/all?user_id=${userData.id}`);
+            if (!response.ok) {
+              console.error('Fejl ved hentning af alle kommende aftaler');
+              return;
+            }
+      
+            const allAppointments = await response.json();
+      
+            // Filtrér kun dem i fremtiden
+            const today = new Date().toISOString().split('T')[0];
+            const upcoming = allAppointments
+              .filter((a: Appointment) => a.date >= today)
+              .sort((a: Appointment, b: Appointment) => a.date.localeCompare(b.date))
+              .slice(0, 2); // maks 2
+      
+            setUpcomingAppointments(upcoming);
+          } catch (err) {
+            console.error('Fejl ved hentning af kommende besøg:', err);
+          }
+        };
+      
+        fetchUpcomingAppointments();
+      }, []);
+      
     const [displayName, setDisplayName] = useState('Bruger');
 
     useEffect(() => {
+        const checkPersonalization = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data } = await supabase
+                        .from('user_profile_answers')
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .single();
+                    
+                    setHasCompletedPersonalization(!!data);
+                    setUserId(user.id);
+                }
+            } catch (error) {
+                console.error('Error checking personalization:', error);
+            }
+        };
+
+        checkPersonalization();
         const getUserName = async () => {
             try {
                 const userData = await AsyncStorage.getItem('userData');
@@ -70,49 +140,75 @@ export default function Oversigt() {
                 </View>
 
                 {/* Færdiggør profil kort */}
-                <View style={[styles.card, styles.progressCard]}>
-                    <View style={styles.progressContainer}>
-                        <View style={styles.progressCircle}>
-                            <Text style={styles.progressText}>20%</Text>
+                {!hasCompletedPersonalization && (
+                    <TouchableOpacity 
+                        style={[styles.card, styles.progressCard]}
+                        onPress={() => router.push('/personalization')}
+                    >
+                        <View style={styles.progressContainer}>
+                            <View style={styles.progressCircle}>
+                                <Progress.Circle
+                                    progress={0.2}
+                                    size={60}
+                                    thickness={8}
+                                    color="#FFFF"
+                                    unfilledColor="#D1D5DB"
+                                    borderWidth={0}
+                                    strokeCap="round"
+                                    style={styles.progressRing}
+                                />
+                                <Text style={styles.progressText}>20%</Text>
+                            </View>
+                            <View style={styles.progressTextContainer}>
+                                <Text style={styles.progressTitle}>Færdiggør din profil</Text>
+                                <Text style={styles.progressSubtext}>Udfyld din profil for at tilpasse appen til dine behov.</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="white" style={styles.progressArrow} />
                         </View>
-                        <View style={styles.progressTextContainer}>
-                            <Text style={styles.progressTitle}>Færdiggør din profil</Text>
-                            <Text style={styles.progressSubtext}>Udfyld din profil for at tilpasse appen til dine behov.</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color="white" style={styles.progressArrow} />
-                    </View>
-                </View>
+                    </TouchableOpacity>
+                )}
 
                 {/* Kommende besøg sektion */}
                 <View style={styles.visitsSection}>
                     <Text style={styles.sectionTitle}>Kommende besøg</Text>
-                    
-                    <View style={styles.visitCard}>
-                        <View style={styles.visitInfo}>
-                            <Text style={styles.visitTitle}>Besøg mor</Text>
-                            <Text style={styles.visitDate}>22. november 2024</Text>
-                        </View>
-                        <TouchableOpacity style={styles.addLogButton}>
-                            <Text style={styles.addLogButtonText}>Tilføj log</Text>
-                            <View style={styles.addIconContainer}>
-                                <Ionicons name="add" size={20} color="#42865F" />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
 
-                    <View style={styles.visitCard}>
-                        <View style={styles.visitInfo}>
-                            <Text style={styles.visitTitle}>Snak med overlæge</Text>
-                            <Text style={styles.visitDate}>29. november 2024</Text>
-                        </View>
-                        <TouchableOpacity style={styles.addLogButton}>
-                            <Text style={styles.addLogButtonText}>Tilføj log</Text>
-                            <View style={styles.addIconContainer}>
-                                <Ionicons name="add" size={20} color="#42865F" />
+                    {upcomingAppointments.length === 0 ? (
+                        <Text style={styles.noVisitsText}>Ingen kommende besøg</Text>
+                    ) : (
+                        upcomingAppointments.map((appointment) => (
+                            <View key={appointment.id} style={styles.visitCard}>
+                                <View style={styles.visitInfo}>
+                                    <Text style={styles.visitTitle}>{appointment.title}</Text>
+                                    <Text style={styles.visitDate}>
+                                        {new Date(appointment.date).toLocaleDateString('da-DK', {
+                                            day: 'numeric',
+                                            month: 'long',
+                                            year: 'numeric',
+                                        })}
+                                    </Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.addLogButton}
+                                    onPress={() => {
+                                        router.push({
+                                            pathname: '/ny-log',
+                                            params: {
+                                                date: appointment.date,
+                                                appointment_id: appointment.id
+                                            }
+                                        });
+                                    }}
+                                >
+                                    <Text style={styles.addLogButtonText}>Tilføj log</Text>
+                                    <View style={styles.addIconContainer}>
+                                        <Ionicons name="add" size={20} color="#42865F" />
+                                    </View>
+                                </TouchableOpacity>
                             </View>
-                        </TouchableOpacity>
-                    </View>
+                        ))
+                    )}
                 </View>
+
 
                 {/* Vejledninger sektion */}
                 <View style={styles.guidanceSection}>
@@ -241,58 +337,73 @@ const styles = StyleSheet.create({
     progressCard: {
         paddingVertical: 16,
         paddingHorizontal: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: 80,
+        backgroundColor: '#42865F',
+        borderRadius: 16,
+        marginVertical: 4,
         marginHorizontal: 4,
+        height: 100,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     progressContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 16,
+        gap: 20,
         flex: 1,
     },
     progressCircle: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#fff',
+        backgroundColor: '#42865F',
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
-            height: 1,
+            height: 2,
         },
-        shadowOpacity: 0.08,
-        shadowRadius: 2,
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
         elevation: 2,
+        position: 'relative',
+    },
+    progressRing: {
+        position: 'absolute',
+        transform: [{ rotate: '-90deg' }],
     },
     progressText: {
-        color: '#42865F',
-        fontSize: 16,
+        color: '#FFFFFF',
+        fontSize: 18,
         fontFamily: 'RedHatDisplay_700Bold',
     },
     progressTextContainer: {
         flex: 1,
-        paddingRight: 12,
+        paddingRight: 16,
     },
     progressTitle: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 24,
         fontFamily: 'RedHatDisplay_700Bold',
-        marginBottom: 4,
+        marginBottom: 6,
         letterSpacing: 0.1,
     },
     progressSubtext: {
         color: '#fff',
-        fontSize: 13,
+        fontSize: 17,
         fontFamily: 'RedHatDisplay_400Regular',
-        opacity: 0.9,
-        lineHeight: 16,
+        opacity: 1,
+        lineHeight: 22,
     },
     progressArrow: {
         marginLeft: 'auto',
+        paddingLeft: 8,
     },
     visitsSection: {
         marginTop: 32,
@@ -339,6 +450,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#666',
+    },
+    noVisitsText: {
+        fontSize: 16,
+        fontFamily: 'RedHatDisplay_400Regular',
+        color: '#666',
+        textAlign: 'center',
+        marginTop: 16,
     },
     addLogButton: {
         flexDirection: 'row',
