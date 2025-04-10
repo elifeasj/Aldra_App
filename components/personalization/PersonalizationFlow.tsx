@@ -5,6 +5,9 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressIndicator } from './ProgressIndicator';
 import { usePersonalization } from '../../context/PersonalizationContext';
+import supabase from '../../config/supabase';
+import { API_URL } from '../../config';
+import { useAuth } from '../../context/auth';
 
 const STEPS = {
   WELCOME: 0,
@@ -18,10 +21,54 @@ const STEPS = {
 export const PersonalizationFlow: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation();
-  const { currentStep, setCurrentStep, answers, updateAnswer, saveAnswers } = usePersonalization();  // Brug usePersonalization hooket
+  const { currentStep, setCurrentStep, answers, updateAnswer } = usePersonalization();
+  const { user } = useAuth(); 
 
 
+  const saveAnswers = async () => {
+    if (!user || !user.id) {
+      throw new Error('Bruger ikke fundet');
+    }
   
+    const user_id = user.id;
+  
+    console.log('Gemmer til Supabase:', answers);
+  
+    // Hvis du bruger din egen backend (fx /save-answers)
+    await fetch(`${API_URL}/save-answers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id, answers }),
+    });
+  
+    // Eller hvis du skriver direkte til Supabase (client-side)
+    const { data, error } = await supabase
+      .from('personalization')
+      .insert([{ user_id, ...answers }])
+      .single();
+  
+    if (error) throw error;
+  };
+  
+  
+  if (currentStep > 5) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.welcomeTitle}>Tak for dine svar!</Text>
+        <Text style={styles.welcomeText}>
+          Vi tilpasser dit dashboard og vejledning, så det passer til dine behov.
+        </Text>
+        <TouchableOpacity
+          style={[styles.navigationButton, styles.nextButton]}
+          onPress={() => navigation.navigate('oversigt' as never)}
+        >
+          <Text style={[styles.navigationButtonText, styles.nextButtonText]}>
+            Til din oversigt
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const renderWelcomeScreen = () => (
     <View style={styles.welcomeContainer}>
@@ -76,12 +123,22 @@ const closeOtherInput = (step: number) => {
     if (currentStep === 5) {
       try {
         await saveAnswers();
-        navigation.navigate('oversigt' as never);
+      setCurrentStep(6);
       } catch (error) {
         Alert.alert('Fejl', 'Der opstod en fejl ved gem af dine svar. Prøv igen.');
       }
     } else {
       setCurrentStep(currentStep + 1);
+    }
+    if (currentStep === 5) {
+      try {
+        console.log('Gemmer svar:', answers); // 👀 Se hvad du prøver at gemme
+        await saveAnswers();
+        setCurrentStep(6);
+      } catch (error) {
+        console.error('Fejl i saveAnswers:', error); // 👈 Viser fejl i terminalen
+        Alert.alert('Fejl', 'Der opstod en fejl ved gem af dine svar. Prøv igen.');
+      }
     }
   };
 
@@ -327,6 +384,7 @@ const closeOtherInput = (step: number) => {
   if (currentStep === STEPS.WELCOME) {
     return renderWelcomeScreen();
   }
+    
 
   const marginBottomForTitle = currentStep === STEPS.CHALLENGES || currentStep === STEPS.HELP_NEEDS ? 10 : 30;
   const marginBottomForSubtext = currentStep === STEPS.CHALLENGES || currentStep === STEPS.HELP_NEEDS ? 20 : 10;

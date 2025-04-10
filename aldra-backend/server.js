@@ -1462,6 +1462,24 @@ app.post('/submit-feedback', async (req, res) => {
   }
 });
 
+
+
+// Personalization endpoint
+app.post('/save-answers', async (req, res) => {
+  const { user_id, answers } = req.body;
+
+  const { data, error } = await supabase
+    .from('personalization')
+    .insert([{ user_id, ...answers }]);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  return res.status(200).json({ data });
+});
+
+
 // Start server
 const PORT = process.env.PORT || 10000;
 
