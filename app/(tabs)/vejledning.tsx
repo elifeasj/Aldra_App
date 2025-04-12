@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { GuideCategory } from '../../components/guides/GuideCategory';
 import { Guide, UserProfileAnswers } from '../../types/guides';
-import { API_URL } from '../../config';
+import { STRAPI_URL } from '../../config/api';
 
 export default function Vejledning() {
     const router = useRouter();
@@ -22,7 +22,7 @@ export default function Vejledning() {
             if (!userDataString) return;
 
             const userData = JSON.parse(userDataString);
-            const response = await fetch(`${API_URL}/user-profile-answers/${userData.id}`);
+            const response = await fetch(`${STRAPI_URL}/user-profile-answers/${userData.id}`);
             if (!response.ok) throw new Error('Failed to fetch user answers');
 
             const answers = await response.json();
@@ -43,7 +43,7 @@ export default function Vejledning() {
                 'filters[visible][$eq]': 'true'
             });
 
-            const response = await fetch(`${API_URL}/guides?${queryParams}`);
+            const response = await fetch(`${STRAPI_URL}/guides?${queryParams}`);
             if (!response.ok) throw new Error('Failed to fetch guides');
 
             const guidesData = await response.json();
