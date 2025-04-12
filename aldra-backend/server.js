@@ -1480,6 +1480,29 @@ app.post('/save-answers', async (req, res) => {
 });
 
 
+// Get user profile answers
+app.get('/user-profile-answers/:id', async (req, res) => {
+  const userId = parseInt(req.params.id);
+
+  const { data, error } = await supabase
+    .from('personalization')
+    .select('*')
+    .eq('user_id', userId)
+    .single(); // Kun én række
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  if (!data) {
+    return res.status(404).json({ error: 'No profile answers found' });
+  }
+
+  return res.status(200).json(data);
+});
+
+
+
 // Start server
 const PORT = process.env.PORT || 10000;
 

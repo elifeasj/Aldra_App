@@ -7,9 +7,6 @@ export default {
     scheme: "myapp",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
-    updates: {
-      url: "http://192.168.0.215:5001"
-    },
     plugins: ["expo-font", "expo-router", "expo-notifications"],
     experiments: {
       typedRoutes: true
