@@ -1,15 +1,16 @@
 services:
   - type: web
-    name: aldra-backend
+    name: aldra-cms
     env: node
     region: frankfurt
     plan: free
-    rootDir: aldra-backend
+    rootDir: aldra-cms
     buildCommand: npm install
-    startCommand: node server.js
+    startCommand: npm run build && npm run start
     envVars:
       - key: NODE_ENV
       - key: PORT
       - key: DATABASE_CLIENT
       - key: DATABASE_URL
-    autoDeploy: true
+      - key: DATABASE_SCHEMA
+        value: strapi

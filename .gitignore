@@ -59,4 +59,23 @@ android/
 Pods/
 node_modules/
 
+
+# Node.js
+node_modules/
+.cache/
+build/
+.tmp/
+
+# Expo/React Native
+.expo/
+.expo-shared/
+
+# Strapi env vars
+.env
+.env.*
+
+# macOS / OS junk
+.DS_Store
+
+
 # @end expo-cli
