@@ -1485,7 +1485,7 @@ app.get('/user-profile-answers/:id', async (req, res) => {
   const userId = parseInt(req.params.id);
 
   const { data, error } = await supabase
-    .from('personalization')
+    .from('user_profile_answers')
     .select('*')
     .eq('user_id', userId)
     .single(); // Kun én række
