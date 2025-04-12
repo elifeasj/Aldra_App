@@ -47,7 +47,12 @@ export default function Vejledning() {
             if (!response.ok) throw new Error('Failed to fetch guides');
 
             const guidesData = await response.json();
-            setGuides(guidesData);
+            const formattedGuides = guidesData.data.map((item: any) => ({
+                id: item.id,
+                ...item.attributes,
+            }));
+            
+            setGuides(formattedGuides);
         } catch (error) {
             console.error('Error fetching guides:', error);
         } finally {
