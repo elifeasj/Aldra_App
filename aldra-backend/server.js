@@ -277,11 +277,9 @@ client.connect()
   // === DEBUG FUNKTION ===
 async function debugDatabase() {
   try {
-    const dbNameResult = await client.query('SELECT current_database();');
+    const dbNameResult = await client.query('SET search_path TO public');
     console.log('🧪 Connected to DB:', dbNameResult.rows[0].current_database);
 
-    const userCheck = await client.query("SELECT * FROM users WHERE email ILIKE '2ceeay@gmail.com'");
-    console.log('🧪 User check in DB:', userCheck.rows);
   } catch (err) {
     console.error('Debug failed:', err);
   }
