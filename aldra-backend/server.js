@@ -10,7 +10,6 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
-const { Client } = require('pg');
 const { Resend } = require('resend');
 const app = express();
 
