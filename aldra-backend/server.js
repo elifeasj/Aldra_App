@@ -1,3 +1,8 @@
+require('dotenv').config();
+
+const express = require('express');
+const cors = require('cors');
+const { Client } = require('pg');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
 const bcrypt = require('bcrypt');
@@ -5,17 +10,11 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
-const express = require('express');
-const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
+const { createClient } = require('@supabase/supabase-js');
+
 const app = express();
 
-import dotenv from 'dotenv';
-dotenv.config();
-
-import pg from 'pg';
-const { Client } = pg;
 
 console.log('🔐 Resend API key loaded:', process.env.RESEND_API_KEY ? '✅' : '❌');
 
