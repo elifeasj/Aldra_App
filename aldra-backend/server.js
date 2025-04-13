@@ -757,6 +757,7 @@ app.post('/register', async (req, res) => {
             'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, "termsAccepted") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
             [name, email, hashedPassword, relationToDementiaPerson, termsAccepted]
         );
+        console.log("RAW query result:", result.rows);
         
         console.log('SQL query executed successfully');
 
