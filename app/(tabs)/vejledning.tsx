@@ -36,22 +36,25 @@ export default function Vejledning() {
 
     const fetchGuides = async (answers: UserProfileAnswers) => {
         try {
-            const queryParams = new URLSearchParams({
-                'filters[relation][$eq]': answers.relation_to_person,
-                'filters[tags][$in]': answers.main_challenges.join(','),
-                'filters[help_tags][$in]': answers.help_needs.join(','),
-                'filters[visible][$eq]': 'true'
-            });
-
-            const response = await fetch(`${STRAPI_URL}/guides?${queryParams}`);
+            const relation = answers.relation_to_person;
+            const tags = answers.main_challenges.map(tag => `filters[tags][$in]=${encodeURIComponent(tag)}`).join('&');
+            const helpTags = answers.help_needs.map(tag => `filters[help_tags][$in]=${encodeURIComponent(tag)}`).join('&');
+            const visible = 'filters[visible][$eq]=true';
+    
+            const queryString = `${tags}&${helpTags}&${visible}&filters[relation][$eq]=${encodeURIComponent(relation)}&populate=*`;
+    
+            const response = await fetch(`${STRAPI_URL}/guides?${queryString}`);
             if (!response.ok) throw new Error('Failed to fetch guides');
-
+    
             const guidesData = await response.json();
             const formattedGuides = guidesData.data.map((item: any) => ({
                 id: item.id,
                 ...item.attributes,
             }));
-            
+
+            console.log("Query:", queryString);
+            console.log("Fetched guides:", formattedGuides);
+    
             setGuides(formattedGuides);
         } catch (error) {
             console.error('Error fetching guides:', error);
