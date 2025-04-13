@@ -272,6 +272,24 @@ client.connect()
 // Initialize database
 async function initializeDatabase() {
   try {
+
+       // Create users table med ny kolonne profile_image
+       await client.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          hashed_password VARCHAR(255) NOT NULL,
+          relation_to_dementia_person VARCHAR(255),
+          profile_image TEXT,  -- Ny kolonne til profilbillede URL
+          birthday DATE,  -- Added birthday column
+          created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+          termsAccepted BOOLEAN DEFAULT false
+        );
+      `);
+      console.log('Users table created successfully');
+  
     // Create family_links table
     await client.query(`
       CREATE TABLE IF NOT EXISTS family_links (
@@ -304,22 +322,6 @@ async function initializeDatabase() {
     // Drop appointments_and_logs table if it exists
     await client.query('DROP TABLE IF EXISTS appointments_and_logs CASCADE');
 
-    // Create users table med ny kolonne profile_image
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        hashed_password VARCHAR(255) NOT NULL,
-        relation_to_dementia_person VARCHAR(255),
-        profile_image TEXT,  -- Ny kolonne til profilbillede URL
-        birthday DATE,  -- Added birthday column
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        termsAccepted BOOLEAN DEFAULT false
-      );
-    `);
-    console.log('Users table created successfully');
 
     // Create appointments table
     await client.query(`
