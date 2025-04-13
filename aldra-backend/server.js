@@ -1,4 +1,3 @@
-const { Client } = require('pg');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
 const bcrypt = require('bcrypt');
