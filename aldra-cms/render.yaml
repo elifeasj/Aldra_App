@@ -14,3 +14,6 @@ services:
       - key: DATABASE_URL
       - key: DATABASE_SCHEMA
         value: strapi
+      - key: ADMIN_PATH
+        value: /admin
+        
