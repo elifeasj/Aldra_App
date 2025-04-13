@@ -269,6 +269,9 @@ client.connect()
     process.exit(1);
   });
 
+  console.log('🧪 DATABASE URL:', process.env.DATABASE_URL);
+
+
 // Initialize database
 async function initializeDatabase() {
   try {
