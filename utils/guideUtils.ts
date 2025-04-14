@@ -1,7 +1,8 @@
 import { Guide } from '../types/guides';
 
 export const mapGuideData = (guide: any): Guide => {
-  const attributes = guide.attributes || {}; // Strapi gemmer alt i attributes
+  console.log('➡️ mapGuideData input:', guide);
+  const attributes = guide.attributes || {};
   const imageUrl = attributes.image?.data?.attributes?.url;
 
   const parsedContent =

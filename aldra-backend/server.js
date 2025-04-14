@@ -1214,26 +1214,14 @@ app.post('/match-guides', async (req, res) => {
       return res.status(404).json({ error: 'User answers not found' });
     }
 
-    // 2. Byg filter-string til Strapi baseret på svar
-    const tags = answers.main_challenges
-      .map(tag => `filters[tags][$containsi]=${encodeURIComponent(tag)}`)
-      .join('&');
-
-    const helpTags = answers.help_needs
-      .map(tag => `filters[help_tags][$containsi]=${encodeURIComponent(tag)}`)
-      .join('&');
-
-    const relation = `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`;
-    const visible = `filters[visible][$eq]=true`;
-    const populate = `populate=*`;
-    
-
-    const queryString = `populate=*`;
-
+    // 2. Byg filter-string (kan udvides senere)
+    const visible = 'filters[visible][$eq]=true';
+    const populate = 'populate=*';
+    const queryString = `${visible}&${populate}`;
 
     console.log('📡 Query to Strapi:', `${process.env.STRAPI_URL}/guides?${queryString}`);
 
-    // 3. Fetch guides fra Strapi
+    // 3. Hent fra Strapi
     const response = await fetch(`${process.env.STRAPI_URL}/guides?${queryString}`);
     const result = await response.json();
 
@@ -1242,10 +1230,10 @@ app.post('/match-guides', async (req, res) => {
       return res.status(500).json({ error: 'Failed to fetch guides from Strapi' });
     }
 
-    // 4. Returner guides til appen
-    const guides = result.data.map((item) => ({
+    // 4. Returnér guides med id + attributes
+    const guides = result.data.map(item => ({
       id: item.id,
-      attributes: item.attributes,
+      attributes: item.attributes, // 🔥 her er nøglen!
     }));
 
     return res.json({ guides });
@@ -1254,6 +1242,7 @@ app.post('/match-guides', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 // Start server
 const PORT = process.env.PORT || 10000;

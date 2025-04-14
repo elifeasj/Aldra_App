@@ -71,8 +71,9 @@ export default function Vejledning() {
       
           const mapped = result.guides.map(mapGuideData); // ✅ korrekt mapping
       
-          console.log('✅ Matchede guides (mapped):', mapped);
-          console.log('👀 Første guide:', mapped[0]);
+          console.log('🧾 RAW guides from backend:', result.guides);
+          console.log('✅ Mapped guides:', mapped);
+          console.log('👀 Første mapped guide:', mapped[0]);
       
           setGuides(mapped);
         } catch (err) {
