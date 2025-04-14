@@ -1223,12 +1223,11 @@ app.post('/match-guides', async (req, res) => {
       .map(tag => `filters[help_tags][$in]=${encodeURIComponent(tag)}`)
       .join('&');
 
-    const experience = `filters[experience_levels][$in]=${encodeURIComponent(answers.experience_level)}`;
-    const dementia = `filters[dementia_types][$in]=${encodeURIComponent(answers.diagnosed_dementia_type)}`;
+    const relation = `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`;
     const visible = `filters[visible][$eq]=true`;
     const populate = `populate=*`;
 
-    const queryString = `${tags}&${helpTags}&${experience}&${dementia}&${visible}&${populate}`;
+    const queryString = `${tags}&${helpTags}&${relation}&${visible}&${populate}`;
 
     // 3. Fetch guides fra Strapi
     const response = await fetch(`${process.env.STRAPI_URL}/guides?${queryString}`);

@@ -46,8 +46,8 @@ export default function Vejledning() {
           setUserAnswers(data);
       
           // Hent matchende guides
-          const response = await fetch(`${API_URL}/match-guides`, {
-            method: 'POST',
+         const response = await fetch(`${API_URL}/match-guides`, {
+            method: 'POST', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userData.id }),
           });
