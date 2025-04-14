@@ -63,6 +63,10 @@ export default function Vejledning() {
           });
       
           const result = await response.json();
+          const mappedGuides = result.guides.map(mapGuideData); // 👈 her
+          console.log('✅ Matchede guides (mapped):', mappedGuides);
+          console.log('👀 Første guide:', mappedGuides[0]); // 👈 ny log
+          setGuides(mappedGuides);
       
           if (!response.ok) {
             console.error('❌ Failed to fetch matched guides:', result.error);
