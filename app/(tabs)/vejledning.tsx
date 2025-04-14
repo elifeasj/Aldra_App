@@ -25,7 +25,6 @@ export default function Vejledning() {
             return;
           }
           
-      
           const userData = JSON.parse(userDataString);
           console.log('🔐 Loaded userData:', userData);
       
@@ -44,6 +43,7 @@ export default function Vejledning() {
       };
 
     const fetchGuides = async (answers: UserProfileAnswers) => {
+        console.log('📡 Fetching guides with filters:', answers);
         try {
             const relation = answers.relation_to_person;
             const tags = answers.main_challenges.map(tag => `filters[tags][$in]=${encodeURIComponent(tag)}`).join('&');
@@ -70,9 +70,6 @@ export default function Vejledning() {
         } finally {
             setLoading(false);
         }
-
-        console.log('📡 Fetching guides with filters:', answers);
-
     };
 
     const handleGuidePress = (guide: Guide) => {
