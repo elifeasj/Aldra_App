@@ -63,21 +63,17 @@ export default function Vejledning() {
           });
       
           const result = await response.json();
-          const mappedGuides = result.guides.map(mapGuideData); // 👈 her
-          console.log('✅ Matchede guides (mapped):', mappedGuides);
-          console.log('👀 Første guide:', mappedGuides[0]); // 👈 ny log
-          setGuides(mappedGuides);
       
           if (!response.ok) {
             console.error('❌ Failed to fetch matched guides:', result.error);
             return;
           }
       
-          // ✅ Brug mapGuideData på hver guide
-          const mapped = result.guides.map(mapGuideData);
+          const mapped = result.guides.map(mapGuideData); // ✅ korrekt mapping
       
           console.log('✅ Matchede guides (mapped):', mapped);
-          console.log(result.guides)
+          console.log('👀 Første guide:', mapped[0]);
+      
           setGuides(mapped);
         } catch (err) {
           console.error('❌ Fejl i fetchMatchedGuides:', err);
