@@ -21,8 +21,10 @@ export default function Vejledning() {
           const userDataString = await AsyncStorage.getItem('userData');
           if (!userDataString) {
             console.log('❌ userData not found in AsyncStorage');
+            setLoading(false); // 🛠 tilføj denne linje!
             return;
           }
+          
       
           const userData = JSON.parse(userDataString);
           console.log('🔐 Loaded userData:', userData);
