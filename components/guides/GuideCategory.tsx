@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { GuideCard } from './GuideCard';
 import { Guide } from '../../types/guides';
+import { mapGuideData } from '../../utils/guideUtils';
 
 interface GuideCategoryProps {
   title: string;

@@ -1,5 +1,6 @@
 import { Guide } from '../types/guides'; // juster hvis nødvendigt
 
+
 export const mapGuideData = (rawGuide: any): Guide => ({
   id: rawGuide.id,
   title: rawGuide.title || 'Uden titel',
