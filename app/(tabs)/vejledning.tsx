@@ -69,19 +69,19 @@ export default function Vejledning() {
             return;
           }
       
-          const mapped = result.guides.map(mapGuideData); // 👈 DETTE ER DET DER MANGLER
-          console.log('✅ Matchede guides (mapped):', mapped);
+          // ✅ Brug mapGuideData på hver guide
+          const mapped = result.guides.map(mapGuideData);
       
-          setGuides(result.guides.map(mapGuideData));;
+          console.log('✅ Matchede guides (mapped):', mapped);
+          setGuides(mapped);
         } catch (err) {
           console.error('❌ Fejl i fetchMatchedGuides:', err);
         } finally {
           setLoading(false);
         }
-      };
+      };      
       
-      
-
+    
     const handleGuidePress = (guide: Guide) => {
         router.push(`/guide/${guide.id}`);
     };

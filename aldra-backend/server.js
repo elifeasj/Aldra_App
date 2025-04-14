@@ -1245,7 +1245,7 @@ app.post('/match-guides', async (req, res) => {
     // 4. Returner guides til appen
     const guides = result.data.map((item) => ({
       id: item.id,
-      ...item.attributes,
+      attributes: item.attributes,
     }));
 
     return res.json({ guides });
