@@ -1,8 +1,6 @@
 require('dotenv').config();
-
 const express = require('express');
 const cors = require('cors');
-const { Client } = require('pg');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
 const bcrypt = require('bcrypt');
@@ -247,32 +245,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Database connection configuration
-const client = new Client({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
-// Add connection error handler
-client.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-});
-
-// Connect to database and initialize
-client.connect()
-  .then(() => {
-    console.log('Connected to PostgreSQL');
-    debugDatabase(); // Tilføjet debug her
-    return initializeDatabase();
-  })
-  .catch((error) => {
-    console.error('Database connection error:', error);
-    process.exit(1);
-  });
-
-  console.log('🧪 DATABASE URL:', process.env.DATABASE_URL);
 
   // === DEBUG FUNKTION ===
 async function debugDatabase() {
@@ -282,130 +254,6 @@ async function debugDatabase() {
 
   } catch (err) {
     console.error('Debug failed:', err);
-  }
-}
-
-// Initialize database
-async function initializeDatabase() {
-  try {
-
-       // Create users table med ny kolonne profile_image
-       await client.query(`
-        CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(255) NOT NULL,
-          email VARCHAR(255) UNIQUE NOT NULL,
-          hashed_password VARCHAR(255) NOT NULL,
-          relation_to_dementia_person VARCHAR(255),
-          profile_image TEXT,  -- Ny kolonne til profilbillede URL
-          birthday DATE,  -- Added birthday column
-          created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-          termsAccepted BOOLEAN DEFAULT false
-        );
-      `);
-      console.log('Users table created successfully');
-  
-    // Create family_links table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS family_links (
-        id SERIAL PRIMARY KEY,
-        creator_user_id INTEGER NOT NULL,
-        family_id INTEGER,
-        unique_code VARCHAR(255) UNIQUE NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        last_used_at TIMESTAMPTZ,
-        member_count INTEGER DEFAULT 0,
-        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-        FOREIGN KEY (creator_user_id) REFERENCES users(id),
-        CONSTRAINT valid_member_count CHECK (member_count >= 0)
-      );
-    `);
-    console.log('Family links table created successfully');
-
-    // Remove family_id column from users table if it exists
-    await client.query(`
-      DO $$ 
-      BEGIN 
-        IF EXISTS (SELECT 1 FROM information_schema.columns 
-                  WHERE table_name = 'users' AND column_name = 'family_id') THEN
-          ALTER TABLE users DROP COLUMN family_id;
-        END IF;
-      END $$;
-    `);
-    console.log('Family ID column added to users table if it did not exist');
-
-    // Drop appointments_and_logs table if it exists
-    await client.query('DROP TABLE IF EXISTS appointments_and_logs CASCADE');
-
-
-    // Create appointments table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS appointments (
-        id SERIAL PRIMARY KEY,
-        appointment_id INTEGER UNIQUE NOT NULL GENERATED ALWAYS AS IDENTITY,
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        date DATE NOT NULL,
-        start_time TIME NOT NULL,
-        end_time TIME NOT NULL,
-        reminder BOOLEAN DEFAULT false,
-        user_id INTEGER,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      );
-    `);
-    console.log('Appointments table created successfully');
-
-    // Create logs table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS logs (
-        id SERIAL PRIMARY KEY,
-        appointment_id INTEGER,
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        date TIMESTAMPTZ NOT NULL,
-        user_id INTEGER,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (appointment_id) REFERENCES appointments(appointment_id),
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      );
-    `);
-    console.log('Logs table created successfully');
-
-    // Create push_tokens table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS push_tokens (
-        id SERIAL PRIMARY KEY,
-        token TEXT UNIQUE NOT NULL,
-        user_id INTEGER,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      );
-    `);
-    console.log('Push tokens table created successfully');
-
-    // Create notifications table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS notifications (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        body TEXT,
-        appointment_id INTEGER,
-        user_id INTEGER,
-        scheduled_for TIMESTAMPTZ,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (appointment_id) REFERENCES appointments(appointment_id),
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      );
-    `);
-    console.log('Notifications table created successfully');
-
-  } catch (error) {
-    console.error('Error initializing database:', error);
-    throw error;
   }
 }
 
@@ -494,58 +342,61 @@ app.post('/change-password', async (req, res) => {
 
 // Login endpoint
 app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    const maskedData = maskSensitiveData({ email, password });
-    console.log('Login attempt:', maskedData);
+  const { email, password } = req.body;
+  const maskedData = maskSensitiveData({ email, password });
+  console.log('Login attempt:', maskedData);
 
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
-    }
+  if (!email || !password) {
+      return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
+  }
 
-    try {
-        const result = await client.query(
-            'SELECT id, name, email, relation_to_dementia_person, profile_image, birthday, hashed_password FROM users WHERE email = $1',
-            [email]
-        );
-        console.log('Database query result:', result.rows[0]);
+  try {
+      const { data: user, error: fetchError } = await supabase
+          .from('users')
+          .select('id, name, email, relation_to_dementia_person, profile_image, birthday, hashed_password')
+          .eq('email', email)
+          .maybeSingle();
 
-        if (result.rows.length === 0) {
-            return res.status(401).json({ error: 'Forkert email eller adgangskode' });
-        }
+      console.log('Database query result:', user);
 
-        const user = result.rows[0];
-        const isPasswordValid = await bcrypt.compare(password, user.hashed_password);
+      if (fetchError) throw fetchError;
 
-        if (!isPasswordValid) {
-            return res.status(401).json({ error: 'Forkert email eller adgangskode' });
-        }
+      if (!user) {
+          return res.status(401).json({ error: 'Forkert email eller adgangskode' });
+      }
 
-        // Send brugerdata tilbage (uden adgangskode)
-        // Log the data we're sending back
-        // Format the birthday if it exists
-        const formattedBirthday = user.birthday ? user.birthday.toISOString().split('T')[0] : null;
-        console.log('User data being sent:', {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            relationToDementiaPerson: user.relation_to_dementia_person,
-            profile_image: user.profile_image,
-            birthday: formattedBirthday,
-        });
-        
-        res.json({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            relationToDementiaPerson: user.relation_to_dementia_person,
-            profile_image: user.profile_image,
-            birthday: formattedBirthday
-        });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Der opstod en fejl under login' });
-    }
+      const isPasswordValid = await bcrypt.compare(password, user.hashed_password);
+
+      if (!isPasswordValid) {
+          return res.status(401).json({ error: 'Forkert email eller adgangskode' });
+      }
+
+      const formattedBirthday = user.birthday ? user.birthday.split('T')[0] : null;
+
+      console.log('User data being sent:', {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          relationToDementiaPerson: user.relation_to_dementia_person,
+          profile_image: user.profile_image,
+          birthday: formattedBirthday,
+      });
+
+      res.json({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          relationToDementiaPerson: user.relation_to_dementia_person,
+          profile_image: user.profile_image,
+          birthday: formattedBirthday
+      });
+
+  } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ error: 'Der opstod en fejl under login' });
+  }
 });
+
 
 // Get a specific log
 app.get('/logs/:id', async (req, res) => {
@@ -730,77 +581,73 @@ app.put('/family-link/:id/status', async (req, res) => {
   }
 });
 
+
+// Register
 app.post('/register', async (req, res) => {
-    const { name, email, password, relationToDementiaPerson, termsAccepted, familyCode } = req.body;
-    console.log('=== START REGISTRATION ===');
-    const maskedData = maskSensitiveData({ name, email, password, relationToDementiaPerson, termsAccepted, familyCode });
-    console.log('Registration attempt:', maskedData);
-    console.log('=== END REGISTRATION ===');
+  const { name, email, password, relationToDementiaPerson, termsAccepted, familyCode } = req.body;
+  console.log('=== START REGISTRATION ===');
+  const maskedData = maskSensitiveData({ name, email, password, relationToDementiaPerson, termsAccepted, familyCode });
+  console.log('Registration attempt:', maskedData);
+  console.log('=== END REGISTRATION ===');
 
-    // Validate input
-    if (!name || !email || !password || !relationToDementiaPerson || termsAccepted === undefined) {
-        console.error('Missing required fields for user:', email);
-        return res.status(400).json({ error: 'All fields are required' });
-    }
+  // Validate input
+  if (!name || !email || !password || !relationToDementiaPerson || termsAccepted === undefined) {
+      console.error('Missing required fields for user:', email);
+      return res.status(400).json({ error: 'All fields are required' });
+  }
 
-    try {
-        // Check if user already exists
-        const existingUser = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+  try {
+      // Check if user already exists
+      const { data: existingUser, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
 
-        if (existingUser.rows.length > 0) {
-            console.error('User already exists:', email);
-            return res.status(409).json({ error: 'User already exists' });
-        }
+      if (fetchError) throw fetchError;
 
-        // Start a transaction
-        await client.query('BEGIN');
+      if (existingUser) {
+          console.error('User already exists:', email);
+          return res.status(409).json({ error: 'User already exists' });
+      }
 
-        // Hash adgangskoden før gemning
-        const hashedPassword = await bcrypt.hash(password, 10);
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Indsæt bruger i databasen
-        console.log('Attempting to insert user with data:', {
-            name,
-            email,
-            relationToDementiaPerson,
-            termsAccepted,
-            hashedPassword: '[REDACTED]'
-        });
-        
-        const result = await client.query(
-            'INSERT INTO users (name, email, hashed_password, relation_to_dementia_person, "termsAccepted") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, relation_to_dementia_person',
-            [name, email, hashedPassword, relationToDementiaPerson, termsAccepted]
-        );
-        console.log("RAW query result:", result.rows);
-        
-        console.log('SQL query executed successfully');
+      // Insert user
+      const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert([{
+              name,
+              email,
+              hashed_password: hashedPassword,
+              relation_to_dementia_person: relationToDementiaPerson,
+              termsAccepted
+          }])
+          .select('id, name, email, relation_to_dementia_person, family_id')
+          .single();
 
-        await client.query('COMMIT');
+      if (insertError) throw insertError;
 
-        const newUser = result.rows[0];
-        console.log('User registered successfully:', newUser);
+      console.log('User registered successfully:', newUser);
 
-        res.status(201).json({
-            id: newUser.id,
-            name: newUser.name,
-            email: newUser.email,
-            relationToDementiaPerson: newUser.relation_to_dementia_person,
-            familyId: newUser.family_id
-        });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Detailed error registering user:', {
-            error: error.message,
-            stack: error.stack,
-            code: error.code
-        });
+      res.status(201).json({
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          relationToDementiaPerson: newUser.relation_to_dementia_person,
+          familyId: newUser.family_id
+      });
 
-        if (error.code === '23505') { // Unique constraint violation
-            res.status(409).json({ error: 'Email already registered' });
-        } else {
-            res.status(500).json({ error: 'Error registering user', message: error.message });
-        }
-    }
+  } catch (error) {
+      console.error('Detailed error registering user:', error);
+
+      if (error.code === '23505') {
+          res.status(409).json({ error: 'Email already registered' });
+      } else {
+          res.status(500).json({ error: 'Error registering user', message: error.message });
+      }
+  }
 });
 
 // Get all dates with appointments
