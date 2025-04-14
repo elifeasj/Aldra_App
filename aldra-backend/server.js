@@ -1226,11 +1226,12 @@ app.post('/match-guides', async (req, res) => {
     const relation = `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`;
     const visible = `filters[visible][$eq]=true`;
     const populate = `populate=*`;
+    
 
-    const queryString = `${tags}&${helpTags}&${relation}&${visible}&${populate}`;
+    const queryString = `${relation}&${visible}&${populate}`;
 
     console.log('📡 Query to Strapi:', `${process.env.STRAPI_URL}/guides?${queryString}`);
-    
+
     // 3. Fetch guides fra Strapi
     const response = await fetch(`${process.env.STRAPI_URL}/guides?${queryString}`);
     const result = await response.json();

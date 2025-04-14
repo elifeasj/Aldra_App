@@ -9,7 +9,7 @@ import { API_URL, STRAPI_URL } from '../../config/api';
 
 export default function Vejledning() {
     const router = useRouter();
-    const [guides, setGuides] = useState<Guide[]>([]);
+    const [guides, setGuides] = useState<Guide[]>([]); console.log('🎯 Guide data til UI:', guides);
     const [loading, setLoading] = useState(true);
     const [userAnswers, setUserAnswers] = useState<UserProfileAnswers | null>(null);
 
