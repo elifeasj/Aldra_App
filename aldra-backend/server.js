@@ -1216,11 +1216,11 @@ app.post('/match-guides', async (req, res) => {
 
     // 2. Byg filter-string til Strapi baseret på svar
     const tags = answers.main_challenges
-      .map(tag => `filters[tags][$in]=${encodeURIComponent(tag)}`)
+      .map(tag => `filters[tags][$containsi]=${encodeURIComponent(tag)}`)
       .join('&');
 
     const helpTags = answers.help_needs
-      .map(tag => `filters[help_tags][$in]=${encodeURIComponent(tag)}`)
+      .map(tag => `filters[help_tags][$containsi]=${encodeURIComponent(tag)}`)
       .join('&');
 
     const relation = `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`;
@@ -1229,6 +1229,8 @@ app.post('/match-guides', async (req, res) => {
 
     const queryString = `${tags}&${helpTags}&${relation}&${visible}&${populate}`;
 
+    console.log('📡 Query to Strapi:', `${process.env.STRAPI_URL}/guides?${queryString}`);
+    
     // 3. Fetch guides fra Strapi
     const response = await fetch(`${process.env.STRAPI_URL}/guides?${queryString}`);
     const result = await response.json();
