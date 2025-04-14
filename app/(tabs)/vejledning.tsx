@@ -73,6 +73,7 @@ export default function Vejledning() {
           const mapped = result.guides.map(mapGuideData);
       
           console.log('✅ Matchede guides (mapped):', mapped);
+          console.log(result.guides)
           setGuides(mapped);
         } catch (err) {
           console.error('❌ Fejl i fetchMatchedGuides:', err);
