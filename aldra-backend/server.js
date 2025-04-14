@@ -1196,28 +1196,61 @@ app.post('/save-answers', async (req, res) => {
 });
 
 
-// Get user profile answers
-app.get('/user-profile-answers/:id', async (req, res) => {
-  const userId = parseInt(req.params.id);
+// Guide matching endpoint
+app.post('/match-guides', async (req, res) => {
+  const { user_id } = req.body;
 
-  const { data, error } = await supabase
-    .from('user_profile_answers')
-    .select('*')
-    .eq('user_id', userId)
-    .single(); // Kun én række
+  if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
 
-  if (error) {
-    return res.status(500).json({ error: error.message });
+  try {
+    // 1. Hent svar fra Supabase
+    const { data: answers, error: answerError } = await supabase
+      .from('user_profile_answers')
+      .select('*')
+      .eq('user_id', user_id)
+      .maybeSingle();
+
+    if (answerError || !answers) {
+      return res.status(404).json({ error: 'User answers not found' });
+    }
+
+    // 2. Byg filter-string til Strapi baseret på svar
+    const tags = answers.main_challenges
+      .map(tag => `filters[tags][$in]=${encodeURIComponent(tag)}`)
+      .join('&');
+
+    const helpTags = answers.help_needs
+      .map(tag => `filters[help_tags][$in]=${encodeURIComponent(tag)}`)
+      .join('&');
+
+    const experience = `filters[experience_levels][$in]=${encodeURIComponent(answers.experience_level)}`;
+    const dementia = `filters[dementia_types][$in]=${encodeURIComponent(answers.diagnosed_dementia_type)}`;
+    const visible = `filters[visible][$eq]=true`;
+    const populate = `populate=*`;
+
+    const queryString = `${tags}&${helpTags}&${experience}&${dementia}&${visible}&${populate}`;
+
+    // 3. Fetch guides fra Strapi
+    const response = await fetch(`${process.env.STRAPI_URL}/guides?${queryString}`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('❌ Strapi-fejl:', result);
+      return res.status(500).json({ error: 'Failed to fetch guides from Strapi' });
+    }
+
+    // 4. Returner guides til appen
+    const guides = result.data.map((item) => ({
+      id: item.id,
+      ...item.attributes,
+    }));
+
+    return res.json({ guides });
+  } catch (err) {
+    console.error('❌ Fejl i /match-guides:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  if (!data) {
-    return res.status(404).json({ error: 'No profile answers found' });
-  }
-
-  return res.status(200).json(data);
 });
-
-
 
 // Start server
 const PORT = process.env.PORT || 10000;

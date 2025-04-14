@@ -4,7 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { GuideCategory } from '../../components/guides/GuideCategory';
 import { Guide, UserProfileAnswers } from '../../types/guides';
-import { STRAPI_URL } from '../../config/api';
+import supabase from '../../config/supabase';
+import { API_URL, STRAPI_URL } from '../../config/api';
 
 export default function Vejledning() {
     const router = useRouter();
@@ -22,56 +23,67 @@ export default function Vejledning() {
           const userDataString = await AsyncStorage.getItem('userData');
           if (!userDataString) {
             console.log('❌ userData not found in AsyncStorage');
-            setLoading(false); // 🛠 tilføj denne linje!
+            setLoading(false);
             return;
           }
-          
+      
           const userData = JSON.parse(userDataString);
           console.log('🔐 Loaded userData:', userData);
       
-          const response = await fetch(`${STRAPI_URL}/user-profile-answers/${userData.id}`);
-          if (!response.ok) throw new Error('Failed to fetch user answers');
+          const { data, error } = await supabase
+            .from('user_profile_answers')
+            .select('*')
+            .eq('user_id', userData.id)
+            .maybeSingle();
       
-          const answers = await response.json();
-          console.log('📋 Fetched user answers:', answers);
+          if (error || !data) {
+            console.warn('⚠️ No answers found');
+            setLoading(false);
+            return;
+          }
       
-          setUserAnswers(answers);
-          fetchGuides(answers);
-        } catch (error) {
-          console.error('❌ Error fetching user answers:', error);
-          setLoading(false); // <== vigtigt!
+          console.log('📋 Supabase answers:', data);
+          setUserAnswers(data);
+      
+          // Hent matchende guides
+          const response = await fetch(`${API_URL}/match-guides`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userData.id }),
+          });
+
+          // Kald backend for at få relevante guides:
+          fetchMatchedGuides(userData.id);
+        } catch (err) {
+          console.error('❌ Error fetching user answers:', err);
+          setLoading(false);
         }
       };
 
-    const fetchGuides = async (answers: UserProfileAnswers) => {
-        console.log('📡 Fetching guides with filters:', answers);
+      const fetchMatchedGuides = async (userId: number) => {
         try {
-            const relation = answers.relation_to_person;
-            const tags = answers.main_challenges.map(tag => `filters[tags][$in]=${encodeURIComponent(tag)}`).join('&');
-            const helpTags = answers.help_needs.map(tag => `filters[help_tags][$in]=${encodeURIComponent(tag)}`).join('&');
-            const visible = 'filters[visible][$eq]=true';
-    
-            const queryString = `${tags}&${helpTags}&${visible}&filters[relation][$eq]=${encodeURIComponent(relation)}&populate=*`;
-    
-            const response = await fetch(`${STRAPI_URL}/guides?${queryString}`);
-            if (!response.ok) throw new Error('Failed to fetch guides');
-    
-            const guidesData = await response.json();
-            const formattedGuides = guidesData.data.map((item: any) => ({
-                id: item.id,
-                ...item.attributes,
-            }));
-
-            console.log("Query:", queryString);
-            console.log("Fetched guides:", formattedGuides);
-    
-            setGuides(formattedGuides);
-        } catch (error) {
-            console.error('Error fetching guides:', error);
+          const response = await fetch(`${API_URL}/match-guides`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId }),
+          });
+      
+          const result = await response.json();
+      
+          if (!response.ok) {
+            console.error('❌ Failed to fetch matched guides:', result.error);
+            return;
+          }
+      
+          console.log('✅ Matchede guides:', result.guides);
+          setGuides(result.guides);
+        } catch (err) {
+          console.error('❌ Fejl i fetchMatchedGuides:', err);
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
+      };
+      
 
     const handleGuidePress = (guide: Guide) => {
         router.push(`/guide/${guide.id}`);
