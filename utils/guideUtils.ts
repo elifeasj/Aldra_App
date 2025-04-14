@@ -1,16 +1,20 @@
 import { Guide } from '../types/guides'; // juster hvis nødvendigt
 
 
-export const mapGuideData = (rawGuide: any): Guide => ({
-  id: rawGuide.id,
-  title: rawGuide.title || 'Uden titel',
-  category: rawGuide.category || 'Ukategoriseret', // 👈 dette sikrer fallback
-  image: rawGuide.image?.url 
-    ? `https://aldra-cms.up.railway.app${rawGuide.image.url}` 
-    : 'https://aldra-cms.up.railway.app/uploads/fallback_guide_image.jpg',
-  tags: rawGuide.tags || [],
-  relation: rawGuide.relation || '',
-  help_tags: rawGuide.help_tags || [],
-  visible: rawGuide.visible,
-  content: rawGuide.content || '',
-});
+export const mapGuideData = (rawGuide: any): Guide => {
+  const attr = rawGuide.attributes || {};
+
+  return {
+    id: rawGuide.id,
+    title: attr.title || 'Uden titel',
+    category: attr.category || 'Ukategoriseret',
+    image: attr.image?.data?.attributes?.url
+      ? `https://aldra-cms.up.railway.app${attr.image.data.attributes.url}`
+      : 'https://aldra-cms.up.railway.app/uploads/fallback_guide_image.jpg',
+    tags: attr.tags || [],
+    relation: attr.relation || '',
+    help_tags: attr.help_tags || [],
+    visible: attr.visible ?? true,
+    content: attr.content || '',
+  };
+};
