@@ -6,7 +6,7 @@ import { GuideCategory } from '../../components/guides/GuideCategory';
 import { Guide, UserProfileAnswers } from '../../types/guides';
 import supabase from '../../config/supabase';
 import { API_URL, STRAPI_URL } from '../../config/api';
-import { mapGuideData } from '../../app/utils/guideUtils';
+import { mapGuideData } from '../../utils/guideUtils';
 
 export default function Vejledning() {
     const router = useRouter();
@@ -47,13 +47,6 @@ export default function Vejledning() {
           setUserAnswers(data);
       
           // Hent matchende guides
-         const response = await fetch(`${API_URL}/match-guides`, {
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userData.id }),
-          });
-
-          // Kald backend for at få relevante guides:
           fetchMatchedGuides(userData.id);
         } catch (err) {
           console.error('❌ Error fetching user answers:', err);
@@ -76,8 +69,10 @@ export default function Vejledning() {
             return;
           }
       
-          console.log('✅ Matchede guides:', result.guides);
-          setGuides(result.guides);
+          const mapped = result.guides.map(mapGuideData); // 👈 DETTE ER DET DER MANGLER
+          console.log('✅ Matchede guides (mapped):', mapped);
+      
+          setGuides(result.guides.map(mapGuideData));;
         } catch (err) {
           console.error('❌ Fejl i fetchMatchedGuides:', err);
         } finally {
@@ -85,18 +80,21 @@ export default function Vejledning() {
         }
       };
       
+      
 
     const handleGuidePress = (guide: Guide) => {
         router.push(`/guide/${guide.id}`);
     };
 
     const categorizedGuides = guides.reduce((acc, guide) => {
-        if (!acc[guide.category]) {
-            acc[guide.category] = [];
+        const category = guide.category || 'Ukategoriseret';
+        if (!acc[category]) {
+          acc[category] = [];
         }
-        acc[guide.category].push(guide);
+        acc[category].push(guide);
         return acc;
-    }, {} as Record<string, Guide[]>);
+      }, {} as Record<string, Guide[]>);
+      
 
     if (loading) {
         return (
@@ -134,7 +132,7 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        paddingTop: 60,
+        paddingTop: 90,
     },
     loadingContainer: {
         flex: 1,

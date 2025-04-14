@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Guide } from '../../types/guides';
-import { API_URL } from '../../config';
+import { STRAPI_URL } from '../../config/api';
+import { mapGuideData } from '../../utils/guideUtils';
 
 export default function GuideDetail() {
     const { id } = useLocalSearchParams();
@@ -15,11 +16,16 @@ export default function GuideDetail() {
 
     const fetchGuide = async () => {
         try {
-            const response = await fetch(`${API_URL}/guides/${id}`);
+            const response = await fetch(`${STRAPI_URL}/guides/${id}?populate=*`);
             if (!response.ok) throw new Error('Failed to fetch guide');
-
-            const guideData = await response.json();
-            setGuide(guideData);
+    
+            const result = await response.json();
+            const formatted = mapGuideData({
+                id: result.data.id,
+                ...result.data.attributes,
+            });
+    
+            setGuide(formatted);
         } catch (error) {
             console.error('Error fetching guide:', error);
         } finally {

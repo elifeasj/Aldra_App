@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, ImageBackground, Text, StyleSheet, View } from 'react-native';
+import { TouchableOpacity, ImageBackground, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface GuideCardProps {
@@ -8,16 +8,20 @@ interface GuideCardProps {
   onPress: () => void;
 }
 
+const fallbackImage = 'https://aldra-cms.up.railway.app/uploads/image2.png'; // <-- du kan uploade denne til Strapi Media
+
 export const GuideCard: React.FC<GuideCardProps> = ({ title, imageUrl, onPress }) => {
+  const finalImage = imageUrl && imageUrl.startsWith('http') ? imageUrl : fallbackImage;
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <ImageBackground 
-        source={{ uri: imageUrl }} 
+        source={{ uri: finalImage }} 
         style={styles.background}
         imageStyle={styles.image}
       >
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          colors={['transparent', 'rgba(31, 101, 15, 0.86)']}
           style={styles.gradient}
         >
           <Text style={styles.title}>{title}</Text>
