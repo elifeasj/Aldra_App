@@ -246,18 +246,6 @@ app.use((req, res, next) => {
 });
 
 
-  // === DEBUG FUNKTION ===
-async function debugDatabase() {
-  try {
-    const dbNameResult = await client.query('SET search_path TO public');
-    console.log('🧪 Connected to DB:', dbNameResult.rows[0].current_database);
-
-  } catch (err) {
-    console.error('Debug failed:', err);
-  }
-}
-
-
 // Helper function to format time
 function formatTimeForDB(timeStr) {
   return timeStr.replace('.', ':');
@@ -400,186 +388,136 @@ app.post('/login', async (req, res) => {
 
 // Get a specific log
 app.get('/logs/:id', async (req, res) => {
-  try {
-    const logId = req.params.id;
-    const { user_id } = req.query;
+  const logId = req.params.id;
+  const { user_id } = req.query;
 
-    console.log('GET /logs/:id - Parameters:', { logId, user_id });
+  if (!user_id) return res.status(400).json({ error: 'User ID is required' });
 
-    if (!user_id) {
-      console.log('No user_id provided in query');
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+  const { data, error } = await supabase
+    .from('logs')
+    .select('*')
+    .eq('id', logId)
+    .eq('user_id', user_id)
+    .maybeSingle();
 
-    const result = await client.query(`
-      SELECT * FROM logs
-      WHERE id = $1 AND user_id = $2
-    `, [logId, user_id]);
+  if (error) return res.status(500).json({ error: 'Error fetching log', message: error.message });
+  if (!data) return res.status(404).json({ error: 'Log not found' });
 
-    if (result.rows.length === 0) {
-      console.log('No log found with these parameters');
-      return res.status(404).json({ error: 'Log not found' });
-    }
-
-    console.log('Sending log:', result.rows[0]);
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Error fetching log:', err);
-    res.status(500).json({ error: 'Error fetching log' });
-  }
+  res.json(data);
 });
 
 // Update a log
 app.put('/logs/:id', async (req, res) => {
-  try {
-    const logId = req.params.id;
-    const { title, description, date, appointment_id, user_id } = req.body;
+  const logId = req.params.id;
+  const { title, description, date, appointment_id, user_id } = req.body;
 
-    console.log('PUT /logs/:id - Parameters:', { logId, user_id });
+  if (!user_id) return res.status(400).json({ error: 'User ID is required' });
 
-    if (!user_id) {
-      console.log('No user_id provided in body');
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+  const { data, error } = await supabase
+    .from('logs')
+    .update({
+      title,
+      description,
+      date,
+      appointment_id,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', logId)
+    .eq('user_id', user_id)
+    .select()
+    .maybeSingle();
 
-    const result = await client.query(`
-      UPDATE logs
-      SET title = $1, 
-          description = $2, 
-          date = $3,
-          appointment_id = $4,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = $5 AND user_id = $6
-      RETURNING *
-    `, [title, description, date, appointment_id, logId, user_id]);
+  if (error) return res.status(500).json({ error: 'Error updating log', message: error.message });
+  if (!data) return res.status(404).json({ error: 'Log not found' });
 
-    if (result.rows.length === 0) {
-      console.log('No log found with these parameters');
-      return res.status(404).json({ error: 'Log not found' });
-    }
-
-    console.log('Updated log:', result.rows[0]);
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Error updating log:', err);
-    res.status(500).json({ error: 'Error updating log' });
-  }
+  res.json(data);
 });
+
 
 // Generate a unique family link
 app.post('/family-link/generate', async (req, res) => {
-  try {
-    const { user_id } = req.body;
+  const { user_id } = req.body;
 
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+  if (!user_id) return res.status(400).json({ error: 'User ID is required' });
 
-    // Generate a random 10-character code
-    const uniqueCode = Math.random().toString(36).substring(2, 12).toUpperCase();
+  // Generate a random 10-character code
+  const uniqueCode = Math.random().toString(36).substring(2, 12).toUpperCase();
 
-    // Save the link in the database
-    const result = await client.query(
-      'INSERT INTO family_links (creator_user_id, unique_code) VALUES ($1, $2) RETURNING *',
-      [user_id, uniqueCode]
-    );
+  const { error } = await supabase
+    .from('family_links')
+    .insert({ creator_user_id: user_id, unique_code: uniqueCode });
 
-    res.json({
-      code: uniqueCode,
-      shareLink: `aldra://register?familyCode=${uniqueCode}`
-    });
-  } catch (error) {
-    console.error('Error generating family link:', error);
-    res.status(500).json({ error: 'Error generating family link' });
-  }
+  if (error) return res.status(500).json({ error: 'Error generating family link', message: error.message });
+
+  res.json({
+    code: uniqueCode,
+    shareLink: `aldra://register?familyCode=${uniqueCode}`
+  });
 });
+
 
 // Validate and use a family code
 app.get('/family-link/validate/:code', async (req, res) => {
-  try {
-    const { code } = req.params;
-    
-    // Get the family link and update last_used_at and member count
-    const result = await client.query(
-      `UPDATE family_links 
-       SET last_used_at = CURRENT_TIMESTAMP,
-           member_count = member_count + 1
-       WHERE unique_code = $1 AND status = 'active' 
-       RETURNING id, creator_user_id, member_count`,
-      [code]
-    );
+  const { code } = req.params;
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Invalid or inactive family link' });
-    }
+  const { data, error } = await supabase
+    .from('family_links')
+    .update({
+      last_used_at: new Date().toISOString(),
+      member_count: supabase.rpc('increment_member_count', { code }) // eller gør det manuelt
+    })
+    .eq('unique_code', code)
+    .eq('status', 'active')
+    .select('id, creator_user_id, member_count')
+    .maybeSingle();
 
-    // Get creator info
-    const creatorResult = await client.query(
-      'SELECT id, name FROM users WHERE id = $1',
-      [code]
-    );
+  if (error) return res.status(500).json({ error: 'Error validating family code', message: error.message });
+  if (!data) return res.status(404).json({ error: 'Invalid or inactive family link' });
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Invalid family code' });
-    }
-
-    res.json({ creator_user_id: result.rows[0].creator_user_id });
-  } catch (error) {
-    console.error('Error validating family code:', error);
-    res.status(500).json({ error: 'Error validating family code' });
-  }
+  res.json({ creator_user_id: data.creator_user_id });
 });
+
 
 // Get family members
 app.get('/users/family/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
+  const { userId } = req.params;
 
-    // Hent alle brugere der har den givne bruger som deres family_id
-    const result = await client.query(`
-      SELECT id, name, relation_to_dementia_person
-      FROM users
-      WHERE family_id = $1
-    `, [userId]);
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, name, relation_to_dementia_person')
+    .eq('family_id', userId);
 
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching family members:', error);
-    res.status(500).json({ error: 'Error fetching family members' });
-  }
+  if (error) return res.status(500).json({ error: 'Error fetching family members', message: error.message });
+
+  res.json(data);
 });
+
 
 
 
 // Root endpoint for health check
 // Update family link status
 app.put('/family-link/:id/status', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
+  const { id } = req.params;
+  const { status } = req.body;
 
-    if (!['active', 'inactive'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status. Must be either "active" or "inactive"' });
-    }
-
-    const result = await client.query(
-      `UPDATE family_links
-       SET status = $1
-       WHERE id = $2
-       RETURNING id, unique_code, status, member_count, last_used_at`,
-      [status, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Family link not found' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error updating family link status:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  if (!['active', 'inactive'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status. Must be either "active" or "inactive"' });
   }
+
+  const { data, error } = await supabase
+    .from('family_links')
+    .update({ status })
+    .eq('id', id)
+    .select('id, unique_code, status, member_count, last_used_at')
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: 'Internal server error', message: error.message });
+  if (!data) return res.status(404).json({ error: 'Family link not found' });
+
+  res.json(data);
 });
+
 
 
 // Register
@@ -652,474 +590,383 @@ app.post('/register', async (req, res) => {
 
 // Get all dates with appointments
 app.get('/appointments/dates/all', async (req, res) => {
-  try {
-    const { user_id } = req.query;
+  const { user_id } = req.query;
 
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+  if (!user_id) return res.status(400).json({ error: 'User ID is required' });
 
-    const result = await client.query(
-      `SELECT DISTINCT date FROM appointments 
-       WHERE user_id = $1 
-       ORDER BY date ASC`,
-      [user_id]
-    );
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('date')
+    .eq('user_id', user_id)
+    .order('date', { ascending: true });
 
-    const dates = result.rows.map(row => row.date);
-    console.log('Fetched dates with appointments:', dates);
-    res.json(dates);
-  } catch (error) {
-    console.error('Error fetching dates with appointments:', error);
-    res.status(500).json({ error: 'Error fetching dates' });
-  }
+  if (error) return res.status(500).json({ error: 'Error fetching dates', message: error.message });
+
+  // Brug Set til at fjerne dubletter, hvis Supabase returnerer flere med samme dato
+  const uniqueDates = [...new Set(data.map(row => row.date))];
+  res.json(uniqueDates);
 });
+
 
 
 // Get logs for a specific user
 app.get('/logs/user/:user_id', async (req, res) => {
   const { user_id } = req.params;
-  try {
-    const result = await client.query(
-      `SELECT id, appointment_id FROM logs WHERE user_id = $1`,
-      [user_id]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching logs for user:', error);
-    res.status(500).json({ error: 'Error fetching logs for user' });
-  }
+
+  const { data, error } = await supabase
+    .from('logs')
+    .select('id, appointment_id')
+    .eq('user_id', user_id);
+
+  if (error) return res.status(500).json({ error: 'Error fetching logs for user', message: error.message });
+
+  res.json(data);
 });
+
 
 
 // Get logs for a specific appointment
 app.get('/logs/:appointment_id', async (req, res) => {
-  try {
-    const { appointment_id } = req.params;
-    const { user_id } = req.query;
+  const { appointment_id } = req.params;
+  const { user_id } = req.query;
 
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+  if (!user_id) return res.status(400).json({ error: 'User ID is required' });
 
-    const result = await client.query(
-      `SELECT * FROM logs 
-       WHERE appointment_id = $1 AND user_id = $2 
-       ORDER BY date DESC`,
-      [appointment_id, user_id]
-    );
+  const { data, error } = await supabase
+    .from('logs')
+    .select('*')
+    .eq('appointment_id', appointment_id)
+    .eq('user_id', user_id)
+    .order('date', { ascending: false });
 
-    console.log('Fetched logs for appointment:', appointment_id, 'logs:', result.rows);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching logs:', error);
-    res.status(500).json({ error: 'Error fetching logs' });
-  }
+  if (error) return res.status(500).json({ error: 'Error fetching logs', message: error.message });
+
+  res.json(data);
 });
+
 
 // Create new log
 app.post('/logs', async (req, res) => {
-  try {
-    const { appointment_id, user_id, title, description, date } = req.body;
-    console.log('Creating log:', { appointment_id, user_id, title, description, date });
+  const { appointment_id, user_id, title, description, date } = req.body;
 
-    // If appointment_id is provided, verify that it belongs to the user
-    if (appointment_id) {
-      const appointmentCheck = await client.query(
-        'SELECT id FROM appointments WHERE appointment_id = $1 AND user_id = $2',
-        [appointment_id, user_id]
-      );
-
-      if (appointmentCheck.rows.length === 0) {
-        return res.status(403).json({ error: 'Unauthorized: This appointment does not belong to the user' });
-      }
-    }
-
-    // Validate required fields
-    if (!user_id || !title || !date) {
-      return res.status(400).json({ error: 'Missing required fields: user_id, title, and date are required' });
-    }
-
-    const result = await client.query(
-      `INSERT INTO logs 
-       (appointment_id, user_id, title, description, date) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING *`,
-      [appointment_id, user_id, title, description, date]
-    );
-
-    console.log('Log created:', result.rows[0]);
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Error creating log:', error);
-    res.status(500).json({ error: 'Error creating log' });
+  if (!user_id || !title || !date) {
+    return res.status(400).json({ error: 'Missing required fields: user_id, title, and date are required' });
   }
+
+  // Tjek ejer af appointment, hvis en appointment_id er angivet
+  if (appointment_id) {
+    const { data: appointmentCheck, error: checkError } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('appointment_id', appointment_id)
+      .eq('user_id', user_id)
+      .maybeSingle();
+
+    if (checkError) return res.status(500).json({ error: 'Error validating appointment', message: checkError.message });
+
+    if (!appointmentCheck) {
+      return res.status(403).json({ error: 'Unauthorized: This appointment does not belong to the user' });
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('logs')
+    .insert([{
+      appointment_id,
+      user_id,
+      title,
+      description,
+      date
+    }])
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: 'Error creating log', message: error.message });
+
+  res.status(201).json(data);
 });
+
 
 // Get ALL appointments for a user (Oversigt.tsx)
 app.get('/appointments/all', async (req, res) => {
-  try {
-    const { user_id } = req.query;
-    console.log("👉 GET /appointments/all kaldes med user_id:", user_id);
-
-    if (!user_id || isNaN(Number(user_id))) {
-      return res.status(400).json({ error: 'User ID is invalid or missing' });
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-    console.log("📆 Dagens dato:", today);
-
-    const query = `
-      SELECT * FROM appointments 
-      WHERE user_id = $1 
-      AND DATE(date) >= $2 
-      AND start_time IS NOT NULL 
-      AND end_time IS NOT NULL 
-      ORDER BY date ASC
-    `;
-
-    const result = await client.query(query, [user_id, today]);
-
-    console.log('📅 Appointments fundet:', result.rows.length);
-    res.json(result.rows);
-
-  } catch (error) {
-    console.error('❌ Fejl i /appointments/all:');
-    console.error('📭 Message:', error.message);
-    console.error('🧱 Stack:', error.stack);
-  
-    res.status(500).json({ 
-      error: 'Error fetching appointments',
-      message: error.message,
-      stack: error.stack
-    });
+  const { user_id } = req.query;
+  if (!user_id || isNaN(Number(user_id))) {
+    return res.status(400).json({ error: 'User ID is invalid or missing' });
   }
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('*')
+    .eq('user_id', user_id)
+    .gte('date', today)
+    .not('start_time', 'is', null)
+    .not('end_time', 'is', null)
+    .order('date', { ascending: true });
+
+  if (error) return res.status(500).json({ error: 'Error fetching appointments', message: error.message });
+
+  res.json(data);
 });
+
 
 // Get appointments for a specific date
 app.get('/appointments/:date', async (req, res) => {
-  try {
-    const { date } = req.params;
-    const { user_id } = req.query;
+  const { date } = req.params;
+  const { user_id } = req.query;
 
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
-
-    const result = await client.query(
-      `SELECT * FROM appointments 
-       WHERE date = $1 AND user_id = $2 
-       ORDER BY start_time ASC`,
-      [date, user_id]
-    );
-
-    console.log('Fetched appointments for date:', date, 'appointments:', result.rows);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching appointments:', error);
-    res.status(500).json({ error: 'Error fetching appointments' });
+  if (!user_id) {
+    return res.status(400).json({ error: 'User ID is required' });
   }
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('*')
+    .eq('date', date)
+    .eq('user_id', user_id)
+    .order('start_time', { ascending: true });
+
+  if (error) return res.status(500).json({ error: 'Error fetching appointments', message: error.message });
+
+  res.json(data);
 });
+
 
 // Create new appointment
 app.post('/appointments', async (req, res) => {
-  try {
-    const { title, description, date, start_time, end_time, reminder, user_id } = req.body;
-    console.log('Creating appointment:', { title, description, date, start_time, end_time, reminder, user_id });
+  const { title, description, date, start_time, end_time, reminder, user_id } = req.body;
 
-    const result = await client.query(
-      `INSERT INTO appointments 
-       (title, description, date, start_time, end_time, reminder, user_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       RETURNING *`,
-      [title, description, date, start_time, end_time, reminder, user_id]
-    );
+  const { data, error } = await supabase
+    .from('appointments')
+    .insert([{
+      title,
+      description,
+      date,
+      start_time,
+      end_time,
+      reminder,
+      user_id
+    }])
+    .select()
+    .single();
 
-    console.log('Appointment created:', result.rows[0]);
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Error creating appointment:', error);
-    res.status(500).json({ error: 'Error creating appointment' });
-  }
+  if (error) return res.status(500).json({ error: 'Error creating appointment', message: error.message });
+
+  res.status(201).json(data);
 });
 
 
 // PUT update appointment
 app.put('/appointments/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description, date, start_time, end_time, reminder } = req.body;
-    const result = await client.query(
-      `UPDATE appointments 
-       SET title = $1, description = $2, date = $3, start_time = $4, end_time = $5, reminder = $6, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7 
-       RETURNING *`,
-      [title, description, date, start_time, end_time, reminder, id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Appointment not found' });
-    }
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error updating appointment:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+  const { id } = req.params;
+  const { title, description, date, start_time, end_time, reminder } = req.body;
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .update({
+      title,
+      description,
+      date,
+      start_time,
+      end_time,
+      reminder,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: 'Error updating appointment', message: error.message });
+  if (!data) return res.status(404).json({ error: 'Appointment not found' });
+
+  res.json(data);
 });
+
 
 // Delete an appointment
 app.delete('/appointments/:id', async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
-    console.log('Received delete request for appointment ID:', id);
-    
-    const result = await client.query('BEGIN');
-    try {
-      // Først sletter vi alle logs der er knyttet til denne aftale
-      await client.query('DELETE FROM logs WHERE appointment_id = $1', [id]);
-      console.log('Deleted associated logs');
+    // Slet logs først
+    const { error: logError } = await supabase
+      .from('logs')
+      .delete()
+      .eq('appointment_id', id);
 
-      // Derefter sletter vi selve aftalen
-      const result = await client.query('DELETE FROM appointments WHERE id = $1 RETURNING *', [id]);
-      
-      if (result.rows.length === 0) {
-        throw new Error('Appointment not found');
-      }
+    if (logError) throw logError;
 
-      await client.query('COMMIT');
-      console.log('Appointment deleted successfully');
-      res.json({ message: 'Appointment deleted successfully' });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      console.error('Error deleting appointment:', err);
-      res.status(500).json({ error: 'Failed to delete appointment' });
-    }
+    // Slet selve aftalen
+    const { data, error: deleteError } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('id', id)
+      .select()
+      .maybeSingle();
+
+    if (deleteError) throw deleteError;
+    if (!data) return res.status(404).json({ error: 'Appointment not found' });
+
+    res.json({ message: 'Appointment deleted successfully' });
   } catch (error) {
-    console.error('Detailed error deleting appointment:', {
-      error: error.message,
-      stack: error.stack,
-      params: req.params
-    });
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error deleting appointment:', error);
+    res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 });
+
 
 // Endpoint to update user's last activity
 // Get latest logs for a user
 // Update user data
 app.put('/users/:userId', async (req, res) => {
-  console.log('Received update request for user:', req.params.userId);
-  console.log('Update data:', req.body);
-  try {
-    const { userId } = req.params;
-    const { name, email, password, birthday, profile_image, relationToDementiaPerson } = req.body;
+  const { userId } = req.params;
+  const { name, email, password, birthday, profile_image, relationToDementiaPerson } = req.body;
 
-    // Verify that the user exists first
-    const userCheck = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
-    if (userCheck.rows.length === 0) {
-      console.log('User not found:', userId);
-      return res.status(404).json({ error: 'User not found' });
-    }
+  const updateData = {};
+  if (name) updateData.name = name;
+  if (email) updateData.email = email;
+  if (password) updateData.hashed_password = await bcrypt.hash(password, 10);
+  if (birthday) updateData.birthday = birthday;
+  if (profile_image !== undefined) updateData.profile_image = profile_image;
+  if (relationToDementiaPerson) updateData.relation_to_dementia_person = relationToDementiaPerson;
 
-    console.log('Found user:', userCheck.rows[0]);
-
-    // Start building the update query
-    let updateFields = [];
-    let queryParams = [];
-    let paramCounter = 1;
-
-    if (name) {
-      updateFields.push(`name = $${paramCounter}`);
-      queryParams.push(name);
-      paramCounter++;
-    }
-
-    if (email) {
-      updateFields.push(`email = $${paramCounter}`);
-      queryParams.push(email);
-      paramCounter++;
-    }
-
-    if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      updateFields.push(`hashed_password = $${paramCounter}`);
-      queryParams.push(hashedPassword);
-      paramCounter++;
-    }
-
-    if (birthday) {
-      updateFields.push(`birthday = $${paramCounter}`);
-      queryParams.push(birthday);
-      paramCounter++;
-    }
-
-    // Always include profile_image in update if it's provided
-    console.log('Checking profile_image:', profile_image);
-    if (profile_image !== undefined) {
-      updateFields.push(`profile_image = $${paramCounter}`);
-      queryParams.push(profile_image);
-      paramCounter++;
-      console.log('Adding profile_image to update:', profile_image);
-    } else {
-      console.log('No profile_image to update');
-    }
-
-    if (relationToDementiaPerson) {
-      updateFields.push(`relation_to_dementia_person = $${paramCounter}`);
-      queryParams.push(relationToDementiaPerson);
-      paramCounter++;
-    }
-
-    // Add the userId as the last parameter
-    queryParams.push(userId);
-
-    // If there are no fields to update, return early
-    if (updateFields.length === 0) {
-      console.log('No fields to update');
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-
-    console.log('Building update query with fields:', updateFields);
-    console.log('And parameters:', queryParams);
-
-    const query = `
-      UPDATE users
-      SET ${updateFields.join(', ')}
-      WHERE id = $${paramCounter}
-      RETURNING id, name, email, birthday, profile_image, relation_to_dementia_person
-    `;
-    
-    console.log('Final SQL query:', query);
-    console.log('Final query parameters:', queryParams);
-
-    console.log('Executing query:', query);
-    const result = await client.query(query, queryParams);
-
-    if (result.rows.length === 0) {
-      console.log('No rows updated');
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    console.log('Successfully updated user:', result.rows[0]);
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Detailed error:', error);
-    if (error.code === '23505') {
-      // Unique constraint violation
-      return res.status(400).json({ error: 'Email already exists' });
-    }
-    if (error.code === '23502') {
-      // Not null constraint violation
-      return res.status(400).json({ error: 'Required field missing' });
-    }
-    res.status(500).json({ 
-      error: 'Error updating user data',
-      details: error.message,
-      code: error.code
-    });
+  if (Object.keys(updateData).length === 0) {
+    return res.status(400).json({ error: 'No fields to update' });
   }
+
+  const { data, error } = await supabase
+    .from('users')
+    .update(updateData)
+    .eq('id', userId)
+    .select('id, name, email, birthday, profile_image, relation_to_dementia_person')
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: 'Error updating user data', details: error.message });
+  if (!data) return res.status(404).json({ error: 'User not found' });
+
+  res.json(data);
 });
 
 app.get('/user-logs/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const result = await client.query(
-      `SELECT * FROM logs 
-       WHERE user_id = $1 
-       ORDER BY created_at DESC 
-       LIMIT 3`,
-      [userId]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching user logs:', error);
-    res.status(500).json({ error: 'Error fetching user logs' });
-  }
+  const { userId } = req.params;
+
+  const { data, error } = await supabase
+    .from('logs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  if (error) return res.status(500).json({ error: 'Error fetching user logs', message: error.message });
+
+  res.json(data);
 });
 
 app.post('/api/update-activity', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+  const { userId } = req.body;
 
-    await client.query(`
-      UPDATE users 
-      SET last_activity = CURRENT_TIMESTAMP,
-          status = 'active'
-      WHERE id = $1
-    `, [userId]);
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error updating user activity:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
   }
+
+  const { error } = await supabase
+    .from('users')
+    .update({
+      last_activity: new Date().toISOString(),
+      status: 'active'
+    })
+    .eq('id', userId);
+
+  if (error) return res.status(500).json({ error: 'Internal server error', message: error.message });
+
+  res.json({ success: true });
 });
 
 // Get or create unique family link code
 app.get('/api/family-link/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    // Check if user already has a family link
-    let familyLink = await client.query(
-      'SELECT * FROM family_links WHERE creator_user_id = $1',
-      [userId]
-    );
+  const { userId } = req.params;
 
-    if (familyLink.rows.length > 0) {
-      return res.status(200).json({ unique_code: familyLink.rows[0].unique_code });
-    }
+  const { data: existingLink, error: findError } = await supabase
+    .from('family_links')
+    .select('unique_code')
+    .eq('creator_user_id', userId)
+    .maybeSingle();
 
-    // If no family link exists, create one
-    const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
-    const result = await client.query(
-      'INSERT INTO family_links (creator_user_id, unique_code, member_count, status) VALUES ($1, $2, 1, $3) RETURNING unique_code',
-      [userId, uniqueCode, 'active']
-    );
+  if (findError) return res.status(500).json({ error: 'Internal server error', message: findError.message });
 
-    res.status(200).json({ unique_code: result.rows[0].unique_code });
-  } catch (error) {
-    console.error('Error getting/creating family link:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  if (existingLink) {
+    return res.status(200).json({ unique_code: existingLink.unique_code });
   }
+
+  const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+  const { data, error } = await supabase
+    .from('family_links')
+    .insert({
+      creator_user_id: userId,
+      unique_code: uniqueCode,
+      member_count: 1,
+      status: 'active'
+    })
+    .select('unique_code')
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: 'Internal server error', message: error.message });
+
+  res.status(200).json({ unique_code: data.unique_code });
 });
 
 // Get all logs with appointment info
 app.get('/admin/logs-view', async (req, res) => {
   try {
-    const result = await client.query(`
-      SELECT 
-        l.*,
-        a.title as appointment_title,
-        a.description as appointment_description,
-        a.start_time as appointment_start_time,
-        a.end_time as appointment_end_time,
-        CASE 
-          WHEN l.appointment_id IS NOT NULL THEN 'Aftale #' || l.appointment_id || ': ' || a.title
-          ELSE 'Ingen aftale'
-        END as appointment_reference
-      FROM logs l
-      LEFT JOIN appointments a ON l.appointment_id = a.appointment_id
-      ORDER BY l.date DESC;
-    `);
-    
-    console.log('Logs with appointments:', result.rows);
-    res.json(result.rows);
+    const { data, error } = await supabase
+      .from('logs')
+      .select(`
+        *,
+        appointments (
+          title,
+          description,
+          start_time,
+          end_time
+        )
+      `)
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+
+    const logsWithReferences = data.map(log => ({
+      ...log,
+      appointment_title: log.appointments?.title ?? null,
+      appointment_description: log.appointments?.description ?? null,
+      appointment_start_time: log.appointments?.start_time ?? null,
+      appointment_end_time: log.appointments?.end_time ?? null,
+      appointment_reference: log.appointment_id
+        ? `Aftale #${log.appointment_id}: ${log.appointments?.title ?? 'Ukendt'}`
+        : 'Ingen aftale',
+    }));
+
+    console.log('Logs with appointments:', logsWithReferences);
+    res.json(logsWithReferences);
   } catch (err) {
     console.error('Error fetching logs with appointments:', err);
     res.status(500).json({ error: 'Error fetching logs with appointments' });
   }
 });
 
+
 // Get all logs
 app.get('/logs', async (req, res) => {
   try {
-    const result = await client.query('SELECT * FROM logs ORDER BY date DESC');
-    console.log('Sending logs:', result.rows);
-    res.json(result.rows);
+    const { data, error } = await supabase
+      .from('logs')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+
+    console.log('Sending logs:', data);
+    res.json(data);
   } catch (err) {
     console.error('Error fetching logs:', err);
     res.status(500).json({ error: 'Error fetching logs' });
@@ -1127,9 +974,11 @@ app.get('/logs', async (req, res) => {
 });
 
 
+// Health check
 app.get('/test', (req, res) => {
   res.send('✅ Backend kører');
 });
+
 
 // Email change request endpoint
 app.post('/request-email-change', async (req, res) => {
