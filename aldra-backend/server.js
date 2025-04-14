@@ -1228,7 +1228,8 @@ app.post('/match-guides', async (req, res) => {
     const populate = `populate=*`;
     
 
-    const queryString = `${relation}&${visible}&${populate}`;
+    const queryString = `populate=*`;
+
 
     console.log('📡 Query to Strapi:', `${process.env.STRAPI_URL}/guides?${queryString}`);
 

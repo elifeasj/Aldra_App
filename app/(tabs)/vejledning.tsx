@@ -6,6 +6,7 @@ import { GuideCategory } from '../../components/guides/GuideCategory';
 import { Guide, UserProfileAnswers } from '../../types/guides';
 import supabase from '../../config/supabase';
 import { API_URL, STRAPI_URL } from '../../config/api';
+import { mapGuideData } from '../../app/utils/guideUtils';
 
 export default function Vejledning() {
     const router = useRouter();
