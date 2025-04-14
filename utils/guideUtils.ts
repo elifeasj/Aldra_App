@@ -20,7 +20,7 @@ export const mapGuideData = (guide: any): Guide => {
     category: attributes.category || 'Ukategoriseret',
     image: imageUrl
       ? `https://aldra-cms.up.railway.app${imageUrl}`
-      : 'https://aldra-cms.up.railway.app/uploads/fallback_guide_image.jpg',
+      : 'https://aldra-cms.up.railway.app/uploads/image2.png',
     tags: attributes.tags || [],
     relation: attributes.relation || '',
     help_tags: attributes.help_tags || [],
