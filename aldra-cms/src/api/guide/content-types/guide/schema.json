@@ -40,10 +40,10 @@
       "type": "string"
     },
     "tags": {
-      "type": "string"
+      "type": "json"
     },
     "help_tags": {
-      "type": "string"
+      "type": "json"
     },
     "visible": {
       "type": "boolean"

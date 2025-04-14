@@ -13,6 +13,7 @@ export default function Vejledning() {
     const [userAnswers, setUserAnswers] = useState<UserProfileAnswers | null>(null);
 
     useEffect(() => {
+        console.log('🔥 useEffect in vejledning.tsx kører');
         fetchUserAnswers();
     }, []);
 
