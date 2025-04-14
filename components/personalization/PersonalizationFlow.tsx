@@ -6,10 +6,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { ProgressIndicator } from './ProgressIndicator';
 import { usePersonalization } from '../../context/PersonalizationContext';
 import supabase from '../../config/supabase';
-import { API_URL } from '../../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/auth';
+
+
+
 
 const STEPS = {
   WELCOME: 0,
@@ -20,12 +22,43 @@ const STEPS = {
   HELP_NEEDS: 5,
 };
 
+type PersonalizationAnswer = {
+  relation_to_person: string;
+  diagnosed_dementia_type: string;
+  experience_level: string;
+  main_challenges: string[];
+  help_needs: string[];
+};
+
+
 export const PersonalizationFlow: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
-  const { currentStep, setCurrentStep, answers, updateAnswer } = usePersonalization();
   const { user } = useAuth();
+  const { currentStep, setCurrentStep, answers, updateAnswer } = usePersonalization() as {
+    currentStep: number;
+    setCurrentStep: (step: number) => void;
+    answers: PersonalizationAnswer;
+    updateAnswer: (key: keyof PersonalizationAnswer, value: any) => void;
+  };
+
+  const [currentFieldMap, setCurrentFieldMap] = useState<Record<number, keyof typeof answers | null>>({});
+  const [otherInputMap, setOtherInputMap] = useState<Record<number, boolean>>({});
+
+  const getOtherInputState = (step: number): boolean => !!otherInputMap[step];
+  const getCurrentField = (step: number): keyof typeof answers | null => currentFieldMap[step] || null;
+
+
+  const openOtherInput = (step: number, field: keyof typeof answers) => {
+    setOtherInputMap(prev => ({ ...prev, [step]: true }));
+    setCurrentFieldMap(prev => ({ ...prev, [step]: field }));
+  };
+
+  const closeOtherInput = (step: number) => {
+    setOtherInputMap(prev => ({ ...prev, [step]: false }));
+    setCurrentFieldMap(prev => ({ ...prev, [step]: null }));
+  }; 
 
   const saveAnswers = async () => {
     console.log('Gemmer svar:', answers);
@@ -107,26 +140,6 @@ export const PersonalizationFlow: React.FC = () => {
     </View>
 
   );
-
-
-  const [currentFieldMap, setCurrentFieldMap] = useState<Record<number, keyof typeof answers | null>>({});
-  const [otherInputMap, setOtherInputMap] = useState<Record<number, boolean>>({});
-
-
-  const getOtherInputState = (step: number): boolean => !!otherInputMap[step];
-  const getCurrentField = (step: number): keyof typeof answers | null => currentFieldMap[step] || null;
-
-
-  const openOtherInput = (step: number, field: keyof typeof answers) => {
-    setOtherInputMap(prev => ({ ...prev, [step]: true }));
-    setCurrentFieldMap(prev => ({ ...prev, [step]: field }));
-  };
-
-const closeOtherInput = (step: number) => {
-  setOtherInputMap(prev => ({ ...prev, [step]: false }));
-  setCurrentFieldMap(prev => ({ ...prev, [step]: null }));
-};
-
 
 
   const handleNext = async () => {

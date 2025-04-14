@@ -150,17 +150,17 @@ export default function Oversigt() {
     useEffect(() => {
         const checkPersonalization = async () => {
             try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    const { data } = await supabase
-                        .from('user_profile_answers')
-                        .select('*')
-                        .eq('user_id', user.id)
-                        .single();
-                    
-                    setHasCompletedPersonalization(!!data);
-                    setUserId(user.id);
-                }
+              const userDataString = await AsyncStorage.getItem('userData');
+              if (userDataString) {
+                const { id } = JSON.parse(userDataString); 
+                const { data } = await supabase
+                  .from('user_profile_answers')
+                  .select('*')
+                  .eq('user_id', id)
+                  .single();
+                setHasCompletedPersonalization(!!data);
+                setUserId(id);
+              }
             } catch (error) {
                 console.error('Error checking personalization:', error);
             }
