@@ -18,21 +18,28 @@ export default function Vejledning() {
 
     const fetchUserAnswers = async () => {
         try {
-            const userDataString = await AsyncStorage.getItem('userData');
-            if (!userDataString) return;
-
-            const userData = JSON.parse(userDataString);
-            const response = await fetch(`${STRAPI_URL}/user-profile-answers/${userData.id}`);
-            if (!response.ok) throw new Error('Failed to fetch user answers');
-
-            const answers = await response.json();
-            setUserAnswers(answers);
-            fetchGuides(answers);
+          const userDataString = await AsyncStorage.getItem('userData');
+          if (!userDataString) {
+            console.log('❌ userData not found in AsyncStorage');
+            return;
+          }
+      
+          const userData = JSON.parse(userDataString);
+          console.log('🔐 Loaded userData:', userData);
+      
+          const response = await fetch(`${STRAPI_URL}/user-profile-answers/${userData.id}`);
+          if (!response.ok) throw new Error('Failed to fetch user answers');
+      
+          const answers = await response.json();
+          console.log('📋 Fetched user answers:', answers);
+      
+          setUserAnswers(answers);
+          fetchGuides(answers);
         } catch (error) {
-            console.error('Error fetching user answers:', error);
-            setLoading(false);
+          console.error('❌ Error fetching user answers:', error);
+          setLoading(false); // <== vigtigt!
         }
-    };
+      };
 
     const fetchGuides = async (answers: UserProfileAnswers) => {
         try {
@@ -61,6 +68,9 @@ export default function Vejledning() {
         } finally {
             setLoading(false);
         }
+
+        console.log('📡 Fetching guides with filters:', answers);
+
     };
 
     const handleGuidePress = (guide: Guide) => {
