@@ -1213,7 +1213,7 @@ app.post('/match-guides', async (req, res) => {
       return res.status(404).json({ error: 'User answers not found' });
     }
 
-    // 2. Byg korrekt Strapi-query
+    // 2. Byg korrekt Strapi-query 
     const baseUrl = `${process.env.STRAPI_URL}/api/guides`;
     const filters = [
       `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`,
@@ -1221,20 +1221,17 @@ app.post('/match-guides', async (req, res) => {
       `populate=*`
     ];
 
-    // Tilføj tags som OR-betingelser (kun én skal matche)
-    if (answers.main_challenges?.length) {
+    // Tilføj kun én tag-gruppe ad gangen (OR-logik)
+    const activeTags = answers.main_challenges?.length > 0 
+      ? answers.main_challenges
+      : answers.help_needs;
+
+    if (activeTags?.length) {
       filters.push(
-        answers.main_challenges.map(t => 
+        activeTags.map(t => 
           `filters[tags][$containsi]=${encodeURIComponent(t)}`
         ).join('&')
       );
-    }
-
-    // Tilføj help_tags som AND-betingelser (alle skal matche)
-    if (answers.help_needs?.length) {
-      answers.help_needs.forEach(tag => {
-        filters.push(`filters[help_tags][$containsi]=${encodeURIComponent(tag)}`);
-      });
     }
 
     const url = `${baseUrl}?${filters.join('&')}`;
@@ -1242,25 +1239,25 @@ app.post('/match-guides', async (req, res) => {
 
     // 3. Hent guides
     const response = await fetch(url);
-    const { data } = await response.json();
+    const { data, error: strapiError } = await response.json();
 
-    if (!response.ok) {
-      throw new Error('Strapi request failed');
+    if (!response.ok || strapiError) {
+      throw new Error(strapiError?.message || 'Strapi request failed');
     }
 
-    // 4. Transformér data til frontend-format
-    const guides = data.map(item => ({
+    // 4. Transformér data
+    const guides = data?.map(item => ({
       id: item.id,
-      ...item.attributes, // Fladt objekt
+      ...item.attributes,
       image: item.attributes.image?.data?.attributes?.url 
         ? `${process.env.STRAPI_URL}${item.attributes.image.data.attributes.url}`
         : null
-    }));
+    })) || [];
 
     return res.json({ guides });
   } catch (err) {
-    console.error('❌ /match-guides error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ /match-guides error:', err.message);
+    res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
 
