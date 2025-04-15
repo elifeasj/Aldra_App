@@ -59,7 +59,7 @@ export default function Vejledning() {
           const response = await fetch(`${API_URL}/match-guides`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId }),
+            body: JSON.stringify({ user_id: 31 })
           });
       
           const result = await response.json();

@@ -1199,56 +1199,67 @@ app.post('/save-answers', async (req, res) => {
 // Guide matching endpoint
 app.post('/match-guides', async (req, res) => {
   const { user_id } = req.body;
-
   if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
 
   try {
-    // 1. Hent svar fra Supabase
-    const { data: answers, error: answerError } = await supabase
+    // 1. Hent brugerens svar
+    const { data: answers, error } = await supabase
       .from('user_profile_answers')
       .select('*')
       .eq('user_id', user_id)
       .maybeSingle();
 
-    if (answerError || !answers) {
+    if (error || !answers) {
       return res.status(404).json({ error: 'User answers not found' });
     }
 
-    // 2. Byg filter-string til Strapi baseret på svar
-    const tags = answers.main_challenges
-      .map(tag => `filters[tags][$containsi]=${encodeURIComponent(tag)}`)
-      .join('&');
+    // 2. Byg korrekt Strapi-query
+    const baseUrl = `${process.env.STRAPI_URL}/api/guides`;
+    const filters = [
+      `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`,
+      `filters[visible][$eq]=true`,
+      `populate=*`
+    ];
 
-    const helpTags = answers.help_needs
-      .map(tag => `filters[help_tags][$containsi]=${encodeURIComponent(tag)}`)
-      .join('&');
-
-    const relation = `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`;
-    const visible = `filters[visible][$eq]=true`;
-    const populate = `populate=*`;
-
-    const queryString = `${tags}&${helpTags}&${relation}&${visible}&${populate}`;
-
-    console.log('📡 Query to Strapi:', `${process.env.STRAPI_URL}/guides?${queryString}`);
-
-    // 3. Fetch guides fra Strapi
-    const response = await fetch(`${process.env.STRAPI_URL}/guides?${queryString}`);
-    const result = await response.json();
-
-    if (!response.ok) {
-      console.error('❌ Strapi-fejl:', result);
-      return res.status(500).json({ error: 'Failed to fetch guides from Strapi' });
+    // Tilføj tags som OR-betingelser (kun én skal matche)
+    if (answers.main_challenges?.length) {
+      filters.push(
+        answers.main_challenges.map(t => 
+          `filters[tags][$containsi]=${encodeURIComponent(t)}`
+        ).join('&')
+      );
     }
 
-    // 4. Returner guides til appen
-    const guides = result.data.map((item) => ({
+    // Tilføj help_tags som AND-betingelser (alle skal matche)
+    if (answers.help_needs?.length) {
+      answers.help_needs.forEach(tag => {
+        filters.push(`filters[help_tags][$containsi]=${encodeURIComponent(tag)}`);
+      });
+    }
+
+    const url = `${baseUrl}?${filters.join('&')}`;
+    console.log('🔍 Strapi Query:', url);
+
+    // 3. Hent guides
+    const response = await fetch(url);
+    const { data } = await response.json();
+
+    if (!response.ok) {
+      throw new Error('Strapi request failed');
+    }
+
+    // 4. Transformér data til frontend-format
+    const guides = data.map(item => ({
       id: item.id,
-      attributes: item.attributes,
+      ...item.attributes, // Fladt objekt
+      image: item.attributes.image?.data?.attributes?.url 
+        ? `${process.env.STRAPI_URL}${item.attributes.image.data.attributes.url}`
+        : null
     }));
 
     return res.json({ guides });
   } catch (err) {
-    console.error('❌ Fejl i /match-guides:', err);
+    console.error('❌ /match-guides error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
