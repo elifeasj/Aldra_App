@@ -63,13 +63,14 @@ export default function Vejledning() {
           });
       
           const result = await response.json();
+          console.log('Strapi response:', result);
       
           if (!response.ok) {
             console.error('❌ Failed to fetch matched guides:', result.error);
             return;
           }
       
-          const mapped = result.guides.map(mapGuideData); // ✅ korrekt mapping
+          const mapped = result.guides.map(mapGuideData);
       
           console.log('🧾 RAW guides from backend:', result.guides);
           console.log('✅ Mapped guides:', mapped);

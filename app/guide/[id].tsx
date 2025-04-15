@@ -16,14 +16,16 @@ export default function GuideDetail() {
 
     const fetchGuide = async () => {
         try {
-            const response = await fetch(`${STRAPI_URL}/guides/${id}?populate=*`);
-            if (!response.ok) throw new Error('Failed to fetch guide');
-    
-            const result = await response.json();
-            const formatted = mapGuideData({
-                id: result.data.id,
-                ...result.data.attributes,
-            });
+          const response = await fetch(`${STRAPI_URL}/guides/${id}?populate=*`);
+          if (!response.ok) throw new Error('Failed to fetch guide');
+      
+          const result = await response.json();
+          console.log('Strapi single guide response:', result);
+          
+          const formatted = mapGuideData({
+            id: result.data.id,
+            ...result.data.attributes,
+          });
     
             setGuide(formatted);
         } catch (error) {
