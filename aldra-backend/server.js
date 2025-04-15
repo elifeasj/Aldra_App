@@ -1213,7 +1213,7 @@ app.post('/match-guides', async (req, res) => {
       return res.status(404).json({ error: 'User answers not found' });
     }
 
-    // 2. Byg korrekt Strapi-query 
+    // 2. Byg query
     const baseUrl = `${process.env.STRAPI_URL.replace(/\/api$/, '')}/api/guides`;
     const filters = [
       `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`,
@@ -1221,40 +1221,41 @@ app.post('/match-guides', async (req, res) => {
       `populate=*`
     ];
 
-    // Tilføj kun én tag-gruppe ad gangen (OR-logik)
+    // 3. Tilføj tags (OR-logik)
     const activeTags = answers.main_challenges?.length > 0 
       ? answers.main_challenges
       : answers.help_needs;
 
     if (activeTags?.length) {
-      filters.push(
-        activeTags.map(t => 
-          `filters[tags][$containsi]=${encodeURIComponent(t)}`
-        ).join('&')
-      );
+      filters.push(`filters[tags][$containsi][0]=${encodeURIComponent(activeTags[0])}`);
+      if (activeTags.length > 1) {
+        filters.push(`filters[tags][$containsi][1]=${encodeURIComponent(activeTags[1])}`);
+      }
     }
 
     const url = `${baseUrl}?${filters.join('&')}`;
     console.log('🔍 Strapi Query:', url);
 
-    // 3. Hent guides
+    // 4. Hent data
     const response = await fetch(url);
-    const { data, error: strapiError } = await response.json();
+    const { data } = await response.json();
+    console.log('Raw Strapi data:', JSON.stringify(data, null, 2)); // Debug
 
-    if (!response.ok || strapiError) {
-      throw new Error(strapiError?.message || 'Strapi request failed');
-    }
-
-    // 4. Transformér data
+    // 5. Transformér data
     const guides = data?.map(item => ({
       id: item.id,
-      ...item.attributes,
-      image: item.attributes.image?.data?.attributes?.url 
+      title: item.attributes?.title || 'Uden titel',
+      content: item.attributes?.content || '',
+      category: item.attributes?.category || 'Ukategoriseret',
+      image: item.attributes?.image?.data?.attributes?.url 
         ? `${process.env.STRAPI_URL}${item.attributes.image.data.attributes.url}`
-        : null
+        : 'https://aldra-cms.up.railway.app/uploads/image2.png',
+      help_tags: item.attributes?.help_tags || [],
+      relation: item.attributes?.relation || ''
     })) || [];
 
     return res.json({ guides });
+    
   } catch (err) {
     console.error('❌ /match-guides error:', err.message);
     res.status(500).json({ error: err.message || 'Internal server error' });
