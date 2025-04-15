@@ -1214,7 +1214,7 @@ app.post('/match-guides', async (req, res) => {
     }
 
     // 2. Byg korrekt Strapi-query 
-    const baseUrl = `${process.env.STRAPI_URL}/api/guides`;
+    const baseUrl = `${process.env.STRAPI_URL.replace(/\/api$/, '')}/api/guides`;
     const filters = [
       `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`,
       `filters[visible][$eq]=true`,
