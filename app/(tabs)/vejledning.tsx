@@ -10,8 +10,9 @@ import { mapGuideData } from '../../utils/guideUtils';
 
 export default function Vejledning() {
     const router = useRouter();
-    const [guides, setGuides] = useState<Guide[]>([]); console.log('🎯 Guide data til UI:', guides);
+    const [guides, setGuides] = useState<Guide[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null); // Tilføjet setError
     const [userAnswers, setUserAnswers] = useState<UserProfileAnswers | null>(null);
 
     useEffect(() => {
@@ -50,6 +51,7 @@ export default function Vejledning() {
           fetchMatchedGuides(userData.id);
         } catch (err) {
           console.error('❌ Error fetching user answers:', err);
+          setError('Failed to fetch user answers'); // Set error here
           setLoading(false);
         }
       };
@@ -59,14 +61,15 @@ export default function Vejledning() {
           const response = await fetch(`${API_URL}/match-guides`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: 31 })
+            body: JSON.stringify({ user_id: userId })
           });
       
           const result = await response.json();
           console.log('Strapi response:', result);
       
           if (!response.ok) {
-            console.error('❌ Failed to fetch matched guides:', result.error);
+            console.error('❌ Failed to fetch matched guides:', result);
+            setError(`Failed to fetch matched guides. Status: ${response.status}`); // Set error here
             return;
           }
       
@@ -77,8 +80,9 @@ export default function Vejledning() {
           console.log('👀 Første mapped guide:', mapped[0]);
       
           setGuides(mapped);
-        } catch (err) {
+        } catch (err: any) {
           console.error('❌ Fejl i fetchMatchedGuides:', err);
+          setError(`An unexpected error occurred: ${err.message}`); // Set error here
         } finally {
           setLoading(false);
         }
@@ -103,6 +107,14 @@ export default function Vejledning() {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#42865F" />
+            </View>
+        );
+    }
+
+    if (error) { // Vis fejlmeddelelse
+        return (
+            <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
             </View>
         );
     }
@@ -142,6 +154,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#fff',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+    },
+    errorText: {
+        fontSize: 18,
+        fontFamily: 'RedHatDisplay_400Regular',
+        color: '#333',
     },
     title: {
         fontSize: 32,
