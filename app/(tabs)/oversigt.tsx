@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, KeyboardAvoidingView, Platform, Keyboard, ViewStyle, TextStyle } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../config';
@@ -14,6 +14,10 @@ export default function Oversigt() {
     const [userId, setUserId] = useState('');
     const isFocused = useIsFocused();
 
+    // Handler for Samtalekort card tap
+    const handleSamtalekortPress = () => {
+        router.push('/samtalekort' as any);
+    };
 
     // State for personalization completion check
     const [hasCompletedPersonalization, setHasCompletedPersonalization] = useState(false);
@@ -327,12 +331,48 @@ export default function Oversigt() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#F6F8F6',
     },
     content: {
         padding: 20,
-        paddingTop: 60,
-        marginTop: 35,
+        paddingTop: 28,
+    },
+    samtalekortCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#5B876C',
+        borderRadius: 18,
+        padding: 20,
+        marginBottom: 18,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.16,
+        shadowRadius: 6,
+        elevation: 5,
+    },
+    cardContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    samtalekortTitle: {
+        color: '#fff',
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    samtalekortSubtitle: {
+        color: '#E9F1EC',
+        fontSize: 15,
+        marginTop: 2,
+    },
+    cardIconWrapper: {
+        marginLeft: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 48,
+        minHeight: 48,
+        position: 'relative',
     },
     title: {
         fontSize: 32,
@@ -376,7 +416,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 8,
     },
-    cardContent: {
+    cardContentSection: {
         flex: 1,
         justifyContent: 'center',
     },
