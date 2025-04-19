@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ImageBackground } from 'react-native';
 
 // Define categories with their titles
 const categories = [
@@ -19,6 +21,7 @@ const itemWidth = (width - 60) / 2; // 2 columns with 20px padding on sides and 
 
 export default function SamtalekortScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleCategoryPress = (categoryId: string) => {
     router.push(`/samtalekort/${categoryId}` as any);
@@ -26,18 +29,13 @@ export default function SamtalekortScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerTitle: 'Samtalekort',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons name="chevron-back" size={24} color="#000" />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
+        <View style={[styles.header]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back-outline" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Samtalekort</Text>
+        </View>
         <Text style={styles.description}>
           Find samtaleemner og spørgsmål, der skaber rum for åbne og meningsfulde dialoger.
         </Text>
@@ -47,19 +45,23 @@ export default function SamtalekortScreen() {
         <View style={styles.grid}>
           {categories.map((category) => (
             <TouchableOpacity
-              key={category.id}
+            key={category.id}
+            onPress={() => handleCategoryPress(category.id)}
+            activeOpacity={0.9}
+          >
+            <ImageBackground
+              source={require('../assets/images/conversationcardicon-white.png')}
               style={styles.categoryCard}
-              onPress={() => handleCategoryPress(category.id)}
+              imageStyle={styles.cardBackgroundImage}
             >
               <View style={styles.cardContent}>
                 <Text style={styles.categoryTitle}>{category.title}</Text>
-                <View style={styles.cardIconBackground}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={24} color="#E9F1EC" style={styles.cardIcon} />
-                </View>
               </View>
-            </TouchableOpacity>
+            </ImageBackground>
+          </TouchableOpacity>
           ))}
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -70,23 +72,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 18,
+    backgroundColor: '#fff',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '400',
+    fontFamily: 'RedHatDisplay_400Regular',
+  },  
+  backButton: {
+    marginRight: 16,
+  },
   scrollView: {
     flex: 1,
+    backgroundColor: '#fff',
+    paddingVertical: 16,
   },
   contentContainer: {
     padding: 20,
     paddingBottom: 40,
   },
   description: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#333',
-    marginBottom: 30,
+    fontSize: 18,
+    fontWeight: '400',
+    fontFamily: 'RedHatDisplay_400Regular',
+    lineHeight: 30,
+    color: '#000000',
+    marginBottom: 40,
+    paddingRight: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontSize: 22,
+    fontWeight: '500',
+    fontFamily: 'RedHatDisplay_500Medium',
+    marginBottom: 30,
   },
   grid: {
     flexDirection: 'row',
@@ -113,14 +135,19 @@ const styles = StyleSheet.create({
   },
   categoryTitle: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    paddingTop: 14,
+    fontSize: 22,
+    fontWeight: '400',
+    fontFamily: 'RedHatDisplay_700Bold',
   },
-  cardIconBackground: {
-    alignSelf: 'flex-end',
-    opacity: 0.8,
-  },
-  cardIcon: {
-    marginBottom: 8,
+  cardBackgroundImage: {
+    resizeMode: 'contain',
+    position: 'absolute',
+    left: 30,
+    top: 70,
+    width: 150,
+    height: 150,
+    opacity: 0.15,
+    transform: [{ rotate: '-10deg' }],
   },
 });

@@ -245,7 +245,7 @@ export default function Oversigt() {
                         </Text>
                     </View>
                     <View style={styles.cardIconWrapper}>
-                        <Ionicons name="chevron-forward" size={28} color="#fff" />
+                        <Ionicons name="chevron-forward" size={20} color="#fff" />
                     </View>
                 </View>
             </TouchableOpacity>
@@ -358,35 +358,36 @@ export default function Oversigt() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F6F8F6',
+        backgroundColor: '#FFFFFF',
     },
     content: {
         padding: 20,
         paddingTop: 90,
     },
     samtalekortCard: {
-        position: 'relative',
-        overflow: 'hidden',
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#5B876C',
-        borderRadius: 18,
-        padding: 24,
-        marginVertical: 20,
-        height: 132,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.16,
-        shadowRadius: 6,
-        elevation: 5,
+      backgroundColor: '#42865F',
+      borderRadius: 16,
+      marginVertical: 4,
+      marginHorizontal: 4,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      height: 100,
+      marginTop: 12, 
+      position: 'relative',
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     },
     cardBackgroundImage: {
       position: 'absolute',
-      right: -20,
-      top: -10,
-      width: 160,
-      height: 160,
-      opacity: 0.08,
+      right: 6,
+      top: 6,
+      width: 150,
+      height: 150,
+      opacity: 0.15,
       zIndex: 0,
     },    
     cardContent: {
@@ -396,22 +397,23 @@ const styles = StyleSheet.create({
         zIndex: 1,
     },
     samtalekortTitle: {
-        color: '#fff',
-        fontSize: 22,
-        fontWeight: 'bold',
-        marginBottom: 4,
+      color: '#fff',
+      fontSize: 24,
+      fontFamily: 'RedHatDisplay_700Bold',
+      marginBottom: 4,
     },
     samtalekortSubtitle: {
-        color: '#E9F1EC',
-        fontSize: 15,
-        marginTop: 2,
+      color: '#FFFFFF',
+      fontSize: 17,
+      fontFamily: 'RedHatDisplay_400Regular',
+      lineHeight: 22,
+      marginRight: 56,
     },
     cardIconWrapper: {
-        marginLeft: 18,
         alignItems: 'center',
         justifyContent: 'center',
-        minWidth: 48,
-        minHeight: 48,
+        marginLeft: 'auto',
+        paddingLeft: 8,
         position: 'relative',
     },
     title: {
@@ -421,7 +423,7 @@ const styles = StyleSheet.create({
         marginBottom: 25,
     },
     subtitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#333',
         marginBottom: 24,
@@ -568,7 +570,7 @@ const styles = StyleSheet.create({
         paddingLeft: 8,
     },
     visitsSection: {
-        marginTop: 50,
+        marginTop: 30,
         paddingHorizontal: 0,
     },
     sectionTitle: {
@@ -728,9 +730,10 @@ const styles = StyleSheet.create({
     },
     guidanceSection: {
         marginTop: 24,
+        marginBottom: 140,
     },
     guidanceSubtitle: {
-        fontSize: 14,
+        fontSize: 18,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#666',
         marginBottom: 12,
@@ -744,6 +747,7 @@ const styles = StyleSheet.create({
         height: 140,
         marginRight: 12,
         borderRadius: 12,
+        backgroundColor: '#42865F',
         overflow: 'hidden',
     },
     guidanceImage: {
