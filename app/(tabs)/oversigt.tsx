@@ -223,6 +223,33 @@ export default function Oversigt() {
             </View>
       
             <ProfileCompletion />
+
+            {/* Samtalekort Card */}
+            <TouchableOpacity
+                style={styles.samtalekortCard}
+                activeOpacity={0.8}
+                onPress={handleSamtalekortPress}
+            >
+                {/* Background Image */}
+                <Image
+                    source={require('../../assets/images/conversationcardicon-white.png')}
+                    style={styles.cardBackgroundImage}
+                    resizeMode="contain"
+                />
+
+                <View style={styles.cardContent}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.samtalekortTitle}>Samtalekort</Text>
+                        <Text style={styles.samtalekortSubtitle}>
+                            Spørgsmål, der åbner op for samtaler om livets oplevelser.
+                        </Text>
+                    </View>
+                    <View style={styles.cardIconWrapper}>
+                        <Ionicons name="chevron-forward" size={28} color="#fff" />
+                    </View>
+                </View>
+            </TouchableOpacity>
+
     
             {/* Kommende besøg sektion */}
             <View style={styles.visitsSection}>
@@ -335,25 +362,38 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 20,
-        paddingTop: 28,
+        paddingTop: 90,
     },
     samtalekortCard: {
+        position: 'relative',
+        overflow: 'hidden',
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#5B876C',
         borderRadius: 18,
-        padding: 20,
-        marginBottom: 18,
+        padding: 24,
+        marginVertical: 20,
+        height: 132,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.16,
         shadowRadius: 6,
         elevation: 5,
     },
+    cardBackgroundImage: {
+      position: 'absolute',
+      right: -20,
+      top: -10,
+      width: 160,
+      height: 160,
+      opacity: 0.08,
+      zIndex: 0,
+    },    
     cardContent: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
+        zIndex: 1,
     },
     samtalekortTitle: {
         color: '#fff',
