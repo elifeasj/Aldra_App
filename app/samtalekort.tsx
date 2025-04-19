@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     position: 'absolute',
     left: 50,
-    top: 70,
+    top: 65,
     width: 150,
     height: 150,
     opacity: 0.15,
