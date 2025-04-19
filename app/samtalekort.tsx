@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   cardBackgroundImage: {
     resizeMode: 'contain',
     position: 'absolute',
-    left: 30,
+    left: 50,
     top: 70,
     width: 150,
     height: 150,
