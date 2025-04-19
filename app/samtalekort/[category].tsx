@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Swiper from 'react-native-swiper';
+import Carousel from 'react-native-reanimated-carousel';
+import Animated, { useSharedValue } from 'react-native-reanimated';
 import { API_URL } from '../../config';
 
 // Type definition for conversation cards
@@ -46,6 +47,7 @@ export default function CategoryScreen() {
   const [cards, setCards] = useState<ConversationCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   // Fetch conversation cards from Strapi
   useEffect(() => {
@@ -114,20 +116,32 @@ export default function CategoryScreen() {
           <Text style={styles.emptyText}>No conversation cards found for this category.</Text>
         </View>
       ) : (
-        <Swiper
-          style={styles.wrapper}
-          showsButtons={false}
-          loop={false}
-          dot={<View style={styles.dot} />}
-          activeDot={<View style={styles.activeDot} />}
-          paginationStyle={styles.pagination}
-        >
-          {cards.map((card) => (
-            <View key={card.id} style={styles.slide}>
-              <Text style={styles.questionText}>{card.attributes.question}</Text>
-            </View>
-          ))}
-        </Swiper>
+        <View style={styles.carouselContainer}>
+          <Carousel
+            width={width}
+            height={height * 0.6}
+            data={cards}
+            loop={false}
+            mode="parallax"
+            scrollAnimationDuration={800}
+            onSnapToItem={(index) => setActiveIndex(index)}
+            renderItem={({ item }) => (
+              <View style={styles.slide}>
+                <Text style={styles.questionText}>{item.attributes.question}</Text>
+              </View>
+            )}
+          />
+          
+          {/* Custom pagination dots */}
+          <View style={styles.pagination}>
+            {cards.map((_, index) => (
+              <View 
+                key={index}
+                style={[styles.dot, index === activeIndex ? styles.activeDot : null]}
+              />
+            ))}
+          </View>
+        </View>
       )}
     </View>
   );
@@ -143,7 +157,11 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
   },
-  wrapper: {},
+  carouselContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   slide: {
     flex: 1,
     justifyContent: 'center',
@@ -158,7 +176,12 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
   pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
     bottom: 50,
+    width: '100%',
   },
   dot: {
     backgroundColor: 'rgba(255,255,255,0.3)',
