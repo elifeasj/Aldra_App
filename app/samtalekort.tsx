@@ -17,7 +17,7 @@ const categories = [
 
 // Calculate dimensions for the grid items
 const { width } = Dimensions.get('window');
-const itemWidth = (width - 60) / 2; // 2 columns with 20px padding on sides and 20px between
+const itemWidth = (width - 60) / 2;
 
 export default function SamtalekortScreen() {
   const router = useRouter();
