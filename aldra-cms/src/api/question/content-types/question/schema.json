@@ -4,7 +4,8 @@
   "info": {
     "singularName": "question",
     "pluralName": "questions",
-    "displayName": "Question"
+    "displayName": "Question",
+    "description": ""
   },
   "options": {
     "draftAndPublish": false
@@ -19,6 +20,10 @@
       "relation": "manyToOne",
       "target": "api::category.category",
       "inversedBy": "questions"
+    },
+    "visible": {
+      "type": "boolean",
+      "default": true
     }
   }
 }
