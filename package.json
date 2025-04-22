@@ -29,8 +29,9 @@
     "@react-navigation/native": "^7.0.14",
     "@supabase/supabase-js": "^2.49.4",
     "cors": "^2.8.5",
-    "cross-spawn": "7.0.1",
+    "cross-spawn": "^7.0.6",
     "dotenv": "^16.5.0",
+    "esbuild": "^0.25.2",
     "expo-clipboard": "~7.0.1",
     "expo-font": "^13.0.4",
     "expo-image-manipulator": "^13.0.6",
@@ -45,6 +46,7 @@
     "express": "^4.17.1",
     "glob": "^8.1.0",
     "graphql": "^16.10.0",
+    "koa": "^2.16.1",
     "metro": "0.81.0",
     "metro-config": "0.81.0",
     "metro-resolver": "0.81.0",
@@ -60,7 +62,8 @@
     "react-native-reanimated": "~3.16.1",
     "react-native-reanimated-carousel": "^4.0.2",
     "react-native-select-dropdown": "^4.0.1",
-    "react-native-web": "~0.19.13"
+    "react-native-web": "~0.19.13",
+    "vite": "^6.3.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
