@@ -1,4 +1,5 @@
 {
+  "kind": "collectionType",
   "collectionName": "questions",
   "info": {
     "singularName": "question",
