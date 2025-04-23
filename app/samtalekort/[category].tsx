@@ -55,9 +55,8 @@ export default function CategoryScreen() {
       try {
         setLoading(true);
         // Construct the query to filter by category and visibility
-        const query = `filters[category][slug][$eq]=${category}&filters[visible][$eq]=true&populate=*`;
+        const query = `filters[category][slug][$eq]=${category}&filters[visible][$eq]=true&populate=category`;
         const response = await fetch(`${endpoints.questions}?${query}`);
-
 
         
         if (!response.ok) {
