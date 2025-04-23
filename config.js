@@ -9,3 +9,5 @@ export const endpoints = {
     logs: `${API_URL}/logs`,
     savelog: `${API_URL}/logs`,
 };
+
+

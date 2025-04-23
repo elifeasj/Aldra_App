@@ -55,8 +55,10 @@ export default function CategoryScreen() {
       try {
         setLoading(true);
         // Construct the query to filter by category and visibility
-        const query = `filters[category][$eq]=${category}&filters[visible][$eq]=true`;
-        const response = await fetch(`${API_URL}/api/conversation-cards?${query}`);
+        const query = `filters[category][slug][$eq]=${category}&filters[visible][$eq]=true&populate=*`;
+        const response = await fetch(`${API_URL}/api/questions?${query}`);
+
+
         
         if (!response.ok) {
           throw new Error('Failed to fetch conversation cards');
