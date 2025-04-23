@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Carousel from 'react-native-reanimated-carousel';
 import Animated, { useSharedValue } from 'react-native-reanimated';
-import { API_URL } from '../../config';
+import { endpoints } from '../../config';
 
 // Type definition for conversation cards
 interface ConversationCard {
@@ -56,7 +56,7 @@ export default function CategoryScreen() {
         setLoading(true);
         // Construct the query to filter by category and visibility
         const query = `filters[category][slug][$eq]=${category}&filters[visible][$eq]=true&populate=*`;
-        const response = await fetch(`${API_URL}/api/questions?${query}`);
+        const response = await fetch(`${endpoints.questions}?${query}`);
 
 
         
