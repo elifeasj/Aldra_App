@@ -11,8 +11,8 @@ module.exports = ({ env }) => ({
             s3ForcePathStyle: env.bool('AWS_S3_FORCE_PATH_STYLE', true),
           },
           params: {
-            Bucket: env('AWS_BUCKET'),
-          },
+            Bucket: 'strapi-media',  // Hardcoded bucket-navn for test
+        },
         },
       },
     },
