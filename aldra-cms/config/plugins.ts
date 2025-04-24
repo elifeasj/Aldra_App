@@ -1,4 +1,4 @@
-export default ({ env }) => ({
+/* export default ({ env }) => ({
     upload: {
       config: {
         provider: '@strapi/provider-upload-aws-s3',
@@ -16,4 +16,4 @@ export default ({ env }) => ({
         },
       },
     },
-  });
+  }); */
