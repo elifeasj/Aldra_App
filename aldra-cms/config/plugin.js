@@ -5,7 +5,7 @@ module.exports = ({ env }) => ({
       providerOptions: {
         apiUrl: env('SUPABASE_URL'),
         apiKey: env('SUPABASE_SERVICE_ROLE'),
-        bucket: 'strapi-media',
+        bucket: env('SUPABASE_BUCKET'), 
       },
     },
   },
