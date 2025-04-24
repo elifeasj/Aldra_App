@@ -1,4 +1,4 @@
-/* export default ({ env }) => ({
+export default ({ env }) => ({
     upload: {
       config: {
         provider: '@strapi/provider-upload-aws-s3',
@@ -11,9 +11,9 @@
             s3ForcePathStyle: env.bool('AWS_S3_FORCE_PATH_STYLE', true),
           },
           params: {
-            Bucket: env('AWS_BUCKET'),
+            Bucket: 'strapi-media',
           },
         },
       },
     },
-  }); */
+  });
