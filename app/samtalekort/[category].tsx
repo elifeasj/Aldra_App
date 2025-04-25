@@ -96,26 +96,13 @@ export default function CategoryScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerTitle: categoryTitle,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.push('/samtalekort')} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color="#fff" />
-            </TouchableOpacity>
-          ),
-          headerStyle: {
-            backgroundColor: '#5B876C',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontSize: 20,
-            color: '#fff',
-            fontWeight: '500',
-          },
-        }}
-      />
-  
+      <View style={styles.customHeader}>
+        <TouchableOpacity onPress={() => router.push('/samtalekort')} style={styles.backButton}>
+          <Ionicons name="chevron-back-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.customHeaderTitle}>{categoryTitle}</Text>
+      </View>
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#fff" />
@@ -181,6 +168,20 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
   },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  customHeaderTitle: {
+    fontSize: 22,
+    color: '#fff',
+    fontWeight: '500',
+    marginLeft: 10,
+  },  
   carouselContainer: {
     flex: 1,
     alignItems: 'center',
