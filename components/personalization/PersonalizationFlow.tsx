@@ -62,10 +62,20 @@ export const PersonalizationFlow: React.FC = () => {
 
   const saveAnswers = async () => {
     console.log('Gemmer svar:', answers);
-    
-    const { data, error } = await supabase
+  
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('Fejl ved hentning af user:', userError);
+      throw new Error('Ingen bruger fundet');
+    }
+  
+    const { error } = await supabase
       .from('user_profile_answers')
-      .insert([{ user_id: user?.id, ...answers }])
+      .insert([{ 
+        user_id: user.id, 
+        ...answers, 
+        completed_at: new Date().toISOString() 
+      }])
       .single();
   
     if (error) {
