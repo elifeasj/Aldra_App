@@ -64,15 +64,23 @@ export const PersonalizationFlow: React.FC = () => {
     console.log('Gemmer svar:', answers);
   
     const { data: { user }, error: userError } = await supabase.auth.getUser();
+  
     if (userError || !user) {
-      console.error('Fejl ved hentning af user:', userError);
-      throw new Error('Ingen bruger fundet');
+      console.error('⚠️ Ingen bruger fundet, springer over gemning af user_id:', userError);
+      await supabase
+        .from('user_profile_answers')
+        .insert([{ 
+          ...answers, 
+          completed_at: new Date().toISOString() 
+        }])
+        .single();
+      return;
     }
   
     const { error } = await supabase
       .from('user_profile_answers')
       .insert([{ 
-        user_id: user.id, 
+        user_id: user.id,
         ...answers, 
         completed_at: new Date().toISOString() 
       }])
@@ -83,6 +91,7 @@ export const PersonalizationFlow: React.FC = () => {
       throw new Error(error.message || 'Fejl ved gem af svar');
     }
   };
+  
   
   const handleFinish = async () => {
     try {
