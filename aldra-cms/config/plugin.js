@@ -1,3 +1,4 @@
+console.log("🟢 Loading Supabase upload plugin");
 module.exports = ({ env }) => ({
   upload: {
     config: {
