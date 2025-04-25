@@ -3,6 +3,7 @@ module.exports = ({ env }) => {
   const endpoint = env('SUPABASE_S3_ENDPOINT');
 
   console.log('🟢 plugins.js LOADED!');
+  console.log('✅ Upload config:', JSON.stringify(uploadConfig, null, 2));
   console.log('📍 Endpoint:', endpoint);
   console.log('🪣 Bucket:', bucket);
 
