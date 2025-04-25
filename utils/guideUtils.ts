@@ -12,7 +12,7 @@ export const mapGuideData = (guide: any): Guide => {
     id: guide.id,
     title: guide.title || 'Uden titel',
     image: guide.image?.url
-    ? `https://aldra-cms.up.railway.app${guide.image.url}`
+    ? `https://qqmhshgabgopbnauuhhk.supabase.co/storage/v1/object/public/strapi-media/${guide.image.url}`
     : 'https://aldra-cms.up.railway.app/uploads/aldralogo_24c7c4af6a.png',
   
     category: typeof guide.category === 'string'
