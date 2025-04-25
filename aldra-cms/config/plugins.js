@@ -1,4 +1,6 @@
 module.exports = ({ env }) => {
+  throw new Error('⛔ plugins.js test error');
+};
   const bucket = env('SUPABASE_BUCKET');
   const endpoint = env('SUPABASE_S3_ENDPOINT');
 
@@ -24,4 +26,3 @@ module.exports = ({ env }) => {
       },
     },
   };
-};
