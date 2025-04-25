@@ -63,26 +63,19 @@ export const PersonalizationFlow: React.FC = () => {
   const saveAnswers = async () => {
     console.log('Gemmer svar:', answers);
   
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const userDataString = await AsyncStorage.getItem('userData');
+    const userData = userDataString ? JSON.parse(userDataString) : null;
   
-    if (userError || !user) {
-      console.error('⚠️ Ingen bruger fundet, springer over gemning af user_id:', userError);
-      await supabase
-        .from('user_profile_answers')
-        .insert([{ 
-          ...answers, 
-          completed_at: new Date().toISOString() 
-        }])
-        .single();
-      return;
+    if (!userData || !userData.id) {
+      console.error('⚠️ Ingen brugerdata fundet, gemmer uden user_id');
     }
   
     const { error } = await supabase
       .from('user_profile_answers')
       .insert([{ 
-        user_id: user.id,
+        user_id: userData?.id || null,  // bruger din AsyncStorage id
         ...answers, 
-        completed_at: new Date().toISOString() 
+        completed_at: new Date().toISOString()
       }])
       .single();
   

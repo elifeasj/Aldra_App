@@ -1,67 +1,92 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  SafeAreaView, Dimensions, ImageBackground, ActivityIndicator
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ImageBackground } from 'react-native';
 
-// Define categories with their titles
-const categories = [
-  { id: 'hjemmet', title: 'Hjemmet' },
-  { id: 'dagligdagen', title: 'Dagligdagen' },
-  { id: 'ude-i-naturen', title: 'Ude i naturen' },
-  { id: 'fortiden', title: 'Fortiden' },
-  { id: 'livet-i-kultur', title: 'Livet i Kultur' },
-  { id: 'folelser', title: 'Følelser' },
-];
-
-// Calculate dimensions for the grid items
 const { width } = Dimensions.get('window');
 const itemWidth = (width - 60) / 2;
 
 export default function SamtalekortScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleCategoryPress = (categoryId: string) => {
-    router.push(`/samtalekort/${categoryId}` as any);
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('https://aldra-cms.up.railway.app/api/categories?populate=*');
+        const json = await res.json();
+        setCategories(json.data || []);
+      } catch (error) {
+        console.error('Fejl ved hentning af kategorier:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const handleCategoryPress = (slug: string) => {
+    router.push(`/samtalekort/${slug}` as any);
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#42865F" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        <View style={[styles.header]}>
+        <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back-outline" size={24} color="#000" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Samtalekort</Text>
         </View>
+
         <Text style={styles.description}>
           Find samtaleemner og spørgsmål, der skaber rum for åbne og meningsfulde dialoger.
         </Text>
-        
-        <Text style={styles.sectionTitle}>Kategorier</Text>
-        
-        <View style={styles.grid}>
-          {categories.map((category) => (
-            <TouchableOpacity
-            key={category.id}
-            onPress={() => handleCategoryPress(category.id)}
-            activeOpacity={0.9}
-          >
-            <ImageBackground
-              source={require('../assets/images/conversationcardicon-white.png')}
-              style={styles.categoryCard}
-              imageStyle={styles.cardBackgroundImage}
-            >
-              <View style={styles.cardContent}>
-                <Text style={styles.categoryTitle}>{category.title}</Text>
-              </View>
-            </ImageBackground>
-          </TouchableOpacity>
-          ))}
-        </View>
 
+        <Text style={styles.sectionTitle}>Kategorier</Text>
+
+        <View style={styles.grid}>
+        {categories.map((category) => {
+          const title = category?.attributes?.title;
+          const slug = category?.attributes?.slug;
+
+          if (!title || !slug) return null; // skip hvis data mangler
+
+          return (
+            <TouchableOpacity
+              key={category.id}
+              onPress={() => handleCategoryPress(slug)}
+              activeOpacity={0.9}
+            >
+              <ImageBackground
+                source={require('../assets/images/conversationcardicon-white.png')}
+                style={styles.categoryCard}
+                imageStyle={styles.cardBackgroundImage}
+              >
+                <View style={styles.cardContent}>
+                  <Text style={styles.categoryTitle}>{title}</Text>
+                </View>
+              </ImageBackground>
+            </TouchableOpacity>
+          );
+        })}
+
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -70,6 +95,12 @@ export default function SamtalekortScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#fff',
   },
   header: {
@@ -82,7 +113,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '400',
     fontFamily: 'RedHatDisplay_400Regular',
-  },  
+  },
   backButton: {
     marginRight: 16,
   },
