@@ -62,8 +62,8 @@ export default function SamtalekortScreen() {
 
         <View style={styles.grid}>
         {categories.map((category) => {
-          const title = category?.attributes?.title;
-          const slug = category?.attributes?.slug;
+          const title = category?.title;
+          const slug = category?.slug;
 
           if (!title || !slug) return null; // skip hvis data mangler
 

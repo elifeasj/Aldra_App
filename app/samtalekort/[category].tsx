@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, ImageBackground } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Carousel from 'react-native-reanimated-carousel';
@@ -9,14 +9,12 @@ import { endpoints } from '../../config';
 // Type definition for conversation cards
 interface ConversationCard {
   id: number;
-  attributes: {
-    question: string;
-    category: string;
-    visible: boolean;
-    createdAt: string;
-    updatedAt: string;
-  };
-}
+  text: string;
+  category: any;
+  visible: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
 
 // Type for the API response
 interface ApiResponse {
@@ -49,6 +47,24 @@ export default function CategoryScreen() {
   const [error, setError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  const [categoryTitle, setCategoryTitle] = useState<string>('Kategori');
+
+  useEffect(() => {
+    const fetchCategoryTitle = async () => {
+      try {
+        const res = await fetch(`https://aldra-cms.up.railway.app/api/categories?filters[slug][$eq]=${category}`);
+      const json = await res.json();
+      const title = json?.data?.[0]?.title || 'Kategori';
+      setCategoryTitle(title);
+    } catch (err) {
+      console.warn('Kunne ikke hente kategorititel:', err);
+      setCategoryTitle('Kategori');
+    }
+  };
+
+  if (category) fetchCategoryTitle();
+}, [category]);
+
   // Fetch conversation cards from Strapi
   useEffect(() => {
     const fetchCards = async () => {
@@ -78,16 +94,13 @@ export default function CategoryScreen() {
     }
   }, [category]);
 
-  // Get the display name for the category
-  const categoryName = categoryDisplayNames[category as string] || 'Category';
-
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          headerTitle: categoryName,
+          headerTitle: categoryTitle,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => router.push('/samtalekort')} style={styles.backButton}>
               <Ionicons name="chevron-back" size={24} color="#fff" />
             </TouchableOpacity>
           ),
@@ -95,9 +108,14 @@ export default function CategoryScreen() {
             backgroundColor: '#5B876C',
           },
           headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontSize: 20,
+            color: '#fff',
+            fontWeight: '500',
+          },
         }}
       />
-
+  
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#fff" />
@@ -107,7 +125,7 @@ export default function CategoryScreen() {
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity 
             style={styles.retryButton}
-            onPress={() => router.replace(`/samtalekort/${category}` as any)}
+            onPress={() => router.push(`/samtalekort/${category}` as any)}
           >
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
@@ -118,6 +136,12 @@ export default function CategoryScreen() {
         </View>
       ) : (
         <View style={styles.carouselContainer}>
+          <ImageBackground
+            source={require('../../assets/images/conversationcardicon-white.png')}
+            style={StyleSheet.absoluteFill}
+            imageStyle={styles.fixedBackgroundImage}
+          />
+          
           <Carousel
             width={width}
             height={height * 0.6}
@@ -128,12 +152,11 @@ export default function CategoryScreen() {
             onSnapToItem={(index) => setActiveIndex(index)}
             renderItem={({ item }) => (
               <View style={styles.slide}>
-                <Text style={styles.questionText}>{item.attributes.question}</Text>
+                <Text style={styles.questionText}>{item.text}</Text>
               </View>
             )}
           />
-          
-          {/* Custom pagination dots */}
+  
           <View style={styles.pagination}>
             {cards.map((_, index) => (
               <View 
@@ -147,7 +170,7 @@ export default function CategoryScreen() {
     </View>
   );
 }
-
+  
 const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
@@ -162,6 +185,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#5B876C',
+    position: 'relative',
+  },
+  fixedBackgroundImage: {
+    resizeMode: 'contain',
+    position: 'absolute',
+    width: 370,
+    height: 370,
+    top: '70%',
+    left: '30%',
+    opacity: 0.15,
+    transform: [{ translateX: -90 }, { rotate: '-10deg' }],
   },
   slide: {
     flex: 1,
@@ -171,17 +206,17 @@ const styles = StyleSheet.create({
   },
   questionText: {
     color: '#fff',
-    fontSize: 24,
+    fontSize: 44,
     fontWeight: 'bold',
     textAlign: 'center',
-    lineHeight: 32,
+    lineHeight: 55,
   },
   pagination: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
-    bottom: 50,
+    bottom: 300,
     width: '100%',
   },
   dot: {
