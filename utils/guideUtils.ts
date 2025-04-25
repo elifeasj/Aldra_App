@@ -1,21 +1,27 @@
 import { Guide } from '../types/guides';
 
-export const mapGuideData = (guide: any): Guide => {
-  const attributes = guide.attributes || {};
-  const imageUrl = attributes.image?.data?.attributes?.url;
+function parseContent(content: any[]): string {
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((block) => block?.children?.map((c: any) => c.text).join(' '))
+    .join('\n\n');
+}
 
+export const mapGuideData = (guide: any): Guide => {
   return {
     id: guide.id,
-    title: attributes.title || 'Uden titel',
-    category: attributes.category?.data?.attributes?.title || 'Ukategoriseret',
-    image: imageUrl
-      ? `https://aldra-cms.up.railway.app${imageUrl}`
-      : 'https://aldra-cms.up.railway.app/uploads/image2.png',
-    tags: attributes.tags || [],
-    relation: attributes.relation || '',
-    help_tags: attributes.help_tags || [],
-    visible: attributes.visible ?? true,
-    content: attributes.content || '',
+    title: guide.title || 'Uden titel',
+    image: guide.image?.url
+    ? `https://aldra-cms.up.railway.app${guide.image.url}`
+    : 'https://aldra-cms.up.railway.app/uploads/aldralogo_24c7c4af6a.png',
+  
+    category: typeof guide.category === 'string'
+      ? guide.category
+      : guide.category?.title || 'Ukategoriseret',
+    tags: Array.isArray(guide.tags) ? guide.tags : [],
+    help_tags: Array.isArray(guide.help_tags) ? guide.help_tags : [],
+    relation: guide.relation || 'Ukendt',
+    visible: guide.visible ?? true,
+    content: parseContent(guide.content),
   };
 };
-
