@@ -131,7 +131,7 @@ export default function CategoryScreen() {
           
           <Carousel
             width={width}
-            height={height * 0.6}
+            height={0}
             data={cards}
             loop={false}
             mode="parallax"
@@ -169,17 +169,22 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   customHeader: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 60,
     paddingHorizontal: 20,
-    marginBottom: 20,
+    height: 100,
+    backgroundColor: '#5B876C',
   },
   customHeaderTitle: {
-    fontSize: 22,
-    color: '#fff',
+    fontSize: 28,
     fontWeight: '500',
+    fontFamily: 'RedHatDisplay_500Medium',
+    color: '#fff',
     marginLeft: 10,
   },  
   carouselContainer: {
@@ -203,12 +208,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 20,
   },
   questionText: {
     color: '#fff',
-    fontSize: 44,
-    fontWeight: 'bold',
+    fontSize: 46,
+    fontWeight: '500',
+    fontFamily: 'RedHatDisplay_500Medium',
     textAlign: 'center',
     lineHeight: 55,
   },
@@ -262,7 +268,8 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#5B876C',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '500',
+    fontFamily: 'RedHatDisplay_500Medium',
   },
   emptyContainer: {
     flex: 1,

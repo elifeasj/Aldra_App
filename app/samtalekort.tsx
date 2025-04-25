@@ -48,7 +48,7 @@ export default function SamtalekortScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.push('/oversigt')} style={styles.backButton}>
             <Ionicons name="chevron-back-outline" size={24} color="#000" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Samtalekort</Text>
