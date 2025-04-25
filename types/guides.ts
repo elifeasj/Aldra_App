@@ -25,7 +25,7 @@ export default {
   async matchGuides(ctx: any) {
     try {
       const guides = await strapi.entityService.findMany('api::guide.guide', {
-        populate: ['category', 'image', 'tags', 'help_tags'] as any,
+        populate: ['category', 'image', 'tags', 'help_tags', 'content'] as any,
         filters: {
           visible: true,
         },
