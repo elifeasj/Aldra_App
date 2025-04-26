@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 
 // Mock data for current user
 const currentUser = {
@@ -179,19 +180,31 @@ const CurrentPlayingSection = ({ memories }: { memories: Memory[] }) => {
 };
 
 const AddMemoryButtons = () => {
+  const router = useRouter();
   const memoryTypes = [
-    { id: '1', title: 'Billede', icon: 'image-outline' as const },
-    { id: '2', title: 'Musik', icon: 'musical-notes-outline' as const },
-    { id: '3', title: 'Video', icon: 'film-outline' as const },
-    { id: '4', title: 'Kortfilm', icon: 'play-circle-outline' as const },
+    { id: '1', title: 'Billede', icon: 'image-outline' as const, route: '/screens/memory/add-image-memory' as const },
+    { id: '2', title: 'Musik', icon: 'musical-notes-outline' as const, route: '' },
+    { id: '3', title: 'Video', icon: 'film-outline' as const, route: '' },
+    { id: '4', title: 'Kortfilm', icon: 'play-circle-outline' as const, route: '' },
   ];
+
+  const handleMemoryTypePress = (type: { id: string; title: string; route: string }) => {
+    if (type.id === '1') {
+      router.push('/screens/memory/add-image-memory');
+    }
+    // Add other navigation options when implemented
+  };
 
   return (
     <View style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>Tilføj minder</Text>
       <View style={styles.memoryButtonsContainer}>
         {memoryTypes.map((type) => (
-          <TouchableOpacity key={type.id} style={styles.memoryButton}>
+          <TouchableOpacity 
+            key={type.id} 
+            style={styles.memoryButton}
+            onPress={() => handleMemoryTypePress(type)}
+          >
             <View style={styles.iconCircle}>
               <Ionicons name={type.icon as any} size={28} color="#42865F" />
             </View>
@@ -240,6 +253,7 @@ const RecentMemoriesList = ({ memories }: { memories: Memory[] }) => {
 };
 
 export default function Minder() {
+  const router = useRouter();
   const [isDisplayConnected, setIsDisplayConnected] = useState(true);
 
   return (
