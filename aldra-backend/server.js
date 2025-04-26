@@ -1228,24 +1228,13 @@ app.post('/match-guides', async (req, res) => {
 
       if (activeTags?.length > 0) {
         filters.push(
-          `filters[$or][0][tags][name][$containsi]=${encodeURIComponent(activeTags[0])}`
+          ...activeTags.flatMap((tag, index) => [
+            `filters[$or][${index * 2}][tags][name][$containsi]=${encodeURIComponent(tag)}`,
+            `filters[$or][${index * 2 + 1}][help_tags][name][$containsi]=${encodeURIComponent(tag)}`
+          ])
         );
-        if (activeTags[1]) {
-          filters.push(
-            `filters[$or][1][tags][name][$containsi]=${encodeURIComponent(activeTags[1])}`
-          );
-        }
-      
-        // Tilføj også help_tags relation
-        filters.push(
-          `filters[$or][2][help_tags][name][$containsi]=${encodeURIComponent(activeTags[0])}`
-        );
-        if (activeTags[1]) {
-          filters.push(
-            `filters[$or][3][help_tags][name][$containsi]=${encodeURIComponent(activeTags[1])}`
-          );
-        }
       }
+      
 
     const url = `${baseUrl}?${filters.join('&')}`;
     console.log('🔍 Strapi Query:', url);
