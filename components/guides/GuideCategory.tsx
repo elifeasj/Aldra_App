@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontFamily: 'RedHatDisplay_700Bold',
+    fontFamily: 'RedHatDisplay_500Medium',
     color: '#333333',
     marginBottom: 16,
     paddingHorizontal: 20,

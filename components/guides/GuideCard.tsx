@@ -21,7 +21,7 @@ export const GuideCard: React.FC<GuideCardProps> = ({ title, imageUrl, onPress }
         imageStyle={styles.image}
       >
         <LinearGradient
-          colors={['transparent', 'rgba(31, 101, 15, 0.86)']}
+          colors={['transparent', '#42865F']}
           style={styles.gradient}
         >
           <Text style={styles.title}>{title}</Text>
@@ -33,7 +33,7 @@ export const GuideCard: React.FC<GuideCardProps> = ({ title, imageUrl, onPress }
 
 const styles = StyleSheet.create({
   card: {
-    width: 280,
+    width: 320,
     height: 180,
     marginRight: 16,
     borderRadius: 12,
@@ -51,13 +51,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: '50%',
+    height: '200%',
     justifyContent: 'flex-end',
-    padding: 16,
+    padding: 18,
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'RedHatDisplay_700Bold',
     lineHeight: 24,
   },
