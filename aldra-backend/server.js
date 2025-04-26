@@ -1242,17 +1242,23 @@ app.post('/match-guides', async (req, res) => {
     console.log('📋 Raw Strapi data:', JSON.stringify(data, null, 2));
 
     // 5. Transformér data
-    const guides = data?.map(item => ({
-      id: item.id,
-      title: item.attributes?.title || 'Uden titel',
-      content: item.attributes?.content || '',
-      category: item.attributes?.category || 'Ukategoriseret',
-      image: item.attributes?.image?.data?.attributes?.url 
-        ? `${process.env.STRAPI_SUPABASE_BASE_URL}${item.attributes.image.data.attributes.url}`
-        : 'https://via.placeholder.com/280x180.png?text=Aldra',
-      help_tags: item.attributes?.help_tags || [],
-      relation: item.attributes?.relation || ''
-    })) || [];
+    const guides = data?.map(item => {
+      const attrs = item.attributes || {};
+      return {
+        id: item.id,
+        title: attrs.title || 'Uden titel',
+        content: attrs.content || '',
+        category: attrs.category || 'Ukategoriseret',
+    image: attrs.image?.data?.attributes?.url 
+      ? `${process.env.STRAPI_SUPABASE_BASE_URL}${attrs.image.data.attributes.url}`
+      : 'https://via.placeholder.com/280x180.png?text=Aldra',
+    tags: attrs.tags || [],
+    help_tags: attrs.help_tags || [],
+    relation: attrs.relation || 'Ukendt',
+    visible: attrs.visible ?? true,
+  };
+}) || [];
+
 
     return res.json({ guides });
 
