@@ -1202,6 +1202,8 @@ app.post('/match-guides', async (req, res) => {
   if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
 
   try {
+    console.log('🔐 Modtaget user_id:', user_id);
+
     // 1. Hent brugerens svar fra Supabase
     const { data: answers, error } = await supabase
       .from('user_profile_answers')
@@ -1210,60 +1212,78 @@ app.post('/match-guides', async (req, res) => {
       .maybeSingle();
 
     if (error || !answers) {
+      console.error('❌ Brugerens svar ikke fundet eller fejl:', error);
       return res.status(404).json({ error: 'User answers not found' });
     }
+
+    console.log('📋 Brugerens svar:', JSON.stringify(answers, null, 2));
 
     // 2. Byg base query til Strapi
     const baseUrl = `${process.env.STRAPI_URL.replace(/\/api$/, '')}/api/guides`;
     const filters = [
       `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`,
       `filters[visible][$eq]=true`,
-      `populate=*`
+      `populate[tags][fields][0]=name`,
+      `populate[help_tags][fields][0]=name`,
+      `populate=image`,
+      `populate=category`
     ];
 
-    // 3. Brug main_challenges eller help_needs som tags
+    const url = `${baseUrl}?${filters.join('&')}`;
+    console.log('🔍 Bygget Strapi Query URL:', url);
+
+    // 3. Fetch alle guides fra Strapi
+    const response = await fetch(url);
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('❌ Strapi fetch fejl:', JSON.stringify(result, null, 2));
+      return res.status(response.status).json({ error: result?.error?.message || 'Failed fetching guides from Strapi' });
+    }
+
+    const { data } = result;
+    console.log('📦 Raw Strapi data:', JSON.stringify(data, null, 2));
+
+    // 4. Brug main_challenges eller help_needs som aktive tags
     const activeTags = answers.main_challenges?.length > 0
       ? answers.main_challenges
       : answers.help_needs;
 
-      if (activeTags?.length > 0) {
-        filters.push(
-          ...activeTags.flatMap((tag, index) => [
-            `filters[$or][${index * 2}][tags][name][$containsi]=${encodeURIComponent(tag)}`,
-            `filters[$or][${index * 2 + 1}][help_tags][name][$containsi]=${encodeURIComponent(tag)}`
-          ])
-        );
-      }
-      
+    if (!activeTags || activeTags.length === 0) {
+      console.log('ℹ️ Ingen aktive tags fundet, returnerer alle guides');
+    }
 
-    const url = `${baseUrl}?${filters.join('&')}`;
-    console.log('🔍 Strapi Query:', url);
+    // 5. Filtrér guides baseret på tags i JS
+    const matchesTag = (guide, tag) =>
+      guide.tags?.some(t => t.name?.toLowerCase().includes(tag.toLowerCase())) ||
+      guide.help_tags?.some(t => t.name?.toLowerCase().includes(tag.toLowerCase()));
 
-    // 4. Fetch guides fra Strapi
-    const response = await fetch(url);
-    const { data } = await response.json();
-    console.log('📋 Raw Strapi data:', JSON.stringify(data, null, 2));
+    const filteredGuides = (data || []).filter(guide =>
+      activeTags.some(tag => matchesTag(guide, tag))
+    );
 
-    // 5. Transformér data
-    const guides = data?.map(item => {
-      return {
-        id: item.id,
-        title: item.title,
-        content: item.content || '',
-        category: item.category,
-        image: item.image?.url || 'https://via.placeholder.com/280x180.png?text=Aldra',
-        tags: item.tags || [],
-        help_tags: item.help_tags || [],
-        relation: item.relation,
-        visible: item.visible ?? true,
-      };
-    }) || [];
+    console.log('✅ Antal matchende guides:', filteredGuides.length);
+    if (filteredGuides.length > 0) {
+      console.log('👀 Første matched guide:', JSON.stringify(filteredGuides[0], null, 2));
+    }
 
+    // 6. Transformér data
+    const guides = filteredGuides.map(item => ({
+      id: item.id,
+      title: item.title,
+      content: item.content || '',
+      category: item.category,
+      image: item.image?.url || 'https://via.placeholder.com/280x180.png?text=Aldra',
+      tags: item.tags || [],
+      help_tags: item.help_tags || [],
+      relation: item.relation,
+      visible: item.visible ?? true,
+    }));
 
     return res.json({ guides });
 
   } catch (err) {
-    console.error('❌ /match-guides error:', err.message);
+    console.error('❌ /match-guides catch-fejl:', err.message, err.stack);
     res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
