@@ -1235,7 +1235,7 @@ app.post('/match-guides', async (req, res) => {
             `filters[$or][1][tags][$contains]=${encodeURIComponent(`"${activeTags[1]}"`)}`
           );
         }
-      }
+      }    
 
     const url = `${baseUrl}?${filters.join('&')}`;
     console.log('🔍 Strapi Query:', url);

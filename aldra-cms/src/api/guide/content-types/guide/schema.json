@@ -39,14 +39,20 @@
     "relation": {
       "type": "string"
     },
-    "tags": {
-      "type": "json"
-    },
-    "help_tags": {
-      "type": "json"
-    },
     "visible": {
       "type": "boolean"
+    },
+    "tags": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::tag.tag",
+      "mappedBy": "guide"
+    },
+    "help_tags": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::tag.tag",
+      "inversedBy": "guides"
     }
   }
 }
