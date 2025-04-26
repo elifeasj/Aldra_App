@@ -367,9 +367,9 @@ export default function Oversigt() {
                     imageUrl={guide.image}
                     onPress={() =>
                       router.push({
-                        pathname: '/guide/[id]', // <-- skriv [id] ikke slug direkte
+                        pathname: '/guide/[id]',
                         params: {
-                          id: guide.slug || guide.id, // <-- slug eller id sendes som param
+                          id: guide.slug || guide.id,
                           slug: guide.slug,
                           title: guide.title,
                           image: guide.image,

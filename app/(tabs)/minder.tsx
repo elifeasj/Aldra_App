@@ -25,15 +25,15 @@ const styles = StyleSheet.create({
         marginTop: 35, 
     },
     title: {
-        fontSize: 32,
+        fontSize: 36,
         fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
         marginBottom: 20,
     },
     text: {
-        fontSize: 16,
+        fontSize: 19,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#333',
-        lineHeight: 24,
+        lineHeight: 28,
     },
 });
