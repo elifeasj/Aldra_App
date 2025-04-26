@@ -47,6 +47,7 @@
     "glob": "^8.1.0",
     "graphql": "^16.10.0",
     "koa": "^2.16.1",
+    "lucide-react-native": "^0.503.0",
     "metro": "0.81.0",
     "metro-config": "0.81.0",
     "metro-resolver": "0.81.0",

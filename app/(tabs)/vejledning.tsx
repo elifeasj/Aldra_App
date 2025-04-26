@@ -115,8 +115,9 @@ export default function Vejledning() {
         params: {
           id: String(guide.id),
           title: guide.title,
-          content: guide.content,
+          content: JSON.stringify(guide.content),
           image: guide.image,
+          category: guide.category,
         },
       });
     };
