@@ -1,13 +1,8 @@
 import { Guide } from '../types/guides';
 
-function parseContent(content: any[]): string {
-  if (!Array.isArray(content)) return '';
-  return content
-    .map((block) => block?.children?.map((c: any) => c.text).join(' '))
-    .join('\n\n');
-}
-
 export const mapGuideData = (guide: any): Guide => {
+  console.log('👀 mapping guide:', JSON.stringify(guide, null, 2));
+
   return {
     id: guide.id,
     title: guide.title,
@@ -17,6 +12,6 @@ export const mapGuideData = (guide: any): Guide => {
     help_tags: Array.isArray(guide.help_tags) ? guide.help_tags : [],
     relation: guide.relation,
     visible: guide.visible,
-    content: parseContent(guide.content),
+    // content: parseContent(guide.content),
   };
 };
