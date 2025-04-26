@@ -1249,15 +1249,15 @@ app.post('/match-guides', async (req, res) => {
         title: attrs.title || 'Uden titel',
         content: attrs.content || '',
         category: attrs.category || 'Ukategoriseret',
-    image: attrs.image?.data?.attributes?.url 
-      ? `${process.env.STRAPI_SUPABASE_BASE_URL}${attrs.image.data.attributes.url}`
-      : 'https://via.placeholder.com/280x180.png?text=Aldra',
-    tags: attrs.tags || [],
-    help_tags: attrs.help_tags || [],
-    relation: attrs.relation || 'Ukendt',
-    visible: attrs.visible ?? true,
-  };
-}) || [];
+        image: attrs.image?.data?.attributes?.url 
+          ? `${process.env.STRAPI_SUPABASE_BASE_URL}${attrs.image.data.attributes.url}`
+          : 'https://via.placeholder.com/280x180.png?text=Aldra',
+        tags: attrs.tags || [],
+        help_tags: attrs.help_tags || [],
+        relation: attrs.relation || 'Ukendt',
+        visible: attrs.visible ?? true,
+      };
+    }) || [];
 
 
     return res.json({ guides });

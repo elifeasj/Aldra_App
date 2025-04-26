@@ -10,18 +10,13 @@ function parseContent(content: any[]): string {
 export const mapGuideData = (guide: any): Guide => {
   return {
     id: guide.id,
-    title: guide.title || 'Uden titel',
-    image: guide.image?.url
-    ? `https://qqmhshgabgopbnauuhhk.supabase.co/storage/v1/object/public/strapi-media/${guide.image.url}`
-    : 'https://qqmhshgabgopbnauuhhk.supabase.co/storage/v1/object/public/strapi-media/aldralogo.png',
-  
-    category: typeof guide.category === 'string'
-      ? guide.category
-      : guide.category?.title || 'Ukategoriseret',
+    title: guide.title,
+    image: guide.image,
+    category: guide.category,
     tags: Array.isArray(guide.tags) ? guide.tags : [],
     help_tags: Array.isArray(guide.help_tags) ? guide.help_tags : [],
-    relation: guide.relation || 'Ukendt',
-    visible: guide.visible ?? true,
+    relation: guide.relation,
+    visible: guide.visible,
     content: parseContent(guide.content),
   };
 };
