@@ -110,7 +110,7 @@ export default function Vejledning() {
     };
 
     const handleGuidePress = (guide: Guide) => {
-        router.push(`/guide/${guide.id}`);
+      router.push(`/guide/${guide.id}`);
     };
 
     const categorizedGuides = guides.reduce((acc, guide) => {
