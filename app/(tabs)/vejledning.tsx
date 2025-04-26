@@ -110,8 +110,15 @@ export default function Vejledning() {
     };
 
     const handleGuidePress = (guide: Guide) => {
-      console.log('🛑 Klikket guide:', guide);
-      router.push(`/guide/${guide.id}`);
+      router.push({
+        pathname: `/guide/[id]`,
+        params: {
+          id: String(guide.id),
+          title: guide.title,
+          content: guide.content,
+          image: guide.image,
+        },
+      });
     };
 
     const categorizedGuides = guides.reduce((acc, guide) => {
