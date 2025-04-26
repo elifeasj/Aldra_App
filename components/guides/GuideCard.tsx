@@ -33,8 +33,8 @@ export const GuideCard: React.FC<GuideCardProps> = ({ title, imageUrl, onPress }
 
 const styles = StyleSheet.create({
   card: {
-    width: 320,
-    height: 180,
+    width: 300,
+    height: 150,
     marginRight: 16,
     borderRadius: 12,
     overflow: 'hidden',

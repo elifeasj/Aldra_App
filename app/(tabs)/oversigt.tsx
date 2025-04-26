@@ -7,6 +7,11 @@ import { API_URL } from '../../config';
 import supabase from '../../config/supabase';
 import * as Progress from 'react-native-progress';
 import { useIsFocused } from '@react-navigation/native';
+import { Guide } from '../../types/guides';
+import { STRAPI_URL } from '../../config/api';
+import { mapGuideData } from '../../utils/guideUtils';
+import { GuideCard } from '../../components/guides/GuideCard';
+
 
 export default function Oversigt() {
     const { userName } = useLocalSearchParams();
@@ -14,6 +19,32 @@ export default function Oversigt() {
     const [userId, setUserId] = useState('');
     const isFocused = useIsFocused();
 
+    //vejledning cards visning
+    const [guides, setGuides] = useState<Guide[]>([]);
+
+    useEffect(() => {
+      const fetchGuides = async () => {
+        try {
+          const res = await fetch(`${STRAPI_URL}/api/guides?filters[visible][$eq]=true&populate=*`);
+          const json = await res.json();
+    
+          if (!res.ok) {
+            console.error('❌ Failed to fetch guides:', json);
+            return;
+          }
+    
+          const rawGuides = json.data.map(mapGuideData);
+          setGuides(rawGuides);
+        } catch (err) {
+          console.error('❌ Error fetching guides:', err);
+        }
+      };
+    
+      fetchGuides();
+    }, []);
+    
+    
+    
     // Handler for Samtalekort card tap
     const handleSamtalekortPress = () => {
         router.push('/samtalekort' as any);
@@ -38,7 +69,6 @@ export default function Oversigt() {
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(' ');
     };
-
 
 
     // Kommende besøg
@@ -185,6 +215,7 @@ export default function Oversigt() {
         getUserName();
     }, []);
 
+
     return (
         <ScrollView style={styles.container}>
           <View style={styles.content}>
@@ -305,12 +336,12 @@ export default function Oversigt() {
                         >
                           {appointmentsWithLogs[appointment.id] ? (
                             <>
-                              <Ionicons name="pencil" size={14} color="#42865F" />
+                              <Ionicons name="pencil" size={12} color="#42865F" />
                               <Text style={styles.editLogText}>Rediger</Text>
                             </>
                           ) : (
                             <>
-                              <Ionicons name="add" size={14} color="#FFFFFF" />
+                              <Ionicons name="add" size={12} color="#FFFFFF" />
                               <Text style={styles.addLogText}>Tilføj log</Text>
                             </>
                           )}
@@ -321,34 +352,37 @@ export default function Oversigt() {
                 </View>
               ))}
             </View>
-      
+
+            
             {/* Vejledninger sektion */}
             <View style={styles.guidanceSection}>
               <Text style={styles.sectionTitle}>Vejledninger</Text>
-              <Text style={styles.guidanceSubtitle}>Effektiv Kommunikation</Text>
-      
+              <Text style={styles.guidanceSubtitle}>Din hjælp til at navigere i hverdagen</Text>
+
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardScroll}>
-                <TouchableOpacity style={styles.guidanceCard}>
-                  <Image 
-                    source={require('../../assets/images/frame_1.png')} 
-                    style={styles.guidanceImage}
+                {guides.slice(0, 3).map((guide) => (
+                  <GuideCard
+                    key={guide.id}
+                    title={guide.title}
+                    imageUrl={guide.image}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/guide/[id]', // <-- skriv [id] ikke slug direkte
+                        params: {
+                          id: guide.slug || guide.id, // <-- slug eller id sendes som param
+                          slug: guide.slug,
+                          title: guide.title,
+                          image: guide.image,
+                          category: guide.category,
+                          content: JSON.stringify(guide.content),
+                        },
+                      })
+                    }
                   />
-                  <View style={styles.guidanceOverlay}>
-                    <Text style={styles.guidanceCardText}>Tal Langsomt og Klar</Text>
-                  </View>
-                </TouchableOpacity>
-      
-                <TouchableOpacity style={styles.guidanceCard}>
-                  <Image 
-                    source={require('../../assets/images/frame_1.png')} 
-                    style={styles.guidanceImage}
-                  />
-                  <View style={styles.guidanceOverlay}>
-                    <Text style={styles.guidanceCardText}>Ikke Afbryd</Text>
-                  </View>
-                </TouchableOpacity>
+                ))}
               </ScrollView>
             </View>
+
           </View>
         </ScrollView>
       );
@@ -417,7 +451,7 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     title: {
-        fontSize: 32,
+        fontSize: 36,
         fontFamily: 'RedHatDisplay_700Bold',
         color: '#42865F',
         marginBottom: 25,
@@ -449,7 +483,7 @@ const styles = StyleSheet.create({
     },
     halfCard: {
         flex: 1,
-        height: 132,
+        height: 160,
         justifyContent: 'space-between',
     },
     cardHeader: {
@@ -463,14 +497,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     cardTitle: {
-        fontSize: 16,
+        fontSize: 24,
         fontFamily: 'RedHatDisplay_700Bold',
         color: '#fff',
         letterSpacing: 0.1,
     },
     cardSubtext: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: 18,
         fontFamily: 'RedHatDisplay_400Regular',
         lineHeight: 18,
         opacity: 0.9,
@@ -494,7 +528,7 @@ const styles = StyleSheet.create({
     },
     cardButtonText: {
         color: '#42865F',
-        fontSize: 14,
+        fontSize: 16,
         fontFamily: 'RedHatDisplay_700Bold',
         letterSpacing: 0.1,
     },
@@ -736,7 +770,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontFamily: 'RedHatDisplay_400Regular',
         color: '#666',
-        marginBottom: 12,
+        marginBottom: 24,
     },
     cardScroll: {
         marginLeft: -20,
@@ -770,4 +804,5 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'RedHatDisplay_700Bold',
     },
+    
 });

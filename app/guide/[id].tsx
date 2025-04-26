@@ -23,7 +23,7 @@ export default function GuideDetail() {
   }
 
   const handleBackPress = () => {
-    router.push('/vejledning');
+    router.back();
   };
 
   const handleSharePress = () => {
@@ -32,7 +32,7 @@ export default function GuideDetail() {
 
   const handleShareOption = async (platform: string) => {
     const shareUrl = `https://aldra.dk/post/${slug || id}`;
-    const message = `Se hvad der står her på Aldra om demens...\n${shareUrl}`;
+    const message = `Se hvad Aldra deler om livet, minder og demens: "${title}"\n${shareUrl}`;
   
     switch (platform) {
       case 'facebook':
@@ -64,6 +64,33 @@ export default function GuideDetail() {
     setShareModalVisible(false);
   };
 
+  const handleSystemShare = async () => {
+    const safeTitle = Array.isArray(title) ? title[0] : title;
+    const safeSlug = Array.isArray(slug) ? slug[0] : slug;
+    const shareUrl = `https://aldra.dk/post/${safeSlug || id}`;
+    const message = `Se hvad Aldra deler om livet, minder og demens: "${safeTitle}"\n${shareUrl}`;
+  
+    try {
+      const result = await Share.share({
+        message: message,
+        url: shareUrl,
+        title: safeTitle,
+      });
+  
+      if (result.action === Share.sharedAction) {
+        // Hvis brugeren har valgt at kopiere linket
+        if (result.activityType === 'com.apple.UIKit.activity.CopyToPasteboard') {
+          setShowToast(true); // Vis Toast
+          setTimeout(() => setShowToast(false), 2000);
+        }
+        setShareModalVisible(false); // Luk modal altid hvis delt
+      }
+      // Hvis dismissed, gør intet
+    } catch (error) {
+      console.error('❌ Fejl ved deling:', error);
+    }
+  };
+  
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -123,7 +150,12 @@ export default function GuideDetail() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.shareOptions}>
+            <ScrollView 
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.shareOptions}
+              style={styles.shareScroll}
+            >
               <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('facebook')}>
                 <View style={[styles.shareIconCircle, { backgroundColor: '#1877F2' }]}>
                   <Icon name="facebook" size={24} color="#fff" />
@@ -151,7 +183,21 @@ export default function GuideDetail() {
                 </View>
                 <Text style={styles.shareOptionText}>LinkedIn</Text>
               </TouchableOpacity>
-            </View>
+
+              <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('instagram')}>
+                <View style={[styles.shareIconCircle, { backgroundColor: '#E1306C' }]}>
+                  <Icon name="instagram" size={24} color="#fff" />
+                </View>
+                <Text style={styles.shareOptionText}>Instagram</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.shareOption} onPress={handleSystemShare}>
+                <View style={[styles.shareIconCircle, { backgroundColor: '#ffffff', borderColor: '#333', borderWidth: 0.1, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 2, }]}>
+                  <Share2 size={24} color="#333" />
+                </View>
+                <Text style={styles.shareOptionText}>Del via enhed</Text>
+              </TouchableOpacity>
+            </ScrollView>
 
 
             <TouchableOpacity style={styles.linkContainer} onPress={handleCopyLink}>
@@ -163,7 +209,7 @@ export default function GuideDetail() {
           </View>
         </View>
       </Modal>
-      {showToast && <Toast type="success" message="Link kopieret til udklipsholder" />}
+      {showToast && <Toast type="success" message="Linket er kopieret til din enhed" />}
 
     </View>
   );
@@ -217,7 +263,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginTop: -20,
-
+    marginBottom: 20,
   },
   categoryBadge: {
     backgroundColor: '#42865F',
@@ -263,19 +309,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 24,
     minHeight: '40%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
-    },
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 36,
+    marginBottom: 10,
     marginTop: 10,
 },
   modalTitle: {
@@ -286,12 +334,12 @@ const styles = StyleSheet.create({
   shareOptions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 0,
     alignItems: 'center',
   },
   shareOption: {
     alignItems: 'center',
-    width: '22%',
+    marginRight: 28,
 },
 shareInlineButton: {
     width: 40,
@@ -327,6 +375,10 @@ shareIconCircle: {
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
 },
+shareScroll: {
+    marginHorizontal: -24,
+    paddingLeft: 24,
+  },
 linkContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -336,7 +388,7 @@ linkContainer: {
     borderRadius: 14,
     paddingVertical: 20,
     paddingHorizontal: 18,
-    marginTop: 16,
+    marginBottom: 30,
   },
   linkText: {
     flex: 1,
