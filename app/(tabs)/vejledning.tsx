@@ -54,46 +54,59 @@ export default function Vejledning() {
     };
 
     const fetchGuides = async (answers: UserProfileAnswers | null) => {
-        try {
-          const res = await fetch(`${STRAPI_URL}/api/guides?filters[visible][$eq]=true&populate[tags][fields][0]=name&populate[help_tags][fields][0]=name&populate=image`);
-          const json = await res.json();
-
-            if (!res.ok) {
-                console.error('❌ Failed to fetch guides:', json);
-                setError('Failed to fetch guides');
-                return;
-            }
-
-            const rawGuides = json.data.map(mapGuideData);
-            console.log('✅ Mapped guides:', rawGuides);
-
-            if (answers) {
-                const filtered = filterGuides(rawGuides, answers);
-                setGuides(filtered);
-            } else {
-                setGuides(rawGuides);
-            }
-        } catch (err: any) {
-            console.error('❌ Error fetching guides:', err);
-            setError(`Failed to fetch guides: ${err.message}`);
-        } finally {
-            setLoading(false);
+      try {
+        const res = await fetch(`${STRAPI_URL}/api/guides?filters[visible][$eq]=true&populate=*`);
+        const json = await res.json();
+    
+        if (!res.ok) {
+          console.error('❌ Failed to fetch guides:', json);
+          setError('Failed to fetch guides');
+          return;
         }
+    
+        console.log('🛠️ RAW guides from Strapi:', JSON.stringify(json.data, null, 2));
+    
+        const rawGuides = json.data.map(mapGuideData);
+        console.log('✅ Mapped guides:', rawGuides);
+    
+        if (answers) {
+          const filtered = filterGuides(rawGuides, answers);
+          setGuides(filtered);
+        } else {
+          setGuides(rawGuides);
+        }
+      } catch (err: any) {
+        console.error('❌ Error fetching guides:', err);
+        setError(`Failed to fetch guides: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
     };
 
     const filterGuides = (guides: Guide[], answers: UserProfileAnswers) => {
-        const userChallenges = answers.main_challenges || [];
-        const userHelpNeeds = answers.help_needs || [];
-
-        return guides.filter(guide => {
-            const guideTags = guide.tags || [];
-            const guideHelpTags = guide.help_tags || [];
-
-            const matchesChallenge = guideTags.some(tag => userChallenges.includes(tag));
-            const matchesHelpNeed = guideHelpTags.some(tag => userHelpNeeds.includes(tag));
-
-            return matchesChallenge || matchesHelpNeed;
-        });
+      const userChallenges = answers.main_challenges || [];
+      const userHelpNeeds = answers.help_needs || [];
+    
+      console.log('🧩 Brugers udfordringer:', userChallenges);
+      console.log('🧩 Brugers hjælpebehov:', userHelpNeeds);
+    
+      const matchedGuides = guides.filter(guide => {
+        const guideTags = guide.tags || [];
+        const guideHelpTags = guide.help_tags || [];
+    
+        const hasChallengeMatch = guideTags.some(tag => userChallenges.includes(tag));
+        const hasHelpNeedMatch = guideHelpTags.some(tag => userHelpNeeds.includes(tag));
+    
+        return hasChallengeMatch || hasHelpNeedMatch;
+      });
+    
+      if (matchedGuides.length === 0) {
+        console.log('⚠️ Ingen guides matcher - viser ALLE guides som fallback');
+        return guides; // fallback til alle guides
+      }
+    
+      console.log('✅ Antal matchende guides:', matchedGuides.length);
+      return matchedGuides;
     };
 
     const handleGuidePress = (guide: Guide) => {
