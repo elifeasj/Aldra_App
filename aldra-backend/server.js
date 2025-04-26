@@ -1243,19 +1243,18 @@ app.post('/match-guides', async (req, res) => {
 
     // 5. Transformér data
     const guides = data?.map(item => {
-      const attrs = item.attributes || {};
       return {
         id: item.id,
-        title: attrs.title,
-        content: attrs.content || '',
-        category: attrs.category,
-        image: attrs.image?.data?.attributes?.url 
-          ? `${process.env.STRAPI_SUPABASE_BASE_URL}${attrs.image.data.attributes.url}`
+        title: item.title,
+        content: item.content || '',
+        category: item.category,
+        image: item.image?.url
+          ? `${process.env.STRAPI_SUPABASE_BASE_URL}${item.image.url}`
           : 'https://via.placeholder.com/280x180.png?text=Aldra',
-        tags: attrs.tags || [],
-        help_tags: attrs.help_tags || [],
-        relation: attrs.relation,
-        visible: attrs.visible ?? true,
+        tags: item.tags || [],
+        help_tags: item.help_tags || [],
+        relation: item.relation,
+        visible: item.visible ?? true,
       };
     }) || [];
 
