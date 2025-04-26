@@ -110,6 +110,7 @@ export default function Vejledning() {
     };
 
     const handleGuidePress = (guide: Guide) => {
+      console.log('🛑 Klikket guide:', guide);
       router.push(`/guide/${guide.id}`);
     };
 
