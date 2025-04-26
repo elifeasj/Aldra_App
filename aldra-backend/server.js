@@ -1202,7 +1202,7 @@ app.post('/match-guides', async (req, res) => {
   if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
 
   try {
-    // 1. Hent brugerens svar
+    // 1. Hent brugerens svar fra Supabase
     const { data: answers, error } = await supabase
       .from('user_profile_answers')
       .select('*')
@@ -1213,7 +1213,7 @@ app.post('/match-guides', async (req, res) => {
       return res.status(404).json({ error: 'User answers not found' });
     }
 
-    // 2. Byg query
+    // 2. Byg base query til Strapi
     const baseUrl = `${process.env.STRAPI_URL.replace(/\/api$/, '')}/api/guides`;
     const filters = [
       `filters[relation][$eq]=${encodeURIComponent(answers.relation_to_person)}`,
@@ -1221,25 +1221,25 @@ app.post('/match-guides', async (req, res) => {
       `populate=*`
     ];
 
-    // 3. Tilføj tags (OR-logik)
-    const activeTags = answers.main_challenges?.length > 0 
+    // 3. Brug main_challenges eller help_needs som tags
+    const activeTags = answers.main_challenges?.length > 0
       ? answers.main_challenges
       : answers.help_needs;
 
-    if (activeTags?.length) {
-      filters.push(`filters[tags][$containsi][0]=${encodeURIComponent(activeTags[0])}`);
-      if (activeTags.length > 1) {
-        filters.push(`filters[tags][$containsi][1]=${encodeURIComponent(activeTags[1])}`);
-      }
+    if (activeTags?.length > 0) {
+      // Tilføj $or på tags
+      filters.push(
+        ...activeTags.map((tag, index) => `filters[$or][${index}][tags][$contains]=${encodeURIComponent(tag)}`)
+      );
     }
 
     const url = `${baseUrl}?${filters.join('&')}`;
     console.log('🔍 Strapi Query:', url);
 
-    // 4. Hent data
+    // 4. Fetch guides fra Strapi
     const response = await fetch(url);
     const { data } = await response.json();
-    console.log('Raw Strapi data:', JSON.stringify(data, null, 2)); // Debug
+    console.log('📋 Raw Strapi data:', JSON.stringify(data, null, 2));
 
     // 5. Transformér data
     const guides = data?.map(item => ({
@@ -1248,19 +1248,20 @@ app.post('/match-guides', async (req, res) => {
       content: item.attributes?.content || '',
       category: item.attributes?.category || 'Ukategoriseret',
       image: item.attributes?.image?.data?.attributes?.url 
-        ? `${process.env.STRAPI_URL}${item.attributes.image.data.attributes.url}`
-        : 'https://aldra-cms.up.railway.app/uploads/image2.png',
+        ? `${process.env.STRAPI_SUPABASE_BASE_URL}${item.attributes.image.data.attributes.url}`
+        : 'https://via.placeholder.com/280x180.png?text=Aldra',
       help_tags: item.attributes?.help_tags || [],
       relation: item.attributes?.relation || ''
     })) || [];
 
     return res.json({ guides });
-    
+
   } catch (err) {
     console.error('❌ /match-guides error:', err.message);
     res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
+
 
 // Start server
 const PORT = process.env.PORT || 10000;
