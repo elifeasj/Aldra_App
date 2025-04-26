@@ -1226,12 +1226,11 @@ app.post('/match-guides', async (req, res) => {
       ? answers.main_challenges
       : answers.help_needs;
 
-    // Midlertidigt INGEN tag filter
-    // if (activeTags?.length > 0) {
-    //   filters.push(
-    //     ...activeTags.map((tag, index) => `filters[$or][${index}][tags][$contains]=${encodeURIComponent(tag)}`)
-    //   );
-    // }
+    if (activeTags?.length > 0) {
+      filters.push(
+        ...activeTags.map((tag, index) => `filters[$or][${index}][tags][$contains]=${encodeURIComponent(tag)}`)
+      );
+    }
 
     const url = `${baseUrl}?${filters.join('&')}`;
     console.log('🔍 Strapi Query:', url);
@@ -1248,9 +1247,7 @@ app.post('/match-guides', async (req, res) => {
         title: item.title,
         content: item.content || '',
         category: item.category,
-        image: item.image?.url
-          ? `${process.env.STRAPI_SUPABASE_BASE_URL}${item.image.url}`
-          : 'https://via.placeholder.com/280x180.png?text=Aldra',
+        image: item.image?.url || 'https://via.placeholder.com/280x180.png?text=Aldra',
         tags: item.tags || [],
         help_tags: item.help_tags || [],
         relation: item.relation,
