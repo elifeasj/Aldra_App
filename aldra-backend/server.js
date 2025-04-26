@@ -1226,13 +1226,13 @@ app.post('/match-guides', async (req, res) => {
       ? answers.main_challenges
       : answers.help_needs;
 
-    if (activeTags?.length > 0) {
-      filters.push(
-        `filters[$or][0][tags][$in]=${encodeURIComponent(activeTags[0])}`
-      );
-      if (activeTags[1]) {
+      if (activeTags?.length > 0) {
         filters.push(
-            `filters[$or][1][tags][$in]=${encodeURIComponent(activeTags[1])}`
+          `filters[$or][0][tags][$contains]=${encodeURIComponent(`"${activeTags[0]}"`)}`
+        );
+        if (activeTags[1]) {
+          filters.push(
+            `filters[$or][1][tags][$contains]=${encodeURIComponent(`"${activeTags[1]}"`)}`
           );
         }
       }
