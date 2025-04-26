@@ -5,90 +5,97 @@ import { useRouter } from 'expo-router';
 import { GuideCategory } from '../../components/guides/GuideCategory';
 import { Guide, UserProfileAnswers } from '../../types/guides';
 import supabase from '../../config/supabase';
-import { API_URL, STRAPI_URL } from '../../config/api';
+import { STRAPI_URL } from '../../config/api';
 import { mapGuideData } from '../../utils/guideUtils';
 
 export default function Vejledning() {
     const router = useRouter();
     const [guides, setGuides] = useState<Guide[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null); // Tilføjet setError
+    const [error, setError] = useState<string | null>(null);
     const [userAnswers, setUserAnswers] = useState<UserProfileAnswers | null>(null);
 
     useEffect(() => {
-        console.log('🔥 useEffect in vejledning.tsx kører');
         fetchUserAnswers();
     }, []);
 
     const fetchUserAnswers = async () => {
         try {
-          const userDataString = await AsyncStorage.getItem('userData');
-          if (!userDataString) {
-            console.log('❌ userData not found in AsyncStorage');
-            setLoading(false);
-            return;
-          }
-      
-          const userData = JSON.parse(userDataString);
-          console.log('🔐 Loaded userData:', userData);
-      
-          const { data, error } = await supabase
-            .from('user_profile_answers')
-            .select('*')
-            .eq('user_id', userData.id)
-            .maybeSingle();
-      
-          if (error || !data) {
-            console.warn('⚠️ No answers found');
-            setLoading(false);
-            return;
-          }
-      
-          console.log('📋 Supabase answers:', data);
-          setUserAnswers(data);
-      
-          // Hent matchende guides
-          fetchMatchedGuides(userData.id);
-        } catch (err) {
-          console.error('❌ Error fetching user answers:', err);
-          setError('Failed to fetch user answers'); // Set error here
-          setLoading(false);
-        }
-      };
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (!userDataString) {
+                console.log('❌ userData not found in AsyncStorage');
+                fetchGuides(null); // ➔ hent alle guides
+                return;
+            }
 
-      const fetchMatchedGuides = async (userId: number) => {
-        try {
-          const response = await fetch(`${API_URL}/match-guides`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-          });
-      
-          const result = await response.json();
-          console.log('Strapi response:', result);
-      
-          if (!response.ok) {
-            console.error('❌ Failed to fetch matched guides:', result);
-            setError(`Failed to fetch matched guides. Status: ${response.status}`); // Set error here
-            return;
-          }
-      
-          const mapped = result.guides.map(mapGuideData);
-      
-          console.log('🧾 RAW guides from backend:', result.guides);
-          console.log('✅ Mapped guides:', mapped);
-          console.log('👀 Første mapped guide:', mapped[0]);
-      
-          setGuides(mapped);
-        } catch (err: any) {
-          console.error('❌ Fejl i fetchMatchedGuides:', err);
-          setError(`An unexpected error occurred: ${err.message}`); // Set error here
-        } finally {
-          setLoading(false);
+            const userData = JSON.parse(userDataString);
+            console.log('🔐 Loaded userData:', userData);
+
+            const { data, error } = await supabase
+                .from('user_profile_answers')
+                .select('*')
+                .eq('user_id', userData.id)
+                .maybeSingle();
+
+            if (error) {
+                console.warn('⚠️ No answers found:', error);
+                fetchGuides(null); // ➔ hent alle guides
+                return;
+            }
+
+            console.log('📋 Supabase answers:', data);
+            setUserAnswers(data);
+            fetchGuides(data); // ➔ hent guides og filtrér
+        } catch (err) {
+            console.error('❌ Error fetching user answers:', err);
+            setError('Failed to fetch user answers');
+            setLoading(false);
         }
-      };      
-      
-    
+    };
+
+    const fetchGuides = async (answers: UserProfileAnswers | null) => {
+        try {
+            const res = await fetch(`${STRAPI_URL}/api/guides?filters[visible][$eq]=true&populate[tags][fields][0]=name&populate[help_tags][fields][0]=name&populate=image&populate[category]`);
+            const json = await res.json();
+
+            if (!res.ok) {
+                console.error('❌ Failed to fetch guides:', json);
+                setError('Failed to fetch guides');
+                return;
+            }
+
+            const rawGuides = json.data.map(mapGuideData);
+            console.log('✅ Mapped guides:', rawGuides);
+
+            if (answers) {
+                const filtered = filterGuides(rawGuides, answers);
+                setGuides(filtered);
+            } else {
+                setGuides(rawGuides);
+            }
+        } catch (err: any) {
+            console.error('❌ Error fetching guides:', err);
+            setError(`Failed to fetch guides: ${err.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filterGuides = (guides: Guide[], answers: UserProfileAnswers) => {
+        const userChallenges = answers.main_challenges || [];
+        const userHelpNeeds = answers.help_needs || [];
+
+        return guides.filter(guide => {
+            const guideTags = guide.tags || [];
+            const guideHelpTags = guide.help_tags || [];
+
+            const matchesChallenge = guideTags.some(tag => userChallenges.includes(tag));
+            const matchesHelpNeed = guideHelpTags.some(tag => userHelpNeeds.includes(tag));
+
+            return matchesChallenge || matchesHelpNeed;
+        });
+    };
+
     const handleGuidePress = (guide: Guide) => {
         router.push(`/guide/${guide.id}`);
     };
@@ -96,12 +103,11 @@ export default function Vejledning() {
     const categorizedGuides = guides.reduce((acc, guide) => {
         const category = guide.category || 'Ukategoriseret';
         if (!acc[category]) {
-          acc[category] = [];
+            acc[category] = [];
         }
         acc[category].push(guide);
         return acc;
-      }, {} as Record<string, Guide[]>);
-      
+    }, {} as Record<string, Guide[]>);
 
     if (loading) {
         return (
@@ -111,7 +117,7 @@ export default function Vejledning() {
         );
     }
 
-    if (error) { // Vis fejlmeddelelse
+    if (error) {
         return (
             <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>

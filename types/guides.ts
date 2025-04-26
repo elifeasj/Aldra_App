@@ -1,13 +1,12 @@
 export interface Guide {
   id: number;
   title: string;
+  slug: string;
+  content: string;
   image: string;
   category: string;
   tags: string[];
-  relation: string;
   help_tags: string[];
-  visible: boolean;
-  content?: string;
 }
 
 export interface UserProfileAnswers {
@@ -20,6 +19,7 @@ export interface UserProfileAnswers {
   help_needs: string[];
   completed_at: string;
 }
+
 
 export default {
   async matchGuides(ctx: any) {
