@@ -55,8 +55,8 @@ export default function Vejledning() {
 
     const fetchGuides = async (answers: UserProfileAnswers | null) => {
         try {
-            const res = await fetch(`${STRAPI_URL}/api/guides?filters[visible][$eq]=true&populate[tags][fields][0]=name&populate[help_tags][fields][0]=name&populate=image&populate[category]`);
-            const json = await res.json();
+          const res = await fetch(`${STRAPI_URL}/api/guides?filters[visible][$eq]=true&populate[tags][fields][0]=name&populate[help_tags][fields][0]=name&populate=image`);
+          const json = await res.json();
 
             if (!res.ok) {
                 console.error('❌ Failed to fetch guides:', json);
