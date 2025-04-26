@@ -118,6 +118,7 @@ export default function Vejledning() {
           content: JSON.stringify(guide.content),
           image: guide.image,
           category: guide.category,
+          slug: guide.slug,
         },
       });
     };
