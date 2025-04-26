@@ -1226,12 +1226,12 @@ app.post('/match-guides', async (req, res) => {
       ? answers.main_challenges
       : answers.help_needs;
 
-    if (activeTags?.length > 0) {
-      // Tilføj $or på tags
-      filters.push(
-        ...activeTags.map((tag, index) => `filters[$or][${index}][tags][$contains]=${encodeURIComponent(tag)}`)
-      );
-    }
+    // Midlertidigt INGEN tag filter
+    // if (activeTags?.length > 0) {
+    //   filters.push(
+    //     ...activeTags.map((tag, index) => `filters[$or][${index}][tags][$contains]=${encodeURIComponent(tag)}`)
+    //   );
+    // }
 
     const url = `${baseUrl}?${filters.join('&')}`;
     console.log('🔍 Strapi Query:', url);
