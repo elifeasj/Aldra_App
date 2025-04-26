@@ -1228,9 +1228,14 @@ app.post('/match-guides', async (req, res) => {
 
     if (activeTags?.length > 0) {
       filters.push(
-        ...activeTags.map((tag, index) => `filters[$or][${index}][tags][$contains]=${encodeURIComponent(tag)}`)
+        `filters[$or][0][tags][$in]=${encodeURIComponent(activeTags[0])}`
       );
-    }
+      if (activeTags[1]) {
+        filters.push(
+            `filters[$or][1][tags][$in]=${encodeURIComponent(activeTags[1])}`
+          );
+        }
+      }
 
     const url = `${baseUrl}?${filters.join('&')}`;
     console.log('🔍 Strapi Query:', url);
