@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, ImageBackground, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, SafeAreaView, StatusBar, ImageBackground } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { STRAPI_URL } from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,8 @@ export default function FAQPage() {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const bannerImage = 'https://aldra-cms.up.railway.app/uploads/elderly_smiling.jpg';
 
   useEffect(() => {
     const fetchFAQs = async () => {
@@ -46,9 +48,6 @@ export default function FAQPage() {
     fetchFAQs();
   }, []);
 
-  // Banner image - using a static image for the FAQ page
-  const bannerImage = 'https://aldra-cms.up.railway.app/uploads/elderly_smiling.jpg';
-
   return (
     <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar backgroundColor="#42865F" barStyle="light-content" />
@@ -69,8 +68,8 @@ export default function FAQPage() {
           </View>
         </View>
       </SafeAreaView>
-  
-      <View style={styles.body}>
+
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#42865F" />
@@ -80,13 +79,24 @@ export default function FAQPage() {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <>
+            {/* Banner image som en del af FAQ content */}
+            <ImageBackground 
+              source={{ uri: bannerImage }} 
+              style={styles.bannerImage}
+              imageStyle={styles.bannerImageStyle}
+            >
+              <View style={styles.bannerOverlay}>
+                <Text style={styles.bannerTitle}>Ofte stillede spørgsmål</Text>
+              </View>
+            </ImageBackground>
+
             <View style={styles.faqContent}>
               <Text style={styles.sectionHeader}>Spørgsmål & Svar</Text>
               <Text style={styles.introText}>
                 Få svar på de mest stillede spørgsmål om Aldra, funktionerne og din adgang.
               </Text>
-  
+
               <View style={styles.faqList}>
                 {faqs.map((faq, index) => (
                   <View key={faq.id} style={styles.faqItem}>
@@ -100,12 +110,12 @@ export default function FAQPage() {
                 ))}
               </View>
             </View>
-          </ScrollView>
+          </>
         )}
-      </View>
+      </ScrollView>
     </View>
   );
-};  
+}
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -136,15 +146,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     flex: 1,
   },
-  body: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },  
   placeholder: {
     width: 40,
   },
