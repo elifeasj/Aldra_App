@@ -4,7 +4,8 @@
   "info": {
     "singularName": "function",
     "pluralName": "functions",
-    "displayName": "Function"
+    "displayName": "Function",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -25,14 +26,18 @@
       "type": "blocks"
     },
     "image": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
       "allowedTypes": [
         "images",
         "files",
         "videos",
         "audios"
-      ],
-      "type": "media",
-      "multiple": true
+      ]
+    },
+    "order": {
+      "type": "integer"
     }
   }
 }

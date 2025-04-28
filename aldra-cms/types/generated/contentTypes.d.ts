@@ -428,6 +428,7 @@ export interface ApiFaqFaq extends Struct.CollectionTypeSchema {
 export interface ApiFunctionFunction extends Struct.CollectionTypeSchema {
   collectionName: 'functions';
   info: {
+    description: '';
     displayName: 'Function';
     pluralName: 'functions';
     singularName: 'function';
@@ -450,6 +451,7 @@ export interface ApiFunctionFunction extends Struct.CollectionTypeSchema {
       'api::function.function'
     > &
       Schema.Attribute.Private;
+    order: Schema.Attribute.Integer;
     publishedAt: Schema.Attribute.DateTime;
     short_description: Schema.Attribute.String;
     slug: Schema.Attribute.UID<'title'>;
@@ -519,10 +521,50 @@ export interface ApiInfoCardsInfoCards extends Struct.CollectionTypeSchema {
       'api::info-cards.info-cards'
     > &
       Schema.Attribute.Private;
+    order: Schema.Attribute.Integer;
     publishedAt: Schema.Attribute.DateTime;
     short_description: Schema.Attribute.String;
     slug: Schema.Attribute.UID<'title'>;
     title: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiMembershipPlanMembershipPlan
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'membership_plans';
+  info: {
+    displayName: 'membership-plan';
+    pluralName: 'membership-plans';
+    singularName: 'membership-plan';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    currency: Schema.Attribute.String & Schema.Attribute.DefaultTo<'DKK'>;
+    full_description: Schema.Attribute.Blocks;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::membership-plan.membership-plan'
+    > &
+      Schema.Attribute.Private;
+    media: Schema.Attribute.Media<
+      'images' | 'files' | 'videos' | 'audios',
+      true
+    >;
+    price_monthly: Schema.Attribute.Integer;
+    publishedAt: Schema.Attribute.DateTime;
+    short_description: Schema.Attribute.String;
+    slug: Schema.Attribute.UID;
+    title: Schema.Attribute.String;
+    trial_days: Schema.Attribute.Integer;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1102,6 +1144,7 @@ declare module '@strapi/strapi' {
       'api::function.function': ApiFunctionFunction;
       'api::guide.guide': ApiGuideGuide;
       'api::info-cards.info-cards': ApiInfoCardsInfoCards;
+      'api::membership-plan.membership-plan': ApiMembershipPlanMembershipPlan;
       'api::question.question': ApiQuestionQuestion;
       'api::tag.tag': ApiTagTag;
       'plugin::content-releases.release': PluginContentReleasesRelease;

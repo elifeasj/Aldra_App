@@ -26,20 +26,21 @@ export default function AldraFunktioner() {
     const fetchFunctions = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${STRAPI_URL}/api/functions?populate=*`);
+        const res = await fetch(`${STRAPI_URL}/api/functions?populate=*&sort=order`);
         if (!res.ok) {
           throw new Error('Failed to fetch functions');
         }
         const json = await res.json();
         if (json.data && Array.isArray(json.data)) {
-          setFunctions(json.data.map((item: any) => ({
+          const fetchedFunctions = json.data.map((item: any) => ({
             id: item.id,
             title: item.title,
             slug: item.slug,
             short_description: item.short_description,
             full_description: item.full_description,
             image: item.image,
-          })));
+          }));
+          setFunctions(fetchedFunctions);
         } else {
           setError('No functions found');
         }

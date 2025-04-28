@@ -1,0 +1,46 @@
+{
+  "kind": "collectionType",
+  "collectionName": "membership_plans",
+  "info": {
+    "singularName": "membership-plan",
+    "pluralName": "membership-plans",
+    "displayName": "membership-plan"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "uid"
+    },
+    "short_description": {
+      "type": "string"
+    },
+    "full_description": {
+      "type": "blocks"
+    },
+    "price_monthly": {
+      "type": "integer"
+    },
+    "currency": {
+      "type": "string",
+      "default": "DKK"
+    },
+    "trial_days": {
+      "type": "integer"
+    },
+    "media": {
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ],
+      "type": "media",
+      "multiple": true
+    }
+  }
+}
