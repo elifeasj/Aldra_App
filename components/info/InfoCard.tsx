@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, View, Text, StyleSheet, Image, ImageSourcePropType } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet, Image, ImageSourcePropType} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface InfoCardProps {
@@ -32,7 +32,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({
         {imageUrl && (
           <Image 
             source={{ uri: imageUrl }} 
-            style={styles.image}
+            style={styles.backgroundImage}
             resizeMode="contain"
           />
         )}
@@ -76,11 +76,11 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: 'RedHatDisplay_400Regular',
   },
-  image: {
+  backgroundImage: {
     position: 'absolute',
     top: 0,
     right: 0,
-    width: 60,
+    width: 160,
     height: 60,
     opacity: 0.8,
   },

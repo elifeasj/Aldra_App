@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, FlatList, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, SafeAreaView, StatusBar } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { STRAPI_URL } from '../config/api';
 import { FunctionCard } from '../components/functions/FunctionCard';
 import { Ionicons } from '@expo/vector-icons';
 
 interface AldraFunction {
-    id: number;
-    title: string;
-    slug: string;
-    short_description?: string;
-    full_description?: any;
-    image?: {
-      url: string;
-    }[];
-  };
+  id: number;
+  title: string;
+  slug: string;
+  short_description?: string;
+  full_description?: any;
+  image?: {
+    url: string;
+  }[];
+}
 
 export default function AldraFunktioner() {
   const router = useRouter();
@@ -27,15 +27,19 @@ export default function AldraFunktioner() {
       try {
         setLoading(true);
         const res = await fetch(`${STRAPI_URL}/api/functions?populate=*`);
-        
         if (!res.ok) {
           throw new Error('Failed to fetch functions');
         }
-        
         const json = await res.json();
-        
         if (json.data && Array.isArray(json.data)) {
-          setFunctions(json.data);
+          setFunctions(json.data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            slug: item.slug,
+            short_description: item.short_description,
+            full_description: item.full_description,
+            image: item.image,
+          })));
         } else {
           setError('No functions found');
         }
@@ -59,11 +63,11 @@ export default function AldraFunktioner() {
       console.warn('Missing title for function:', item);
       return null;
     }
-  
+
     const imageUrl = item?.image && Array.isArray(item.image) && item.image.length > 0
       ? item.image[0].url
       : undefined;
-  
+
     return (
       <FunctionCard
         title={item.title}
@@ -72,33 +76,29 @@ export default function AldraFunktioner() {
       />
     );
   };
-  
-    
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
-      
-      {/* Custom Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.backButton}>
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#FFFFFF" 
-              onPress={() => router.back()}
-            />
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <StatusBar backgroundColor="#42865F" barStyle="light-content" />
+      <SafeAreaView style={{ backgroundColor: '#42865F' }}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.backButton}>
+              <Ionicons 
+                name="chevron-back" 
+                size={28} 
+                color="#FFFFFF" 
+                onPress={() => router.back()}
+              />
+            </View>
+            <Text style={styles.headerTitle}>Aldras funktioner</Text>
+            <View style={styles.placeholder} />
           </View>
-          <Text style={styles.headerTitle}>Aldras funktioner</Text>
-          <View style={styles.placeholder} />
         </View>
-      </View>
-      
-      <View style={styles.container}>
+      </SafeAreaView>
+
+      <View style={styles.body}>
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#42865F" />
@@ -119,25 +119,21 @@ export default function AldraFunktioner() {
           />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
   header: {
     backgroundColor: '#42865F',
     paddingTop: 10,
     paddingBottom: 16,
+    paddingHorizontal: 16,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
   },
   backButton: {
     width: 40,
@@ -146,7 +142,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 26,
     fontFamily: 'RedHatDisplay_700Bold',
     color: '#FFFFFF',
     textAlign: 'center',
@@ -155,9 +151,11 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
-  container: {
+  body: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -177,11 +175,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   listContent: {
-    padding: 16,
-    paddingTop: 8,
+    paddingTop: 20,
     paddingBottom: 40,
+    paddingHorizontal: 4,
   },
   row: {
+    flex: 1,
     justifyContent: 'space-between',
-  }
+  },
 });

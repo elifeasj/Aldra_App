@@ -316,7 +316,7 @@ export default function Oversigt() {
                 />
 
                 <View style={styles.cardContent}>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, zIndex: 1, }}>
                         <Text style={styles.samtalekortTitle}>Samtalekort</Text>
                         <Text style={styles.samtalekortSubtitle}>
                             Spørgsmål, der åbner op for samtaler om livets oplevelser.

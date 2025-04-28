@@ -34,35 +34,37 @@ export const FunctionCard: React.FC<FunctionCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    width: '48%', // Almost half width to allow for margin
-    aspectRatio: 1, // Square aspect ratio
+    width: '47%',
+    aspectRatio: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 12,
+    marginBottom: 26,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    borderWidth: 0.10,
+    borderColor: '#42865F',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 2,
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
   title: {
     color: '#42865F',
-    fontSize: 18,
+    fontSize: 24,
     fontFamily: 'RedHatDisplay_700Bold',
-    textAlign: 'center',
+    textAlign: 'left',
     marginTop: 12,
   },
   image: {
-    width: 80,
-    height: 80,
+    width: 120,
+    height: 120,
     marginBottom: 8,
   }
 });
