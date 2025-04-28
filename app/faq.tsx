@@ -17,20 +17,16 @@ export default function FAQPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const bannerImage = faqs.length > 0 && faqs[0].image
-    ? faqs[0].image
-    : null;
-
   useEffect(() => {
     const fetchFAQs = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${STRAPI_URL}/api/faqs`);
-        
+        const res = await fetch(`${STRAPI_URL}/api/faqs?populate=*`);
+
         if (!res.ok) {
           throw new Error('Failed to fetch FAQs');
         }
-        
+
         const json = await res.json();
 
         if (json.data && Array.isArray(json.data)) {
@@ -55,6 +51,11 @@ export default function FAQPage() {
 
     fetchFAQs();
   }, []);
+
+  const bannerImage = faqs.length > 0 && faqs[0].image
+  ? faqs[0].image
+  : '../images/aldra_logo.png';
+
 
   const extractText = (content: any) => {
     if (Array.isArray(content)) {
@@ -96,20 +97,19 @@ export default function FAQPage() {
         ) : (
           <>
             <ImageBackground 
-                source={{ uri: bannerImage || '' }} 
-                style={styles.bannerImage}
-                imageStyle={styles.bannerImageStyle}
-              >
-
+              source={{ uri: bannerImage }} 
+              style={styles.bannerImage}
+              imageStyle={styles.bannerImageStyle}
+            >
               <View style={styles.bannerOverlay}>
                 <Text style={styles.bannerTitle}>Ofte stillede spørgsmål</Text>
               </View>
             </ImageBackground>
 
             <View style={styles.faqContent}>
-              <Text style={styles.sectionHeader}>Spørgsmål & Svar</Text>
+              <Text style={styles.sectionHeader}>Velkommen til Aldra</Text>
               <Text style={styles.introText}>
-                Få svar på de mest stillede spørgsmål om Aldra, funktionerne og din adgang.
+                Her finder du svar på de mest stillede spørgsmål om Aldra, funktionerne og din adgang.
               </Text>
 
               <View style={styles.faqList}>
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 26,
     fontFamily: 'RedHatDisplay_700Bold',
     color: '#FFFFFF',
     textAlign: 'center',
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   contentContainer: {
-    paddingBottom: 40,
+    paddingBottom: 60,
   },
   loadingContainer: {
     flex: 1,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorText: {
-    fontSize: 18,
+    fontSize: 20,
     color: '#FF6B6B',
     fontFamily: 'RedHatDisplay_500Medium',
     textAlign: 'center',
@@ -195,8 +195,9 @@ const styles = StyleSheet.create({
   },
   bannerOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(66, 134, 95, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
   },
   bannerTitle: {
@@ -206,36 +207,38 @@ const styles = StyleSheet.create({
   },
   faqContent: {
     padding: 20,
+    paddingTop: 50,
   },
   sectionHeader: {
-    fontSize: 22,
+    fontSize: 26,
     fontFamily: 'RedHatDisplay_700Bold',
     color: '#42865F',
     marginBottom: 12,
   },
   introText: {
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#555555',
     marginBottom: 24,
-    lineHeight: 22,
+    lineHeight: 30,
   },
   faqList: {
     marginTop: 8,
   },
   faqItem: {
-    marginBottom: 24,
+    marginBottom: 40,
   },
   question: {
-    fontSize: 18,
+    fontSize: 22,
+    lineHeight: 34,
     fontFamily: 'RedHatDisplay_700Bold',
     color: '#42865F',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   answer: {
-    fontSize: 17,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333333',
-    lineHeight: 24,
+    lineHeight: 32,
   },
 });
