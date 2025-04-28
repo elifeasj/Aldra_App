@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, FlatList, SafeAreaView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { STRAPI_URL } from '../config/api';
 import { FunctionCard } from '../components/functions/FunctionCard';
@@ -75,13 +75,28 @@ export default function AldraFunktioner() {
   
     
   return (
-    <>
+    <SafeAreaView style={styles.safeArea}>
       <Stack.Screen
         options={{
-          title: 'Aldras funktioner',
-          headerBackTitle: 'Tilbage',
+          headerShown: false,
         }}
       />
+      
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <View style={styles.backButton}>
+            <Ionicons 
+              name="chevron-back" 
+              size={28} 
+              color="#FFFFFF" 
+              onPress={() => router.back()}
+            />
+          </View>
+          <Text style={styles.headerTitle}>Aldras funktioner</Text>
+          <View style={styles.placeholder} />
+        </View>
+      </View>
       
       <View style={styles.container}>
         {loading ? (
@@ -101,22 +116,48 @@ export default function AldraFunktioner() {
             columnWrapperStyle={styles.row}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            ListHeaderComponent={
-              <Text style={styles.description}>
-                Udforsk Aldras forskellige funktioner og lær hvordan de kan hjælpe dig i hverdagen.
-              </Text>
-            }
           />
         )}
       </View>
-    </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    backgroundColor: '#42865F',
+    paddingTop: 10,
+    paddingBottom: 16,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'RedHatDisplay_700Bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    flex: 1,
+  },
+  placeholder: {
+    width: 40,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
@@ -137,16 +178,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+    paddingTop: 8,
     paddingBottom: 40,
   },
   row: {
     justifyContent: 'space-between',
-  },
-  description: {
-    fontSize: 16,
-    fontFamily: 'RedHatDisplay_400Regular',
-    color: '#666666',
-    marginBottom: 24,
-    lineHeight: 22,
   }
 });

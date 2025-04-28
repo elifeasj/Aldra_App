@@ -19,6 +19,7 @@ export const FunctionCard: React.FC<FunctionCardProps> = ({
       activeOpacity={0.7}
     >
       <View style={styles.contentContainer}>
+      <Text style={styles.title}>{title}</Text>
         {imageUrl && (
           <Image 
             source={{ uri: imageUrl }} 
@@ -26,7 +27,6 @@ export const FunctionCard: React.FC<FunctionCardProps> = ({
             resizeMode="contain"
           />
         )}
-        <Text style={styles.title}>{title}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -43,10 +43,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 3,
+    elevation: 2,
   },
   contentContainer: {
     flex: 1,
