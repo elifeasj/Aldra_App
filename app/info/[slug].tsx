@@ -30,7 +30,7 @@ export default function InfoPage() {
     const fetchInfoCard = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${STRAPI_URL}/api/info-cards?filters[slug][$eq]=${slug}&populate=*`);
+        const res = await fetch(`${STRAPI_URL}/api/info-card?filters[slug][$eq]=${slug}&populate=*`);
         
         if (!res.ok) {
           throw new Error('Failed to fetch info card');

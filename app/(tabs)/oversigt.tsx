@@ -51,7 +51,7 @@ export default function Oversigt() {
     useEffect(() => {
       const fetchInfoCards = async () => {
         try {
-          const res = await fetch(`${STRAPI_URL}/api/info-cards?populate=*`);
+          const res = await fetch(`${STRAPI_URL}/api/info-card?populate=*`);
           const json = await res.json();
           
           if (!res.ok) {
