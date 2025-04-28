@@ -17,26 +17,28 @@ export const InfoCard: React.FC<InfoCardProps> = ({
   imageUrl, 
   onPress 
 }) => {
+  console.log('imageUrl in InfoCard:', imageUrl);
+
   return (
     <TouchableOpacity 
       style={styles.card} 
       onPress={() => onPress(slug)}
       activeOpacity={0.8}
     >
+      {imageUrl && (
+        <Image 
+          source={{ uri: imageUrl }} 
+          style={styles.backgroundImage}
+          resizeMode="contain"
+        />
+      )}
+
       <View style={styles.contentContainer}>
         <View style={styles.textContainer}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.description}>{shortDescription}</Text>
         </View>
-        
-        {imageUrl && (
-          <Image 
-            source={{ uri: imageUrl }} 
-            style={styles.backgroundImage}
-            resizeMode="contain"
-          />
-        )}
-        
+
         <View style={styles.arrowContainer}>
           <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
         </View>
@@ -47,7 +49,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    width: 280,
+    width: 300,
     height: 160,
     marginRight: 12,
     borderRadius: 16,
@@ -62,8 +64,9 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    justifyContent: 'center',
-    maxWidth: '80%',
+    justifyContent: 'flex-end',
+    maxWidth: '100%',
+    marginBottom: 16,
   },
   title: {
     color: '#FFFFFF',
@@ -78,15 +81,17 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     position: 'absolute',
-    top: 0,
     right: 0,
-    width: 160,
-    height: 60,
-    opacity: 0.8,
+    left: 100,
+    top: -40,
+    width: 260,
+    height: 260,
+    opacity: 0.25,
+    zIndex: 0,
   },
   arrowContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 16,
     right: 0,
   }
 });

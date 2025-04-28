@@ -412,8 +412,8 @@ export default function Oversigt() {
                     return null;
                   }
 
-                  const imageUrl = infoCard?.image
-                    ? `${STRAPI_URL}${infoCard.image}`
+                  const imageUrl = infoCard?.image?.[0]?.url
+                    ? infoCard.image[0].url
                     : undefined;
 
                   return (
@@ -423,8 +423,8 @@ export default function Oversigt() {
                       shortDescription={infoCard.short_description}
                       slug={infoCard.slug}
                       imageUrl={imageUrl}
-                      onPress={() => handleInfoCardPress(infoCard.slug, infoCard.title, infoCard.image)}
-                        />
+                      onPress={() => handleInfoCardPress(infoCard.slug, infoCard.title)}
+                    />
                   );
                 })}
               </ScrollView>
