@@ -6,21 +6,15 @@ import { FunctionCard } from '../components/functions/FunctionCard';
 import { Ionicons } from '@expo/vector-icons';
 
 interface AldraFunction {
-  id: number;
-  attributes: {
+    id: number;
     title: string;
     slug: string;
-    short_description: string;
-    full_description: string;
-    image: {
-      data: {
-        attributes: {
-          url: string;
-        };
-      };
-    };
+    short_description?: string;
+    full_description?: any;
+    image?: {
+      url: string;
+    }[];
   };
-}
 
 export default function AldraFunktioner() {
   const router = useRouter();
@@ -61,19 +55,25 @@ export default function AldraFunktioner() {
   };
 
   const renderItem = ({ item }: { item: AldraFunction }) => {
-    const imageUrl = item.attributes.image?.data?.attributes?.url 
-      ? `${STRAPI_URL}${item.attributes.image.data.attributes.url}`
+    if (!item?.title) {
+      console.warn('Missing title for function:', item);
+      return null;
+    }
+  
+    const imageUrl = item?.image && Array.isArray(item.image) && item.image.length > 0
+      ? item.image[0].url
       : undefined;
-
+  
     return (
       <FunctionCard
-        title={item.attributes.title}
+        title={item.title}
         imageUrl={imageUrl}
-        onPress={() => handleFunctionPress(item.attributes.slug)}
+        onPress={() => handleFunctionPress(item.slug)}
       />
     );
   };
-
+  
+    
   return (
     <>
       <Stack.Screen

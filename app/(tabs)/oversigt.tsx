@@ -78,18 +78,24 @@ export default function Oversigt() {
     };
     
     // Handler for Info card tap
-    const handleInfoCardPress = (slug: string, title?: string) => {
-        // Special case for "Se Aldras funktioner" card
-        if (slug === "aldra-funktioner" || title === "Se Aldras funktioner") {
-            router.push('/aldra-funktioner' as any);
-        }
-        // Special case for "FAQ" card
-        else if (slug === "faq" || title === "FAQ") {
-            router.push('/faq' as any);
-        } else {
-            router.push(`/info/${slug}` as any);
-        }
-    };
+    const handleInfoCardPress = (slug: string, title?: string, image?: string) => {
+      if (slug === "aldra-funktioner" || title === "Se Aldras funktioner") {
+          router.push('/aldra-funktioner' as any);
+      }
+      else if (slug === "faq" || title === "FAQ") {
+          router.push('/faq' as any);
+      } else {
+          router.push({
+              pathname: `/info/${slug}` as any,
+              params: {
+                  slug,
+                  title,
+                  image: image ? `${STRAPI_URL}${image}` : undefined,
+              },
+          });
+      }
+  };
+  
 
     // State for personalization completion check
     const [hasCompletedPersonalization, setHasCompletedPersonalization] = useState(false);
@@ -130,7 +136,7 @@ export default function Oversigt() {
     const [appointmentsWithLogs, setAppointmentsWithLogs] = useState<Record<number, number>>({});
 
 
-    // ⬇️ Effekt ved load
+    // Effekt ved load
     useEffect(() => {
         const fetchUpcomingAppointments = async () => {
           try {
@@ -399,26 +405,26 @@ export default function Oversigt() {
               <Text style={styles.sectionTitle}>Lær Aldra at kende</Text>
               
               <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
-                style={styles.cardScroll}
-                contentContainerStyle={{ paddingRight: 20 }}
-              >
+                horizontal showsHorizontalScrollIndicator={false} style={styles.cardScroll} contentContainerStyle={{ paddingRight: 20 }}>
                 {infoCards.map((infoCard) => {
-                  const { id, attributes } = infoCard;
-                  const imageUrl = attributes.image?.data?.attributes?.url 
-                    ? `${STRAPI_URL}${attributes.image.data.attributes.url}`
+                  if (!infoCard?.title) {
+                    console.warn('Missing title for infoCard:', infoCard);
+                    return null;
+                  }
+
+                  const imageUrl = infoCard?.image
+                    ? `${STRAPI_URL}${infoCard.image}`
                     : undefined;
-                    
+
                   return (
                     <InfoCard
-                      key={id}
-                      title={attributes.title}
-                      shortDescription={attributes.short_description}
-                      slug={attributes.slug}
+                      key={infoCard.id}
+                      title={infoCard.title}
+                      shortDescription={infoCard.short_description}
+                      slug={infoCard.slug}
                       imageUrl={imageUrl}
-                      onPress={(slug) => handleInfoCardPress(slug, attributes.title)}
-                    />
+                      onPress={() => handleInfoCardPress(infoCard.slug, infoCard.title, infoCard.image)}
+                        />
                   );
                 })}
               </ScrollView>
