@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "functions",
+  "info": {
+    "singularName": "function",
+    "pluralName": "functions",
+    "displayName": "Function"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title"
+    },
+    "short_description": {
+      "type": "string"
+    },
+    "full_description": {
+      "type": "blocks"
+    },
+    "image": {
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ],
+      "type": "media",
+      "multiple": true
+    }
+  }
+}
