@@ -6,10 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface FAQ {
   id: number;
-  attributes: {
-    question: string;
-    answer: string;
-  };
+  question: string;
+  answer: string;
+  image: string | null;
 }
 
 export default function FAQPage() {
@@ -18,7 +17,9 @@ export default function FAQPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const bannerImage = 'https://aldra-cms.up.railway.app/uploads/elderly_smiling.jpg';
+  const bannerImage = faqs.length > 0 && faqs[0].image
+    ? faqs[0].image
+    : null;
 
   useEffect(() => {
     const fetchFAQs = async () => {
@@ -31,9 +32,16 @@ export default function FAQPage() {
         }
         
         const json = await res.json();
-        
+
         if (json.data && Array.isArray(json.data)) {
-          setFaqs(json.data);
+          const mappedFaqs = json.data.map((item: any) => ({
+            id: item.id,
+            question: item.question,
+            answer: item.answer,
+            image: item.image && item.image.length > 0 ? item.image[0].url : null,
+          }));
+
+          setFaqs(mappedFaqs);
         } else {
           setError('No FAQs found');
         }
@@ -47,6 +55,13 @@ export default function FAQPage() {
 
     fetchFAQs();
   }, []);
+
+  const extractText = (content: any) => {
+    if (Array.isArray(content)) {
+      return content.map(block => block.children?.[0]?.text || '').join('\n\n');
+    }
+    return typeof content === 'string' ? content : '';
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -80,12 +95,12 @@ export default function FAQPage() {
           </View>
         ) : (
           <>
-            {/* Banner image som en del af FAQ content */}
             <ImageBackground 
-              source={{ uri: bannerImage }} 
-              style={styles.bannerImage}
-              imageStyle={styles.bannerImageStyle}
-            >
+                source={{ uri: bannerImage || '' }} 
+                style={styles.bannerImage}
+                imageStyle={styles.bannerImageStyle}
+              >
+
               <View style={styles.bannerOverlay}>
                 <Text style={styles.bannerTitle}>Ofte stillede spørgsmål</Text>
               </View>
@@ -101,10 +116,10 @@ export default function FAQPage() {
                 {faqs.map((faq, index) => (
                   <View key={faq.id} style={styles.faqItem}>
                     <Text style={styles.question}>
-                      {index + 1}. {faq.attributes.question}
+                      {index + 1}. {extractText(faq.question)}
                     </Text>
                     <Text style={styles.answer}>
-                      {faq.attributes.answer}
+                      {extractText(faq.answer)}
                     </Text>
                   </View>
                 ))}
@@ -118,10 +133,6 @@ export default function FAQPage() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
   header: {
     backgroundColor: '#42865F',
     paddingTop: 10,
