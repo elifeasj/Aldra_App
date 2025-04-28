@@ -11,6 +11,7 @@ import { Guide } from '../../types/guides';
 import { STRAPI_URL } from '../../config/api';
 import { mapGuideData } from '../../utils/guideUtils';
 import { GuideCard } from '../../components/guides/GuideCard';
+import { InfoCard } from '../../components/info/InfoCard';
 
 
 export default function Oversigt() {
@@ -21,6 +22,9 @@ export default function Oversigt() {
 
     //vejledning cards visning
     const [guides, setGuides] = useState<Guide[]>([]);
+    
+    // Info cards visning
+    const [infoCards, setInfoCards] = useState<any[]>([]);
 
     useEffect(() => {
       const fetchGuides = async () => {
@@ -43,11 +47,48 @@ export default function Oversigt() {
       fetchGuides();
     }, []);
     
+    // Fetch info cards
+    useEffect(() => {
+      const fetchInfoCards = async () => {
+        try {
+          const res = await fetch(`${STRAPI_URL}/api/info-cards?populate=*`);
+          const json = await res.json();
+          
+          if (!res.ok) {
+            console.error('❌ Failed to fetch info cards:', json);
+            return;
+          }
+          
+          if (json.data && Array.isArray(json.data)) {
+            setInfoCards(json.data);
+          }
+        } catch (err) {
+          console.error('❌ Error fetching info cards:', err);
+        }
+      };
+      
+      fetchInfoCards();
+    }, []);
+    
     
     
     // Handler for Samtalekort card tap
     const handleSamtalekortPress = () => {
         router.push('/samtalekort' as any);
+    };
+    
+    // Handler for Info card tap
+    const handleInfoCardPress = (slug: string, title?: string) => {
+        // Special case for "Se Aldras funktioner" card
+        if (slug === "aldra-funktioner" || title === "Se Aldras funktioner") {
+            router.push('/aldra-funktioner' as any);
+        }
+        // Special case for "FAQ" card
+        else if (slug === "faq" || title === "FAQ") {
+            router.push('/faq' as any);
+        } else {
+            router.push(`/info/${slug}` as any);
+        }
     };
 
     // State for personalization completion check
@@ -353,6 +394,35 @@ export default function Oversigt() {
               ))}
             </View>
 
+            {/* Lær Aldra at kende sektion */}
+            <View style={styles.infoSection}>
+              <Text style={styles.sectionTitle}>Lær Aldra at kende</Text>
+              
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={styles.cardScroll}
+                contentContainerStyle={{ paddingRight: 20 }}
+              >
+                {infoCards.map((infoCard) => {
+                  const { id, attributes } = infoCard;
+                  const imageUrl = attributes.image?.data?.attributes?.url 
+                    ? `${STRAPI_URL}${attributes.image.data.attributes.url}`
+                    : undefined;
+                    
+                  return (
+                    <InfoCard
+                      key={id}
+                      title={attributes.title}
+                      shortDescription={attributes.short_description}
+                      slug={attributes.slug}
+                      imageUrl={imageUrl}
+                      onPress={(slug) => handleInfoCardPress(slug, attributes.title)}
+                    />
+                  );
+                })}
+              </ScrollView>
+            </View>
             
             {/* Vejledninger sektion */}
             <View style={styles.guidanceSection}>
@@ -761,6 +831,10 @@ const styles = StyleSheet.create({
         height: 20,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    infoSection: {
+        marginTop: 24,
+        marginBottom: 24,
     },
     guidanceSection: {
         marginTop: 24,
