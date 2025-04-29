@@ -34,6 +34,7 @@
     "cross-spawn": "^7.0.6",
     "dotenv": "^16.5.0",
     "esbuild": "^0.25.2",
+    "expo": "~52.0.46",
     "expo-clipboard": "~7.0.1",
     "expo-file-system": "^18.0.12",
     "expo-font": "^13.0.4",
@@ -62,6 +63,7 @@
     "react-native-blob-util": "^0.21.2",
     "react-native-calendars": "^1.1308.1",
     "react-native-checkbox": "^2.0.0",
+    "react-native-gesture-handler": "^2.25.0",
     "react-native-image-picker": "^8.0.0",
     "react-native-modal-dropdown": "^1.0.2",
     "react-native-progress": "^5.0.1",
@@ -71,8 +73,7 @@
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "~0.19.13",
     "uuid": "^11.1.0",
-    "vite": "^6.3.2",
-    "expo": "~52.0.46"
+    "vite": "^6.3.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
