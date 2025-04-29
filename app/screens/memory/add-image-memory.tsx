@@ -98,54 +98,53 @@ export default function AddImageMemory() {
   };
   
   
-  const handleSendMemory = async () => {
-    if (!images.some(img => img)) {
-      Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
-      return;
-    }
-  
-    if (!title.trim()) {
-      Alert.alert('Fejl', 'Indtast venligst en titel for dit minde.');
-      return;
-    }
-  
-    try {
-      const imageUri = images[0];
-      const filename = `memories/${Date.now()}.jpg`;
-      const storageRef = ref(storage, filename);
-  
-      // Læs billedet som base64
-      const base64Data = await FileSystem.readAsStringAsync(imageUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-  
-      // Upload base64 uden metadata
-      await uploadString(storageRef, base64Data, 'base64');
-  
-      // Få download URL
-      const downloadURL = await getDownloadURL(storageRef);
-  
-      // Gem metadata i Firestore
-      await addDoc(collection(db, 'moments'), {
-        title: title,
-        url: downloadURL,
-        type: 'image',
-        createdAt: serverTimestamp(),
-      });
-  
-      showToast();
-  
-      setTimeout(() => {
-        setTitle('');
-        setImages([]);
-        router.back();
-      }, 3500);
-  
-    } catch (error) {
-      console.error('Error uploading image or saving document:', error);
-      Alert.alert('Fejl', 'Der opstod en fejl under upload af dit minde. Prøv igen senere.');
-    }
-  };
+const handleSendMemory = async () => {
+  if (!images.some(img => img)) {
+    Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
+    return;
+  }
+
+  if (!title.trim()) {
+    Alert.alert('Fejl', 'Indtast venligst en titel for dit minde.');
+    return;
+  }
+
+  try {
+    const imageUri = images[0];
+    const filename = `memories/${Date.now()}.jpg`;
+    const storageRef = ref(storage, filename);
+
+    // Læs billedet som base64
+    const base64Data = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // Upload base64 til Firebase
+    await uploadString(storageRef, base64Data, 'base64');
+
+    const downloadURL = await getDownloadURL(storageRef);
+
+    await addDoc(collection(db, 'moments'), {
+      title: title,
+      url: downloadURL,
+      type: 'image',
+      createdAt: serverTimestamp(),
+    });
+
+    showToast();
+
+    setTimeout(() => {
+      setTitle('');
+      setImages([]);
+      router.back();
+    }, 3500);
+
+  } catch (error) {
+    console.error('Error uploading image or saving document:', error);
+    Alert.alert('Fejl', 'Der opstod en fejl under upload af dit minde. Prøv igen senere.');
+  }
+};
+
   
   
 
