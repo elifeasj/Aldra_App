@@ -4,6 +4,8 @@ export const API_URL = 'https://aldra-app.onrender.com';  // For production (liv
 export const STRAPI_URL = 'https://aldra-cms.up.railway.app';  // Strapi backend (aldra-cms)
 
 
+
+
 export const endpoints = {
     register: `${API_URL}/register`,
     login: `${API_URL}/login`,
