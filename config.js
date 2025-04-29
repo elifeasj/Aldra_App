@@ -1,6 +1,6 @@
 // API Configuration
 // export const API_URL = 'http://192.168.0.118:5001'; // Local network IP
-export const API_URL = 'https://aldra-app.onrender.com';  // For production (live)
+export const API_URL = 'https://aldra-backend.up.railway.app';  // For production (live)
 export const STRAPI_URL = 'https://aldra-cms.up.railway.app';  // Strapi backend (aldra-cms)
 
 
