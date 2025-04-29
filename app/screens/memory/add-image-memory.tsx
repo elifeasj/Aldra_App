@@ -4,11 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { storage, db } from '../../../firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import * as FileSystem from 'expo-file-system';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
-import * as FileSystem from 'expo-file-system';
-import { Buffer } from 'buffer';
+
 
 
 export default function AddImageMemory() {
@@ -55,7 +55,6 @@ export default function AddImageMemory() {
 
     // Launch image picker
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
@@ -82,11 +81,12 @@ export default function AddImageMemory() {
     }
 
     // Launch camera
-    const result = await ImagePicker.launchCameraAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
     });
+    
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const newImages = [...images];
@@ -97,64 +97,57 @@ export default function AddImageMemory() {
     setModalVisible(false);
   };
   
+  
   const handleSendMemory = async () => {
-    // Check if there's at least one image
     if (!images.some(img => img)) {
       Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
       return;
     }
-
-    // Check if title is provided
+  
     if (!title.trim()) {
       Alert.alert('Fejl', 'Indtast venligst en titel for dit minde.');
       return;
     }
-
+  
     try {
-      // Get the first selected image
       const imageUri = images[0];
-      
-      // Create a unique filename using UUID
-      const filename = `memories/${Date.now()}`;
-      
-      // Create a reference to the file location in Firebase Storage
+      const filename = `memories/${Date.now()}.jpg`;
       const storageRef = ref(storage, filename);
-      
-      // Fetch the image and convert to blob
-      const file = await FileSystem.readAsStringAsync(imageUri, {
+  
+      // Læs billedet som base64
+      const base64Data = await FileSystem.readAsStringAsync(imageUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      const blob = Buffer.from(file, 'base64');
-      
-      // Upload the image to Firebase Storage
-      const uploadResult = await uploadBytes(storageRef, blob);
-      
-      // Get the download URL
-      const downloadURL = await getDownloadURL(uploadResult.ref);
-      
-      // Save document to Firestore
+  
+      // Upload base64 uden metadata
+      await uploadString(storageRef, base64Data, 'base64');
+  
+      // Få download URL
+      const downloadURL = await getDownloadURL(storageRef);
+  
+      // Gem metadata i Firestore
       await addDoc(collection(db, 'moments'), {
         title: title,
         url: downloadURL,
         type: 'image',
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
-      
-      // Show success message
+  
       showToast();
-      
-      // Reset form and navigate back
+  
       setTimeout(() => {
         setTitle('');
         setImages([]);
         router.back();
       }, 3500);
-      
+  
     } catch (error) {
       console.error('Error uploading image or saving document:', error);
       Alert.alert('Fejl', 'Der opstod en fejl under upload af dit minde. Prøv igen senere.');
     }
   };
+  
+  
 
   // Create an array of 4 empty slots for images
   const imageSlots = Array(4).fill(null);
@@ -182,7 +175,7 @@ export default function AddImageMemory() {
             Vælg et billede fra dit galleri eller tag et nyt med kameraet for at oprette et minde.
           </Text>
           <Text style={styles.subInstructions}>
-            Du kan vælge op til 6 billeder.
+            Du kan vælge op til 4 billeder.
           </Text>
         </View>
 
