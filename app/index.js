@@ -1,5 +1,7 @@
 import React from 'react';
 import 'react-native-gesture-handler';
+import { enableScreens } from 'react-native-screens';
+enableScreens();
 import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, ImageBackground, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import "expo-router/entry";
