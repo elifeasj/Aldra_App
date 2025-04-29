@@ -3,6 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView,
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { storage, db } from '../../../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
+import * as FileSystem from 'expo-file-system';
+import { Buffer } from 'buffer';
+
 
 export default function AddImageMemory() {
   const router = useRouter();
@@ -90,16 +97,67 @@ export default function AddImageMemory() {
     setModalVisible(false);
   };
   
-  const handleSendMemory = () => {
-    showToast();
-    // You could also reset the form or navigate back after a delay
-    setTimeout(() => {
-      router.back();
-    }, 3500);
+  const handleSendMemory = async () => {
+    // Check if there's at least one image
+    if (!images.some(img => img)) {
+      Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
+      return;
+    }
+
+    // Check if title is provided
+    if (!title.trim()) {
+      Alert.alert('Fejl', 'Indtast venligst en titel for dit minde.');
+      return;
+    }
+
+    try {
+      // Get the first selected image
+      const imageUri = images[0];
+      
+      // Create a unique filename using UUID
+      const filename = `memories/${Date.now()}`;
+      
+      // Create a reference to the file location in Firebase Storage
+      const storageRef = ref(storage, filename);
+      
+      // Fetch the image and convert to blob
+      const file = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const blob = Buffer.from(file, 'base64');
+      
+      // Upload the image to Firebase Storage
+      const uploadResult = await uploadBytes(storageRef, blob);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(uploadResult.ref);
+      
+      // Save document to Firestore
+      await addDoc(collection(db, 'moments'), {
+        title: title,
+        url: downloadURL,
+        type: 'image',
+        createdAt: serverTimestamp()
+      });
+      
+      // Show success message
+      showToast();
+      
+      // Reset form and navigate back
+      setTimeout(() => {
+        setTitle('');
+        setImages([]);
+        router.back();
+      }, 3500);
+      
+    } catch (error) {
+      console.error('Error uploading image or saving document:', error);
+      Alert.alert('Fejl', 'Der opstod en fejl under upload af dit minde. Prøv igen senere.');
+    }
   };
 
-  // Create an array of 6 empty slots for images
-  const imageSlots = Array(6).fill(null);
+  // Create an array of 4 empty slots for images
+  const imageSlots = Array(4).fill(null);
 
   // Check if form is valid for submission
   const isFormValid = title.trim().length > 0 && images.some(img => img);
@@ -330,7 +388,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   imageSlot: {
-    width: '30%',
+    width: '47%',
     aspectRatio: 1,
     backgroundColor: '#EEEEEE',
     borderRadius: 12,
