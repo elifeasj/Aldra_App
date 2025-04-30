@@ -5,9 +5,10 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { storage, db } from '../../../firebase';
 import * as FileSystem from 'expo-file-system';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 
 
@@ -98,55 +99,68 @@ export default function AddImageMemory() {
   };
   
   
-const handleSendMemory = async () => {
-  if (!images.some(img => img)) {
-    Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
-    return;
-  }
-
-  if (!title.trim()) {
-    Alert.alert('Fejl', 'Indtast venligst en titel for dit minde.');
-    return;
-  }
-
-  try {
-    const imageUri = images[0];
-    const filename = `memories/${Date.now()}.jpg`;
-    const storageRef = ref(storage, filename);
-
-    // Læs billedet som base64
-    const base64Data = await FileSystem.readAsStringAsync(imageUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-
-    // Upload base64 til Firebase
-    await uploadString(storageRef, base64Data, 'base64');
-
-    const downloadURL = await getDownloadURL(storageRef);
-
-    await addDoc(collection(db, 'moments'), {
-      title: title,
-      url: downloadURL,
-      type: 'image',
-      createdAt: serverTimestamp(),
-    });
-
-    showToast();
-
-    setTimeout(() => {
-      setTitle('');
-      setImages([]);
-      router.back();
-    }, 3500);
-
-  } catch (error) {
-    console.error('Error uploading image or saving document:', error);
-    Alert.alert('Fejl', 'Der opstod en fejl under upload af dit minde. Prøv igen senere.');
-  }
-};
-
+  const handleSendMemory = async () => {
+    if (!images.some(img => img)) {
+      Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
+      return;
+    }
   
+    if (!title.trim()) {
+      Alert.alert('Fejl', 'Indtast venligst en titel for dit minde.');
+      return;
+    }
   
+    try {
+      const imageUri = images[0];
+      const filename = `memories/${Date.now()}.jpg`;
+      const storageRef = ref(storage, filename);
+  
+      // 👉 Komprimer billedet først
+      const compressed = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [{ resize: { width: 1000 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+  
+      console.log("Compressed URI:", compressed.uri);
+  
+      const response = await fetch(compressed.uri);
+      const blob = await response.blob();
+  
+      console.log("Blob size:", blob.size);
+  
+      if (blob.size === 0) {
+        Alert.alert("Fejl", "Billedet kunne ikke behandles. Prøv igen med et andet.");
+        return;
+      }
+  
+      // 👉 Upload til Firebase Storage
+      await uploadBytes(storageRef, blob);
+      const downloadURL = await getDownloadURL(storageRef);
+  
+      // 👉 Gem metadata i Firestore
+      await addDoc(collection(db, 'moments'), {
+        title: title,
+        url: downloadURL,
+        type: 'image',
+        createdAt: serverTimestamp(),
+      });
+  
+      showToast();
+  
+      setTimeout(() => {
+        setTitle('');
+        setImages([]);
+        router.back();
+      }, 3500);
+  
+    } catch (error) {
+      console.error('Error uploading image or saving document:', error);
+      Alert.alert('Fejl', 'Der opstod en fejl under upload af dit minde. Prøv igen senere.');
+    }
+  };
+
+
 
   // Create an array of 4 empty slots for images
   const imageSlots = Array(4).fill(null);
