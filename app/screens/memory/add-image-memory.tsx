@@ -110,7 +110,10 @@ export default function AddImageMemory() {
       type: 'image/jpeg',
     } as any);
   
-    const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/upload-memory-image`, {
+    const apiUrl = `${process.env.EXPO_PUBLIC_API_URL}/upload-memory-image`;
+    console.log("📤 Uploading to:", apiUrl);
+  
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -118,11 +121,18 @@ export default function AddImageMemory() {
       body: formData,
     });
   
-    if (!response.ok) throw new Error('Upload via backend fejlede');
+    const text = await response.text();
   
-    const data = await response.json();
+    if (!response.ok) {
+      console.error("❌ Upload failed - Status:", response.status);
+      console.error("❌ Upload failed - Body:", text);
+      throw new Error('Upload via backend fejlede');
+    }
+  
+    const data = JSON.parse(text);
     return data.url;
   };
+  
   
 
   // Handle sending memory

@@ -1327,9 +1327,9 @@ app.post('/upload-memory-image', memoryUpload.single('image'), async (req, res) 
     res.send({ url: downloadURL });
 
   } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).send({ error: 'Upload failed' });
-  }
+    console.error('🔥 Upload error:', error);
+    res.status(500).send({ error: 'Upload failed', details: error.message });
+  }  
 });
 
 
