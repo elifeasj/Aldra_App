@@ -10,7 +10,6 @@ const path = require('path');
 const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
-const { getStorage } = require('firebase-admin/storage');
 const admin = require('firebase-admin');
 
 
@@ -1331,6 +1330,7 @@ app.post('/upload-memory-image', memoryUpload.single('image'), async (req, res) 
     res.status(500).send({ error: 'Upload failed', details: error.message });
   }  
 });
+
 
 
 
