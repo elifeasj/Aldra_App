@@ -100,6 +100,7 @@ export default function AddImageMemory() {
   
   
   const handleSendMemory = async () => {
+    console.log('🔔 handleSendMemory CALLED');
     if (!images.some(img => img)) {
       Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
       return;
@@ -111,11 +112,11 @@ export default function AddImageMemory() {
     }
   
     try {
+      console.log('🔔 handleSendMemory CALLED');
       const imageUri = images[0];
       const filename = `memories/${Date.now()}.jpg`;
       const storageRef = ref(storage, filename);
   
-      // 👉 Komprimer billedet først
       const compressed = await ImageManipulator.manipulateAsync(
         imageUri,
         [{ resize: { width: 1000 } }],
@@ -134,17 +135,21 @@ export default function AddImageMemory() {
         return;
       }
   
-      // 👉 Upload til Firebase Storage
+      console.log("Uploading blob...");
       await uploadBytes(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
+      console.log("✅ Upload complete!");
   
-      // 👉 Gem metadata i Firestore
+      const downloadURL = await getDownloadURL(storageRef);
+      console.log("✅ Download URL:", downloadURL);
+  
       await addDoc(collection(db, 'moments'), {
         title: title,
         url: downloadURL,
         type: 'image',
         createdAt: serverTimestamp(),
       });
+  
+      console.log("✅ Document added to Firestore!");
   
       showToast();
   
@@ -154,9 +159,9 @@ export default function AddImageMemory() {
         router.back();
       }, 3500);
   
-    } catch (error) {
-      console.error('Error uploading image or saving document:', error);
-      Alert.alert('Fejl', 'Der opstod en fejl under upload af dit minde. Prøv igen senere.');
+    } catch (error: any) {
+      console.error('❌ FEJL:', error);
+      Alert.alert('Fejl', error.message || 'Ukendt fejl ved upload af minde.');
     }
   };
 
@@ -208,10 +213,10 @@ export default function AddImageMemory() {
                 value={title}
                 onChangeText={setTitle}
                 placeholder="Skriv titel på din minde her..."
-                maxLength={10}
+                maxLength={20}
                 placeholderTextColor="#AAAAAA"
               />
-              <Text style={styles.charCounter}>{title.length}/10</Text>
+              <Text style={styles.charCounter}>{title.length}/20</Text>
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -224,8 +229,12 @@ export default function AddImageMemory() {
               style={styles.imageSlot}
               onPress={() => openImageActionSheet(index)}
             >
-              {images[index] ? (
-                <Image source={{ uri: images[index] }} style={styles.selectedImage} />
+              {images[index] && typeof images[index] === 'string' ? (
+                <Image
+                  source={{ uri: images[index] }}
+                  style={[styles.selectedImage, { width: '100%', height: '100%' }]}
+                  resizeMode="cover"
+                />
               ) : (
                 <View style={styles.emptySlot}>
                   <Ionicons name="image-outline" size={24} color="#CCCCCC" />
@@ -412,7 +421,8 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 12,
-  },
+    resizeMode: 'cover',
+  },  
   addIconContainer: {
     position: 'absolute',
     bottom: 8,
