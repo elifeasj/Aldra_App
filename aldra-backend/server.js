@@ -1298,7 +1298,7 @@ app.use(express.json());
 
 // INITIALISER Firebase Admin MED storageBucket
 admin.initializeApp({
-  credential: admin.credential.cert(process.env.FIREBASE_SERVICE_ACCOUNT),
+  credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
   storageBucket: 'aldraapp.appspot.com',
 });
 
@@ -1314,7 +1314,7 @@ app.post('/upload-memory-image', memoryUpload.single('image'), async (req, res) 
       return res.status(400).send({ error: 'No file uploaded' });
     }
 
-    const bucket = admin.storage().bucket(); // ← bruger din bucket
+    const bucket = admin.storage().bucket();
     const filename = `memories/${Date.now()}.jpg`;
     const fileRef = bucket.file(filename);
 
