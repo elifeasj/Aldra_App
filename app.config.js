@@ -13,7 +13,10 @@ export default {
     },
     extra: {
       SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
-      SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+      SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      eas: {
+        projectId: "353b4f0f-2aa3-4f8c-9ed4-e5c59de58a5e"
+      }
     },
     icon: "./assets/images/icon.png",
     android: {

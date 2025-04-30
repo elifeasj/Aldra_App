@@ -5,8 +5,9 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { storage, db } from '../../../firebase';
 import * as FileSystem from 'expo-file-system';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ActivityIndicator } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import * as ImageManipulator from 'expo-image-manipulator';
 
@@ -98,9 +99,36 @@ export default function AddImageMemory() {
     setModalVisible(false);
   };
   
+  // Upload memory image
+  const uploadMemoryImage = async (uri: string) => {
+    const formData = new FormData();
+    const filename = uri.split('/').pop() || 'image.jpg';
   
+    formData.append('image', {
+      uri,
+      name: filename,
+      type: 'image/jpeg',
+    } as any);
+  
+    const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/upload-memory-image`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    });
+  
+    if (!response.ok) throw new Error('Upload via backend fejlede');
+  
+    const data = await response.json();
+    return data.url;
+  };
+  
+
+  // Handle sending memory
+  const [isUploading, setIsUploading] = useState(false);
+
   const handleSendMemory = async () => {
-    console.log('🔔 handleSendMemory CALLED');
     if (!images.some(img => img)) {
       Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
       return;
@@ -111,46 +139,33 @@ export default function AddImageMemory() {
       return;
     }
   
+    setIsUploading(true);
+  
     try {
       console.log('🔔 handleSendMemory CALLED');
-      const imageUri = images[0];
-      const filename = `memories/${Date.now()}.jpg`;
-      const storageRef = ref(storage, filename);
   
+      const imageUri = images[0];
+  
+      // 🚀 1. Komprimér billedet
       const compressed = await ImageManipulator.manipulateAsync(
         imageUri,
-        [{ resize: { width: 1000 } }],
+        [{ resize: { width: 800 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
       );
   
-      console.log("Compressed URI:", compressed.uri);
+      // 🌐 2. Upload via din backend
+      const uploadUrl = await uploadMemoryImage(compressed.uri);
+      console.log("✅ Uploaded via backend:", uploadUrl);
   
-      const response = await fetch(compressed.uri);
-      const blob = await response.blob();
-  
-      console.log("Blob size:", blob.size);
-  
-      if (blob.size === 0) {
-        Alert.alert("Fejl", "Billedet kunne ikke behandles. Prøv igen med et andet.");
-        return;
-      }
-  
-      console.log("Uploading blob...");
-      await uploadBytes(storageRef, blob);
-      console.log("✅ Upload complete!");
-  
-      const downloadURL = await getDownloadURL(storageRef);
-      console.log("✅ Download URL:", downloadURL);
-  
+      // 🧠 3. Gem i Firestore
       await addDoc(collection(db, 'moments'), {
-        title: title,
-        url: downloadURL,
+        title: title.trim(),
+        url: uploadUrl,
         type: 'image',
         createdAt: serverTimestamp(),
       });
   
-      console.log("✅ Document added to Firestore!");
-  
+      console.log("✅ Dokument gemt i Firestore");
       showToast();
   
       setTimeout(() => {
@@ -161,10 +176,12 @@ export default function AddImageMemory() {
   
     } catch (error: any) {
       console.error('❌ FEJL:', error);
-      Alert.alert('Fejl', error.message || 'Ukendt fejl ved upload af minde.');
+      Alert.alert('Fejl', error.message || 'Ukendt fejl ved upload.');
+    } finally {
+      setIsUploading(false);
     }
   };
-
+  
 
 
   // Create an array of 4 empty slots for images
@@ -254,14 +271,16 @@ export default function AddImageMemory() {
             <Text style={styles.scheduleButtonText}>Planlæg visning</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            style={[styles.sendButton, !isFormValid && styles.sendButtonDisabled]}
-            disabled={!isFormValid}
-            onPress={handleSendMemory}
-          >
-            <Ionicons name="paper-plane-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.sendButtonText}>Send minde</Text>
-          </TouchableOpacity>
+          {!isUploading && (
+            <TouchableOpacity 
+              style={[styles.sendButton, !isFormValid && styles.sendButtonDisabled]}
+              disabled={!isFormValid}
+              onPress={handleSendMemory}
+            >
+              <Ionicons name="paper-plane-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.sendButtonText}>Send minde</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
       

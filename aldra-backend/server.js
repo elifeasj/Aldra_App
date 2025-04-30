@@ -10,6 +10,9 @@ const path = require('path');
 const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
+const { getStorage } = require('firebase-admin/storage');
+const admin = require('firebase-admin');
+
 
 const app = express();
 
@@ -1287,6 +1290,49 @@ app.post('/match-guides', async (req, res) => {
     res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
+
+
+// Handle memory image upload - Firebase
+app.use(cors());
+app.use(express.json());
+
+// INITIALISER Firebase Admin MED storageBucket
+admin.initializeApp({
+  credential: admin.credential.cert(process.env.FIREBASE_SERVICE_ACCOUNT),
+  storageBucket: 'aldraapp.appspot.com',
+});
+
+// SETUP Multer til at håndtere fil-upload i memory
+const memoryUpload = multer({ storage: multer.memoryStorage() });
+
+// ENDPOINT: Upload billede til Firebase Storage
+app.post('/upload-memory-image', memoryUpload.single('image'), async (req, res) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).send({ error: 'No file uploaded' });
+    }
+
+    const bucket = admin.storage().bucket(); // ← bruger din bucket
+    const filename = `memories/${Date.now()}.jpg`;
+    const fileRef = bucket.file(filename);
+
+    await fileRef.save(file.buffer, {
+      contentType: file.mimetype,
+      public: true, // gør billedet offentligt tilgængeligt
+    });
+
+    const downloadURL = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+    res.send({ url: downloadURL });
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).send({ error: 'Upload failed' });
+  }
+});
+
+
 
 
 // Start server
