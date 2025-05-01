@@ -1291,7 +1291,7 @@ app.post('/match-guides', async (req, res) => {
 });
 
 
-// Handle memory image upload - Firebase
+/* // Handle memory image upload - Firebase
 app.use(cors());
 app.use(express.json());
 
@@ -1329,7 +1329,7 @@ app.post('/upload-memory-image', memoryUpload.single('image'), async (req, res) 
     console.error('🔥 Upload error:', error);
     res.status(500).send({ error: 'Upload failed', details: error.message });
   }  
-});
+}); */
 
 
 
