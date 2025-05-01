@@ -406,7 +406,7 @@ const Profil = () => {
 
         <TouchableOpacity 
           style={styles.settingsItem}
-          onPress={() => router.push('../../..')}
+          onPress={() => router.push('../../notifications')}
         >
           <View style={styles.settingsIcon}>
             <Ionicons name="notifications-outline" size={24} color="#000" />
