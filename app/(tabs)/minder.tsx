@@ -184,15 +184,14 @@ const AddMemoryButtons = () => {
   const memoryTypes = [
     { id: '1', title: 'Billede', icon: 'image-outline' as const, route: '/screens/memory/add-image-memory' as const },
     { id: '2', title: 'Musik', icon: 'musical-notes-outline' as const, route: '' },
-    { id: '3', title: 'Video', icon: 'film-outline' as const, route: '' },
+    { id: '3', title: 'Video', icon: 'film-outline' as const, route: '/screens/memory/add-video-memory' as const },
     { id: '4', title: 'Kortfilm', icon: 'play-circle-outline' as const, route: '' },
   ];
 
   const handleMemoryTypePress = (type: { id: string; title: string; route: string }) => {
-    if (type.id === '1') {
-      router.push('/screens/memory/add-image-memory');
+    if (type.route) {
+      router.push(type.route);
     }
-    // Add other navigation options when implemented
   };
 
   return (

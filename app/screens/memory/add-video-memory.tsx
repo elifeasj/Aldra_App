@@ -9,16 +9,13 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ActivityIndicator } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
-import * as ImageManipulator from 'expo-image-manipulator';
 
-
-
-export default function AddImageMemory() {
+export default function AddVideoMemory() {
   const router = useRouter();
   const [title, setTitle] = useState('');
-  const [images, setImages] = useState<string[]>([]);
+  const [videoUri, setVideoUri] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -39,151 +36,165 @@ export default function AddImageMemory() {
     }, 3000);
   };
 
-  const openImageActionSheet = (index: number) => {
-    setSelectedSlotIndex(index);
+  const openVideoActionSheet = () => {
     setModalVisible(true);
   };
 
-  const pickImageFromGallery = async () => {
-    if (selectedSlotIndex === null) return;
-    
+  const pickVideoFromGallery = async () => {
     // Ask for permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (status !== 'granted') {
-      Alert.alert('Tilladelse påkrævet', 'Vi har brug for adgang til dit galleri for at vælge billeder.');
+      Alert.alert('Tilladelse påkrævet', 'Vi har brug for adgang til dit galleri for at vælge videoer.');
       return;
     }
 
-    // Launch image picker
+    // Launch video picker
     const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: [16, 9],
       quality: 1,
+      videoMaxDuration: 15, // 15 seconds max duration
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const newImages = [...images];
-      newImages[selectedSlotIndex] = result.assets[0].uri;
-      setImages(newImages);
+      setVideoUri(result.assets[0].uri);
     }
     
     setModalVisible(false);
   };
 
-  const takePhoto = async () => {
-    if (selectedSlotIndex === null) return;
-    
+  const recordVideo = async () => {
     // Ask for camera permission
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     
     if (status !== 'granted') {
-      Alert.alert('Tilladelse påkrævet', 'Vi har brug for adgang til dit kamera for at tage billeder.');
+      Alert.alert('Tilladelse påkrævet', 'Vi har brug for adgang til dit kamera for at optage video.');
       return;
     }
 
-    // Launch camera
-    const result = await ImagePicker.launchImageLibraryAsync({
+    // Launch camera for video recording
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: [16, 9],
       quality: 1,
+      videoMaxDuration: 15, // 15 seconds max duration
     });
-    
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const newImages = [...images];
-      newImages[selectedSlotIndex] = result.assets[0].uri;
-      setImages(newImages);
+      setVideoUri(result.assets[0].uri);
     }
     
     setModalVisible(false);
   };
   
-  // Upload memory image
-  const uploadMemoryImage = async (uri: string) => {
+  // Upload memory video
+  const uploadMemoryVideo = async (uri: string) => {
     const formData = new FormData();
-    const filename = uri.split('/').pop() || 'image.jpg';
+    const filename = uri.split('/').pop() || 'video.mp4';
   
-    formData.append('image', {
+    formData.append('video', {
       uri,
       name: filename,
-      type: 'image/jpeg',
+      type: 'video/mp4',
     } as any);
   
-    const apiUrl = `${process.env.EXPO_PUBLIC_API_URL}/upload-memory-image`;
+    const apiUrl = `${process.env.EXPO_PUBLIC_API_URL}/upload-memory-video`;
     console.log("📤 Uploading to:", apiUrl);
   
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      body: formData,
-    });
-  
-    const text = await response.text();
-  
-    if (!response.ok) {
-      console.error("❌ Upload failed - Status:", response.status);
-      console.error("❌ Upload failed - Body:", text);
-      throw new Error('Upload via backend fejlede');
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+    
+      const text = await response.text();
+    
+      if (!response.ok) {
+        console.error("❌ Upload failed - Status:", response.status);
+        console.error("❌ Upload failed - Body:", text);
+        throw new Error('Upload via backend fejlede');
+      }
+    
+      const data = JSON.parse(text);
+      return data.url;
+    } catch (error) {
+      console.error("❌ Error during upload:", error);
+      // Fallback to direct Firebase upload if backend fails
+      return uploadToFirebaseDirectly(uri);
     }
-  
-    const data = JSON.parse(text);
-    return data.url;
   };
-  
-  
 
-  // Handle sending memory
-  const [isUploading, setIsUploading] = useState(false);
+  // Fallback direct upload to Firebase if backend fails
+  const uploadToFirebaseDirectly = async (uri: string) => {
+    const filename = `videos/${uuidv4()}`;
+    const storageRef = ref(storage, filename);
+    
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    
+    const uploadTask = uploadBytesResumable(storageRef, blob);
+    
+    return new Promise<string>((resolve, reject) => {
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          // Progress tracking if needed
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log(`Upload is ${progress}% done`);
+        },
+        (error) => {
+          console.error('❌ Error uploading to Firebase:', error);
+          reject(error);
+        },
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadURL);
+        }
+      );
+    });
+  };
 
   const handleSendMemory = async () => {
-    if (!images.some(img => img)) {
-      Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
-      return;
-    }
-  
     if (!title.trim()) {
-      Alert.alert('Fejl', 'Indtast venligst en titel for dit minde.');
+      Alert.alert('Manglende titel', 'Indtast venligst en titel til dit minde.');
       return;
     }
-  
-    setIsUploading(true);
-  
+
+    if (!videoUri) {
+      Alert.alert('Ingen video valgt', 'Vælg venligst en video til dit minde.');
+      return;
+    }
+
     try {
-      console.log('🔔 handleSendMemory CALLED');
-  
-      const imageUri = images[0];
-  
-      // 🚀 1. Komprimér billedet
-      const compressed = await ImageManipulator.manipulateAsync(
-        imageUri,
-        [{ resize: { width: 800 } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-      );
-  
-      // 🌐 2. Upload via din backend
-      const uploadUrl = await uploadMemoryImage(compressed.uri);
-      console.log("✅ Uploaded via backend:", uploadUrl);
-  
-      // 🧠 3. Gem i Firestore
-      await addDoc(collection(db, 'moments'), {
+      setIsUploading(true);
+      
+      // Upload video
+      const videoUrl = await uploadMemoryVideo(videoUri);
+      
+      // Save to Firestore
+      await addDoc(collection(db, 'memories'), {
         title: title.trim(),
-        url: uploadUrl,
-        type: 'image',
+        type: 'video',
+        videoUrl,
         createdAt: serverTimestamp(),
+        userId: 'current-user-id', // Replace with actual user ID
       });
-  
+      
       console.log("✅ Dokument gemt i Firestore");
       showToast();
-  
+      
       setTimeout(() => {
         setTitle('');
-        setImages([]);
+        setVideoUri(null);
         router.back();
       }, 3500);
-  
+      
     } catch (error: any) {
       console.error('❌ FEJL:', error);
       Alert.alert('Fejl', error.message || 'Ukendt fejl ved upload.');
@@ -192,13 +203,8 @@ export default function AddImageMemory() {
     }
   };
   
-
-
-  // Create an array of 4 empty slots for images
-  const imageSlots = Array(4).fill(null);
-
   // Check if form is valid for submission
-  const isFormValid = title.trim().length > 0 && images.some(img => img);
+  const isFormValid = title.trim().length > 0 && videoUri;
 
   return (
     <ScrollView style={styles.container}>
@@ -211,16 +217,19 @@ export default function AddImageMemory() {
           >
             <Ionicons name="chevron-back" size={24} color="#000" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Tilføj billede</Text>
+          <Text style={styles.headerTitle}>Tilføj videobesked</Text>
         </View>
 
         {/* Instructions */}
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructions}>
-            Vælg et billede fra dit galleri eller tag et nyt med kameraet for at oprette et minde.
+            Del en lille hilsen med din kære.
           </Text>
           <Text style={styles.subInstructions}>
-            Du kan vælge op til 4 billeder.
+            Vælg en video fra dit galleri eller optag en ny video.
+          </Text>
+          <Text style={styles.subInstructions}>
+            Din videobesked kan være op til 15 sekunder.
           </Text>
         </View>
 
@@ -248,30 +257,32 @@ export default function AddImageMemory() {
           </View>
         </KeyboardAvoidingView>
 
-        {/* Image Grid */}
-        <View style={styles.imageGrid}>
-          {imageSlots.map((_, index) => (
-            <TouchableOpacity 
-              key={index} 
-              style={styles.imageSlot}
-              onPress={() => openImageActionSheet(index)}
-            >
-              {images[index] && typeof images[index] === 'string' ? (
-                <Image
-                  source={{ uri: images[index] }}
-                  style={[styles.selectedImage, { width: '100%', height: '100%' }]}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={styles.emptySlot}>
-                  <Ionicons name="image-outline" size={24} color="#CCCCCC" />
-                  <View style={styles.addIconContainer}>
-                    <Ionicons name="add" size={18} color="#FFFFFF" />
-                  </View>
+        {/* Video Slot */}
+        <View style={styles.videoContainer}>
+          <TouchableOpacity 
+            style={styles.videoSlot}
+            onPress={openVideoActionSheet}
+          >
+            {videoUri ? (
+              <Image
+                source={{ uri: videoUri }}
+                style={styles.selectedVideo}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.emptySlot}>
+                <Ionicons name="film-outline" size={40} color="#CCCCCC" />
+                <View style={styles.addIconContainer}>
+                  <Ionicons name="add" size={18} color="#FFFFFF" />
                 </View>
-              )}
-            </TouchableOpacity>
-          ))}
+              </View>
+            )}
+            {videoUri && (
+              <View style={styles.playIconOverlay}>
+                <Ionicons name="play" size={40} color="#FFFFFF" />
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Action Buttons */}
@@ -280,7 +291,7 @@ export default function AddImageMemory() {
             style={styles.scheduleButton}
             onPress={() => router.push({
               pathname: '/screens/memory/schedule-memory',
-              params: { memoryType: 'image' }
+              params: { memoryType: 'video' }
             })}
           >
             <Ionicons name="time-outline" size={18} color="#42865F" />
@@ -297,10 +308,16 @@ export default function AddImageMemory() {
               <Text style={styles.sendButtonText}>Send minde</Text>
             </TouchableOpacity>
           )}
+          
+          {isUploading && (
+            <View style={styles.sendButton}>
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            </View>
+          )}
         </View>
       </View>
       
-      {/* Image Picker Modal */}
+      {/* Video Picker Modal */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -315,20 +332,20 @@ export default function AddImageMemory() {
           <View style={styles.modalContainer}>
             <TouchableOpacity 
               style={styles.modalOption}
-              onPress={pickImageFromGallery}
+              onPress={pickVideoFromGallery}
             >
-              <Ionicons name="image-outline" size={24} color="#42865F" />
-              <Text style={styles.modalOptionText}>Vælg et billede</Text>
+              <Ionicons name="images-outline" size={24} color="#42865F" />
+              <Text style={styles.modalOptionText}>Vælg fra galleri</Text>
             </TouchableOpacity>
             
             <View style={styles.modalDivider} />
             
             <TouchableOpacity 
               style={styles.modalOption}
-              onPress={takePhoto}
+              onPress={recordVideo}
             >
-              <Ionicons name="camera-outline" size={24} color="#42865F" />
-              <Text style={styles.modalOptionText}>Tag et billede</Text>
+              <Ionicons name="videocam-outline" size={24} color="#42865F" />
+              <Text style={styles.modalOptionText}>Optag video</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -429,21 +446,18 @@ const styles = StyleSheet.create({
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#999999',
   },
-  imageGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  videoContainer: {
     marginBottom: 32,
     marginTop: 8,
     padding: 8,
   },
-  imageSlot: {
-    width: '47%',
-    aspectRatio: 1,
+  videoSlot: {
+    width: '100%',
+    aspectRatio: 16/9,
     backgroundColor: '#EEEEEE',
     borderRadius: 12,
-    marginBottom: 20,
     overflow: 'hidden',
+    position: 'relative',
   },
   emptySlot: {
     width: '100%',
@@ -452,12 +466,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  selectedImage: {
+  selectedVideo: {
     width: '100%',
     height: '100%',
     borderRadius: 12,
     resizeMode: 'cover',
-  },  
+  },
+  playIconOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
   addIconContainer: {
     position: 'absolute',
     bottom: 8,
