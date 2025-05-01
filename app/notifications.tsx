@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Toast from '@/components/Toast';
 
 const Notifications = () => {
   const router = useRouter();
@@ -13,12 +14,18 @@ const Notifications = () => {
   const [system, setSystem] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
-  // Save changes handler (dummy for now)
+  // Save changes handler
   const handleSaveChanges = () => {
     // Here you would typically save the settings to a backend
-    // For now, we'll just go back to the previous screen
-    router.back();
+    // Show a success toast without navigating back
+    setToast({ type: 'success', message: 'Dine notifikationsindstillinger er blevet gemt' });
+    
+    // Clear the toast after a few seconds
+    setTimeout(() => {
+      setToast(null);
+    }, 3000);
   };
 
   return (
@@ -35,7 +42,7 @@ const Notifications = () => {
         <View style={styles.content}>
           {/* Main toggle */}
           <View style={styles.toggleItem}>
-            <Text style={styles.toggleText}>Slå alle notifikationer fra</Text>
+            <Text style={styles.toggleText}>Slå alle notifikationer til</Text>
             <Switch
               value={allNotifications}
               onValueChange={(value) => {
@@ -139,6 +146,11 @@ const Notifications = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Toast notification */}
+      {toast && (
+        <Toast type={toast.type} message={toast.message} />
+      )}
     </View>
   );
 };

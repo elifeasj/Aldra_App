@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Share, Animated, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Animated, ScrollView } from 'react-native';
+import Toast from '@/components/Toast';
+import Constants from 'expo-constants';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,6 +35,7 @@ const Profil = () => {
   const [familyMembers, setFamilyMembers] = useState<UserData[]>([]);
   const [userLogs, setUserLogs] = useState<LogData[]>([]);
   const [uniqueCode, setUniqueCode] = useState<string>('');
+  const [showToast, setShowToast] = useState<boolean>(false);
 
   const handleLogout = async () => {
     try {
@@ -194,6 +197,35 @@ const Profil = () => {
     }
   };
 
+  const handleCopyLink = async () => {
+    await Clipboard.setStringAsync(uniqueCode);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000); // Hide Toast after 2 seconds
+  };
+
+  const handleShareOption = async () => {
+    const shareUrl = `https://${uniqueCode}`;
+    const message = `Bliv en del af vores familie på Aldra: ${shareUrl}`;
+    
+    try {
+      const result = await Share.share({
+        message: message,
+        url: shareUrl,
+      });
+      
+      if (result.action === Share.sharedAction) {
+        // If user chose to copy the link
+        if (result.activityType === 'com.apple.UIKit.activity.CopyToPasteboard') {
+          setShowToast(true); // Show Toast
+          setTimeout(() => setShowToast(false), 2000);
+        }
+      }
+      // If dismissed, do nothing
+    } catch (error) {
+      console.error('❌ Error sharing:', error);
+    }
+  };
+
   const formatRelation = (relation: string) => {
     if (!relation) return '';
     if (relation === 'Barn') return 'Datter';
@@ -253,28 +285,14 @@ const Profil = () => {
             <Text style={styles.linkText}>{uniqueCode || 'Indlæser...'}</Text>
             <TouchableOpacity 
               style={styles.copyButton}
-              onPress={async () => {
-                await Clipboard.setStringAsync(uniqueCode);
-                Alert.alert('Kopieret', 'Linket er kopieret til udklipsholderen', [
-                  { text: 'OK', onPress: () => console.log('Link copied') }
-                ]);
-              }}
+              onPress={handleCopyLink}
             >
               <Text style={styles.copyButtonText}>Kopiér</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity 
             style={styles.shareButton}
-            onPress={async () => {
-              try {
-                await Share.share({
-                  message: uniqueCode,
-                  url: `https://${uniqueCode}`,
-                });
-              } catch (error) {
-                console.error('Error sharing:', error);
-              }
-            }}
+            onPress={handleShareOption}
           >
             <Text style={styles.shareButtonText}>Del</Text>
             <Ionicons name="paper-plane-outline" size={16} color="#42865F" />
@@ -321,7 +339,7 @@ const Profil = () => {
         <View style={styles.sectionTitleContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Seneste log</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/all-logs')}>
               <Text style={styles.viewAllText}>Vis alle</Text>
             </TouchableOpacity>
           </View>
@@ -384,7 +402,7 @@ const Profil = () => {
 
         <TouchableOpacity 
           style={styles.settingsItem}
-          onPress={() => router.push('../../..')}
+          onPress={() => router.push('../../membership')}
         >
           <View style={styles.settingsIcon}>
             <Ionicons name="heart-circle-outline" size={24} color="#000" />
@@ -395,7 +413,7 @@ const Profil = () => {
 
         <TouchableOpacity 
           style={styles.settingsItem}
-          onPress={() => router.push('../../..')}
+          onPress={() => router.push('../../aldra-display')}
         >
           <View style={styles.settingsIcon}>
             <Ionicons name="tv-outline" size={24} color="#000" />
@@ -447,11 +465,16 @@ const Profil = () => {
         </View>
       </View>
 
+      {/* Toast */}
+      {showToast && <Toast type="success" message="Linket er kopieret til din enhed" />}
+
       <View style={styles.bottomContainer}>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Log ud</Text>
         </TouchableOpacity>
-        <Text style={styles.versionText}>Version nummer 00.01</Text>
+        <View style={styles.versionContainer}>
+          <Text style={styles.versionText}>Version {Constants.expoConfig?.version || (Constants.manifest as any)?.version}</Text>
+        </View>
       </View>
     </ScrollView>
   );
@@ -680,6 +703,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
     marginBottom: 30,
     backgroundColor: '#fff',
+    paddingHorizontal: 20,
   },
   button: {
     backgroundColor: '#42865F',
@@ -813,8 +837,6 @@ const styles = StyleSheet.create({
     paddingRight: 22,
     paddingLeft: 22,
     borderRadius: 10,
-    marginHorizontal: 20,
-    marginBottom: 60,
     alignItems: 'center',
   },
   logoutText: {
@@ -823,12 +845,14 @@ const styles = StyleSheet.create({
     fontFamily: 'RedHatDisplay_400Regular',
     fontWeight: 'medium',
   },
+  versionContainer: {
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
   versionText: {
-    textAlign: 'center',
     color: '#999',
     fontSize: 16,
-    marginBottom: 0,
-    paddingRight: 20,
+    fontFamily: 'RedHatDisplay_400Regular',
   },
 
   linkSection: {
