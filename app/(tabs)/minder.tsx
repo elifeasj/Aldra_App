@@ -179,19 +179,28 @@ const CurrentPlayingSection = ({ memories }: { memories: Memory[] }) => {
   );
 };
 
+type MemoryRoute =
+  | '/screens/memory/add-image-memory'
+  | '/screens/memory/add-music-memory'
+  | '/screens/memory/add-video-memory'
+  | '/screens/memory/add-shortfilm-memory';
+
 const AddMemoryButtons = () => {
   const router = useRouter();
-  const memoryTypes = [
-    { id: '1', title: 'Billede', icon: 'image-outline' as const, route: '/screens/memory/add-image-memory' as const },
-    { id: '2', title: 'Musik', icon: 'musical-notes-outline' as const, route: '' },
-    { id: '3', title: 'Video', icon: 'film-outline' as const, route: '/screens/memory/add-video-memory' as const },
-    { id: '4', title: 'Kortfilm', icon: 'play-circle-outline' as const, route: '' },
+  const memoryTypes: {
+    id: string;
+    title: string;
+    icon: any;
+    route: MemoryRoute;
+  }[] = [
+    { id: '1', title: 'Billede', icon: 'image-outline', route: '/screens/memory/add-image-memory' },
+    { id: '2', title: 'Musik', icon: 'musical-notes-outline', route: '/screens/memory/add-music-memory' },
+    { id: '3', title: 'Video', icon: 'film-outline', route: '/screens/memory/add-video-memory' },
+    { id: '4', title: 'Kortfilm', icon: 'play-circle-outline', route: '/screens/memory/add-shortfilm-memory' },
   ];
 
-  const handleMemoryTypePress = (type: { id: string; title: string; route: string }) => {
-    if (type.route) {
-      router.push(type.route);
-    }
+  const handleMemoryTypePress = (type: { id: string; title: string; route: MemoryRoute }) => {
+    router.push(type.route);
   };
 
   return (

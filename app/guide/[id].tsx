@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, Pressable, Share, Linking } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Share2, X, } from 'lucide-react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FontAwesome6Brands from 'react-native-vector-icons/FontAwesome6';
 import Toast from '@/components/Toast';
@@ -96,7 +95,7 @@ export default function GuideDetail() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconButton} onPress={handleBackPress}>
-          <ArrowLeft color="#333" size={24} />
+          <Icon name="arrow-back-outline" color="#333" size={24} />
         </TouchableOpacity>
         <View style={styles.headerSpacer} />
         {/* <TouchableOpacity style={styles.iconButton} onPress={handleSharePress}>
@@ -115,7 +114,7 @@ export default function GuideDetail() {
                 <Text style={styles.categoryText}>{category}</Text>
               </View>
               <TouchableOpacity style={styles.shareInlineButton} onPress={handleSharePress}>
-                <Share2 size={20} color="#333" />
+                <Icon name="share-outline" color="#333" size={24} />
               </TouchableOpacity>
             </View>
           )}
@@ -146,7 +145,7 @@ export default function GuideDetail() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Del denne opslag</Text>
               <TouchableOpacity onPress={() => setShareModalVisible(false)}>
-                <X color="#333" size={24} />
+                <Icon name="x" color="#333" size={24} />
               </TouchableOpacity>
             </View>
 
@@ -193,7 +192,7 @@ export default function GuideDetail() {
 
               <TouchableOpacity style={styles.shareOption} onPress={handleSystemShare}>
                 <View style={[styles.shareIconCircle, { backgroundColor: '#ffffff', borderColor: '#333', borderWidth: 0.1, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 2, }]}>
-                  <Share2 size={24} color="#333" />
+                  <Icon name="share-outline" size={24} color="#333" />
                 </View>
                 <Text style={styles.shareOptionText}>Del via enhed</Text>
               </TouchableOpacity>
@@ -201,7 +200,7 @@ export default function GuideDetail() {
 
 
             <TouchableOpacity style={styles.linkContainer} onPress={handleCopyLink}>
-              <Share2 size={20} color="#333" style={{ marginRight: 8}} />  
+              <Icon name="share-outline" size={20} color="#333" style={{ marginRight: 8}} />  
               <Text style={styles.linkText} numberOfLines={1} ellipsizeMode="middle">
                 https://aldra.dk/post/{slug}
               </Text>
