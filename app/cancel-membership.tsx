@@ -1,14 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  ScrollView,
-  Dimensions,
-  NativeSyntheticEvent,
-  NativeScrollEvent
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from '@/components/Toast';
@@ -73,6 +64,7 @@ const CancelMembership = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color="#000" />
@@ -80,7 +72,6 @@ const CancelMembership = () => {
         <Text style={styles.title}>Afmeld medlemskab</Text>
       </View>
 
-      <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           {/* Main heading */}
           <Text style={styles.greenHeading}>Vi håber, vi har gjort en forskel💚</Text>
@@ -257,7 +248,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 90,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
@@ -279,10 +270,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   descriptionText: {
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
-    lineHeight: 24,
+    lineHeight: 30,
     marginBottom: 8,
   },
   cardsContainer: {
@@ -315,7 +306,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardItemTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontFamily: 'RedHatDisplay_500Medium',
     color: '#B73C3C',
     marginLeft: 8,
@@ -324,10 +315,10 @@ const styles = StyleSheet.create({
     color: '#42865F',
   },
   cardItemDescription: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
-    lineHeight: 22,
+    lineHeight: 30,
     paddingLeft: 28,
   },
   paginationContainer: {
@@ -336,8 +327,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   paginationDot: {
-    width: 10,
-    height: 10,
+    width: 8,
+    height: 8,
     borderRadius: 5,
     backgroundColor: '#E5E5E5',
     marginHorizontal: 5,
@@ -347,6 +338,7 @@ const styles = StyleSheet.create({
   },
   buttonsContainer: {
     marginTop: 20,
+    marginBottom: 20,
   },
   cancelButton: {
     alignItems: 'center',
@@ -354,7 +346,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cancelButtonText: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'RedHatDisplay_500Medium',
     color: '#B73C3C',
   },

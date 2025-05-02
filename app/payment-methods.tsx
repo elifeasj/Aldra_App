@@ -29,6 +29,7 @@ const PaymentMethods = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color="#000" />
@@ -36,7 +37,6 @@ const PaymentMethods = () => {
         <Text style={styles.title}>Betalingsoplysninger</Text>
       </View>
 
-      <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           {/* Payment methods section */}
           <Text style={styles.sectionTitle}>Din betalingsmetode</Text>
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 80,
+    paddingTop: 90,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },

@@ -156,6 +156,7 @@ const AddPaymentMethod = () => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color="#000" />
@@ -163,7 +164,6 @@ const AddPaymentMethod = () => {
         <Text style={styles.title}>Tilføj betalingsmetode</Text>
       </View>
 
-      <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           {/* Card information section */}
           <Text style={styles.sectionTitle}>Kortoplysninger</Text>
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 80,
+    paddingTop: 90,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },

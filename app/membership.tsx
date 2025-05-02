@@ -9,6 +9,7 @@ const Membership = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color="#000" />
@@ -16,7 +17,6 @@ const Membership = () => {
         <Text style={styles.title}>Medlemskab</Text>
       </View>
 
-      <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           {/* Membership section */}
           <Text style={styles.sectionTitle}>Dit medlemskab</Text>
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 80,
+    paddingTop: 90,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
@@ -211,6 +211,7 @@ const styles = StyleSheet.create({
     fontFamily: 'RedHatDisplay_500Medium',
     color: '#42865F',
     marginTop: 8,
+    marginBottom: 30,
   },
 });
 

@@ -29,8 +29,10 @@ const Notifications = () => {
   };
 
   return (
+
     <View style={styles.container}>
       {/* Header */}
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color="#000" />
@@ -38,8 +40,7 @@ const Notifications = () => {
         <Text style={styles.title}>Notifikationer</Text>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.content}>
+      <View style={styles.content}>
           {/* Main toggle */}
           <View style={styles.toggleItem}>
             <Text style={styles.toggleText}>Slå alle notifikationer til</Text>
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 90,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
@@ -206,8 +207,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 22,
-    fontFamily: 'RedHatDisplay_500Medium',
-    marginTop: 30,
+    fontFamily: 'RedHatDisplay_400Regular',
+    marginTop: 35,
     marginBottom: 10,
   },
   saveButton: {

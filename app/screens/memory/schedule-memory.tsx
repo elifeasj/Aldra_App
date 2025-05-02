@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   repeatLabel: {
-    fontSize: 19,
+    fontSize: 20,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#000000',
     marginLeft: 8,
@@ -574,8 +574,8 @@ const styles = StyleSheet.create({
     borderColor: '#42865F',
   },
   repeatOptionText: {
-    fontSize: 16,
-    fontFamily: 'RedHatDisplay_500Medium',
+    fontSize: 18,
+    fontFamily: 'RedHatDisplay_400Regular',
     color: '#333333',
   },
   repeatOptionTextSelected: {
@@ -585,10 +585,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   weekdayLabel: {
-    fontSize: 19,
+    fontSize: 20,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#000000',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   weekdayScrollView: {
     marginBottom: 8,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     borderColor: '#42865F',
   },
   weekdayText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333333',
   },
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   saveButtonText: {
-    fontSize: 19,
+    fontSize: 20,
     fontFamily: 'RedHatDisplay_700Bold',
     color: '#FFFFFF',
   },

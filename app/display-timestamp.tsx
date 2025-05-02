@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 90,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
@@ -191,15 +191,15 @@ const styles = StyleSheet.create({
   },
   mainTitle: {
     fontSize: 24,
-    fontFamily: 'RedHatDisplay_500Medium',
+    fontFamily: 'RedHatDisplay_400Regular',
     marginBottom: 12,
     color: '#000',
   },
   description: {
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
-    lineHeight: 22,
+    lineHeight: 30,
     marginBottom: 30,
   },
   togglesContainer: {

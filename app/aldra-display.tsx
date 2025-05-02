@@ -108,7 +108,7 @@ const AldraDisplay = () => {
               <Ionicons name="apps-outline" size={24} color="#333" style={styles.settingsIcon} />
               <Text style={styles.settingsText}>Tid & dato på skærmen</Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#707070" />
+            <Ionicons name="chevron-forward" size={24} color="#000" />
           </TouchableOpacity>
 
           {/* Connect button */}
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 90,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
@@ -159,15 +159,15 @@ const styles = StyleSheet.create({
   },
   mainTitle: {
     fontSize: 24,
-    fontFamily: 'RedHatDisplay_500Medium',
+    fontFamily: 'RedHatDisplay_400Regular',
     marginBottom: 12,
     color: '#000',
   },
   description: {
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
-    lineHeight: 22,
+    lineHeight: 30,
     marginBottom: 30,
   },
   qrContainer: {
@@ -175,10 +175,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   qrText: {
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_500Medium',
     color: '#333',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   qrCodeBox: {
     width: 200,
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   orText: {
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_500Medium',
     color: '#333',
     textAlign: 'center',
@@ -207,36 +207,36 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5E5',
     borderRadius: 8,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
-    marginBottom: 30,
+    marginBottom: 50,
   },
   instructionsContainer: {
     marginBottom: 30,
   },
   instructionsTitle: {
     fontSize: 22,
-    fontFamily: 'RedHatDisplay_500Medium',
+    fontFamily: 'RedHatDisplay_400Regular',
     color: '#000',
-    marginBottom: 16,
+    marginBottom: 25,
   },
   stepContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   stepNumber: {
-    fontSize: 16,
-    fontFamily: 'RedHatDisplay_500Medium',
+    fontSize: 19,
+    fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
     marginRight: 8,
     width: 16,
   },
   stepText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
-    lineHeight: 22,
+    lineHeight: 30,
   },
   settingsItem: {
     flexDirection: 'row',
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   settingsText: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
   },

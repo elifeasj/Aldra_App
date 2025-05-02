@@ -20,6 +20,7 @@ const MembershipManage = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color="#000" />
@@ -27,7 +28,6 @@ const MembershipManage = () => {
         <Text style={styles.title}>Administrer medlemskab</Text>
       </View>
 
-      <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           {/* Membership section */}
           <Text style={styles.sectionTitle}>Dit medlemskab</Text>
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 90,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
@@ -182,15 +182,15 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 22,
-    fontFamily: 'RedHatDisplay_500Medium',
-    marginBottom: 20,
+    fontFamily: 'RedHatDisplay_400Regular',
+    marginBottom: 30,
     color: '#000',
   },
   planCard: {
     borderWidth: 1,
     borderColor: '#E5E5E5',
     borderRadius: 16,
-    marginBottom: 16,
+    marginBottom: 26,
     backgroundColor: '#fff',
   },
   selectedPlanCard: {
@@ -229,13 +229,13 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   trialText: {
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
     marginBottom: 4,
   },
   priceText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#666',
   },
