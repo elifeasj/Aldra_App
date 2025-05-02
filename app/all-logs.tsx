@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 80,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     fontFamily: 'RedHatDisplay_500Medium',
   },
   logItem: {
-    paddingVertical: 16,
+    paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
@@ -252,13 +252,13 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   logTitle: {
-    fontSize: 18,
-    fontFamily: 'RedHatDisplay_500Medium',
+    fontSize: 20,
+    fontFamily: 'RedHatDisplay_400Regular',
     color: '#000',
     marginBottom: 4,
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#666',
   },
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   },
   viewLogButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'RedHatDisplay_500Medium',
     marginLeft: 4,
   },

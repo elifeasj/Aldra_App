@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 80,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   addPaymentMethodText: {
-    fontSize: 18,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#000',
   },

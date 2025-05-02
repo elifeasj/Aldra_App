@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#000',
     marginBottom: 8,
-    fontFamily: 'RedHatDisplay',
+    fontFamily: 'RedHatDisplay_400Regular',
   },
   dateText: {
     fontSize: 16,
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'RedHatDisplay_700Bold',
+    fontFamily: 'RedHatDisplay_500Medium',
   },
   bottomBorder: {
     height: 1,
@@ -543,11 +543,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: '#fff',
     marginBottom: 0,
+    fontFamily: 'RedHatDisplay_400Regular',
   },
   logDate: {
     fontSize: 14,
     color: '#666',
     marginBottom: 10,
+    fontFamily: 'RedHatDisplay_400Regular',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -568,6 +570,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 10,
     fontStyle: 'italic',
+    fontFamily: 'RedHatDisplay_400Regular',
   },
   logHeader: {
     flexDirection: 'row',
@@ -578,6 +581,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontStyle: 'italic',
+    fontFamily: 'RedHatDisplay_400Regular',
   },
   userLogs: {
     marginTop: 8,
@@ -585,20 +589,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
     width: '100%',
+    fontFamily: 'RedHatDisplay_400Regular',
   },
   logEntry: {
     marginBottom: 4,
     padding: 4,
     backgroundColor: '#fff',
     borderRadius: 4,
+    fontFamily: 'RedHatDisplay_400Regular',
   },
   logEntryTitle: {
     fontSize: 12,
+    fontFamily: 'RedHatDisplay_400Regular',
     fontWeight: '500',
     color: '#333',
   },
   logEntryDate: {
     fontSize: 10,
+    fontFamily: 'RedHatDisplay_400Regular',
     color: '#666',
   },
   container: {

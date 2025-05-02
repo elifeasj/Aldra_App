@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 80,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
@@ -341,24 +341,24 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontFamily: 'RedHatDisplay_500Medium',
-    marginBottom: 8,
+    fontSize: 24,
+    fontFamily: 'RedHatDisplay_400Regular',
+    marginBottom: 16,
     color: '#000',
   },
   requiredText: {
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
-    color: '#666',
-    marginBottom: 20,
+    color: '#42865F',
+    marginBottom: 24,
   },
   inputGroup: {
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 16,
-    fontFamily: 'RedHatDisplay_500Medium',
-    color: '#42865F',
+    fontSize: 19,
+    fontFamily: 'RedHatDisplay_400Regular',
+    color: '#000',
     marginBottom: 8,
   },
   errorLabel: {
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
   },
   inputIcon: {
@@ -388,10 +388,10 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   errorText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#B73C3C',
-    marginTop: 4,
+    marginTop: 6,
   },
   rowInputs: {
     flexDirection: 'row',
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   securityText: {
-    fontSize: 14,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#42865F',
   },
@@ -418,10 +418,10 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   privacyText: {
-    fontSize: 14,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
-    lineHeight: 20,
+    lineHeight: 30,
   },
   privacyLinks: {
     flexDirection: 'row',
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   linkText: {
-    fontSize: 14,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_500Medium',
     color: '#42865F',
     textDecorationLine: 'underline',
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 22,
     fontFamily: 'RedHatDisplay_500Medium',
   },
 });

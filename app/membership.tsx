@@ -50,7 +50,7 @@ const Membership = () => {
               <Ionicons name="card-outline" size={24} color="#000" style={styles.menuIcon} />
               <Text style={styles.menuText}>Betalingsoplysninger</Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#707070" />
+            <Ionicons name="chevron-forward" size={24} color="#000" />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -61,7 +61,7 @@ const Membership = () => {
               <Ionicons name="close-circle-outline" size={24} color="#000" style={styles.menuIcon} />
               <Text style={styles.menuText}>Afmeld medlemskab</Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#707070" />
+            <Ionicons name="chevron-forward" size={24} color="#000" />
           </TouchableOpacity>
           
           {/* Help section */}
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 80,
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   },
   membershipTitle: {
     fontSize: 24,
-    fontFamily: 'RedHatDisplay_500Medium',
+    fontFamily: 'RedHatDisplay_700Bold',
     color: '#fff',
   },
   statusBadge: {
@@ -148,16 +148,16 @@ const styles = StyleSheet.create({
     color: '#42865F',
   },
   renewalText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#fff',
     marginBottom: 8,
   },
   priceText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#fff',
-    marginBottom: 24,
+    marginBottom: 30,
   },
   adminButton: {
     backgroundColor: '#fff',
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   adminButtonText: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'RedHatDisplay_500Medium',
     color: '#42865F',
   },
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   menuText: {
-    fontSize: 18,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#000',
   },
@@ -200,14 +200,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   helpText: {
-    fontSize: 16,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_400Regular',
     color: '#333',
-    lineHeight: 24,
-    marginBottom: 16,
+    lineHeight: 30,
+    marginBottom: 18,
   },
   supportEmail: {
-    fontSize: 18,
+    fontSize: 19,
     fontFamily: 'RedHatDisplay_500Medium',
     color: '#42865F',
     marginTop: 8,
