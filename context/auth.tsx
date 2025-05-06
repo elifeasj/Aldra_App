@@ -33,16 +33,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userDataString = await AsyncStorage.getItem('userData');
       if (userDataString) {
-        const userData = JSON.parse(userDataString);
-        setUser(userData);
+        const parsed = JSON.parse(userDataString);
+  
+        if (!parsed || !parsed.id || !parsed.name || !parsed.email) {
+          console.warn("❌ Ugyldig eller manglende brugerdata:", parsed);
+          setUser(null);
+        } else {
+          setUser(parsed);
+        }
+      } else {
+        console.warn("⚠️ Ingen brugerdata fundet i AsyncStorage.");
+        setUser(null);
       }
     } catch (error) {
-      console.error('Kunne ikke loade brugerdata:', error);
+      console.error('❌ Fejl ved indlæsning/parsing af brugerdata:', error);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
-  };
-  
+  };  
 
   return (
     <AuthContext.Provider value={{ user, setUser, isLoading }}>

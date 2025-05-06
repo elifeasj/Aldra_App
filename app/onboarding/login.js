@@ -57,7 +57,11 @@ export default function Login() {
                 };
                 
                 // Gem i AsyncStorage
-                await AsyncStorage.setItem('userData', JSON.stringify(userData));
+                try {
+                    await AsyncStorage.setItem('userData', JSON.stringify(userData));
+                  } catch (err) {
+                    console.error("❌ Fejl ved AsyncStorage userData:", err);
+                  }                  
                 await AsyncStorage.setItem('personalizationCompleted', 'true');
                 
                 router.push({

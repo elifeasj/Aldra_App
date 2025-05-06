@@ -530,65 +530,67 @@ app.post('/register', async (req, res) => {
   console.log('Registration attempt:', maskedData);
   console.log('=== END REGISTRATION ===');
 
-  // Validate input
   if (!name || !email || !password || !relationToDementiaPerson || termsAccepted === undefined) {
-      console.error('Missing required fields for user:', email);
-      return res.status(400).json({ error: 'All fields are required' });
+    return res.status(400).json({ error: 'Alle felter er påkrævede' });
   }
 
   try {
-      // Check if user already exists
-      const { data: existingUser, error: fetchError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', email)
-          .maybeSingle();
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
 
-      if (fetchError) throw fetchError;
+    if (fetchError) throw fetchError;
+    if (existingUser) return res.status(409).json({ error: 'Bruger eksisterer allerede' });
 
-      if (existingUser) {
-          console.error('User already exists:', email);
-          return res.status(409).json({ error: 'User already exists' });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    let family_id = null;
+
+    // 🔑 Slå Aldra-link op, hvis det er medsendt
+    if (familyCode) {
+      const { data: familyLink, error: familyError } = await supabase
+        .from('family_links')
+        .select('id')
+        .eq('unique_code', familyCode)
+        .maybeSingle();
+
+      if (familyError || !familyLink) {
+        return res.status(400).json({ error: 'Ugyldigt Aldra-link' });
       }
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
+      family_id = familyLink.id;
+    }
 
-      // Insert user
-      const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert([{
-              name,
-              email,
-              hashed_password: hashedPassword,
-              relation_to_dementia_person: relationToDementiaPerson,
-              termsAccepted
-          }])
-          .select('id, name, email, relation_to_dementia_person, family_id')
-          .single();
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert([{
+        name,
+        email,
+        hashed_password: hashedPassword,
+        relation_to_dementia_person: relationToDementiaPerson,
+        termsAccepted,
+        family_id: family_id || null
+      }])
+      .select('id, name, email, relation_to_dementia_person, family_id')
+      .single();
 
-      if (insertError) throw insertError;
+    if (insertError) throw insertError;
 
-      console.log('User registered successfully:', newUser);
-
-      res.status(201).json({
-          id: newUser.id,
-          name: newUser.name,
-          email: newUser.email,
-          relationToDementiaPerson: newUser.relation_to_dementia_person,
-          familyId: newUser.family_id
-      });
+    res.status(201).json({
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      relationToDementiaPerson: newUser.relation_to_dementia_person,
+      familyId: newUser.family_id
+    });
 
   } catch (error) {
-      console.error('Detailed error registering user:', error);
-
-      if (error.code === '23505') {
-          res.status(409).json({ error: 'Email already registered' });
-      } else {
-          res.status(500).json({ error: 'Error registering user', message: error.message });
-      }
+    console.error('❌ Registration error:', error);
+    res.status(500).json({ error: 'Fejl under registrering', message: error.message });
   }
 });
+
 
 // Get all dates with appointments
 app.get('/appointments/dates/all', async (req, res) => {
