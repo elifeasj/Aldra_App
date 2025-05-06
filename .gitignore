@@ -77,7 +77,6 @@ build/
 # macOS / OS junk
 .DS_Store
 
-app.config.js
 
 # @end expo-cli
 
