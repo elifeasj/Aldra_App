@@ -179,29 +179,19 @@ const CurrentPlayingSection = ({ memories }: { memories: Memory[] }) => {
   );
 };
 
-type MemoryRoute =
-  | '/screens/memory/add-image-memory'
-  | '/screens/memory/add-music-memory'
-  | '/screens/memory/add-video-memory'
-  | '/screens/memory/add-shortfilm-memory';
-
 const AddMemoryButtons = () => {
   const router = useRouter();
-  const memoryTypes: {
-    id: string;
-    title: string;
-    icon: any;
-    route: MemoryRoute;
-  }[] = [
-    { id: '1', title: 'Billede', icon: 'image-outline', route: '/screens/memory/add-image-memory' },
-    { id: '2', title: 'Musik', icon: 'musical-notes-outline', route: '/screens/memory/add-music-memory' },
-    { id: '3', title: 'Video', icon: 'film-outline', route: '/screens/memory/add-video-memory' },
-    { id: '4', title: 'Kortfilm', icon: 'play-circle-outline', route: '/screens/memory/add-shortfilm-memory' },
+  const memoryTypes = [
+    { id: '1', title: 'Billede', icon: 'image-outline', route: '/memory/add-image-memory' },
+    { id: '2', title: 'Musik', icon: 'musical-notes-outline', route: '/memory/add-music-memory' },
+    { id: '3', title: 'Video', icon: 'film-outline', route: '/memory/add-video-memory' },
+    { id: '4', title: 'Kortfilm', icon: 'play-circle-outline', route: '/memory/add-shortfilm-memory' },
   ];
 
-  const handleMemoryTypePress = (type: { id: string; title: string; route: MemoryRoute }) => {
-    router.push(type.route);
+  const handleMemoryTypePress = (route: string) => {
+    router.push(route as any);
   };
+  
 
   return (
     <View style={styles.sectionContainer}>
@@ -211,7 +201,7 @@ const AddMemoryButtons = () => {
           <TouchableOpacity 
             key={type.id} 
             style={styles.memoryButton}
-            onPress={() => handleMemoryTypePress(type)}
+            onPress={() => handleMemoryTypePress(type.route)}
           >
             <View style={styles.iconCircle}>
               <Ionicons name={type.icon as any} size={28} color="#42865F" />

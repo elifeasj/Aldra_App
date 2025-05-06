@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView,
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { storage, db } from '../../../firebase';
+import { storage, db } from '../../firebase';
 import * as FileSystem from 'expo-file-system';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ActivityIndicator } from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
+import * as Crypto from 'expo-crypto';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 
@@ -101,7 +101,8 @@ export default function AddImageMemory() {
   
   // Upload memory image - direkte til firebase storage
   const uploadMemoryImage = async (uri: string) => {
-    const filename = `images/${uuidv4()}.jpg`;
+    const randomId = Crypto.randomUUID();
+    const filename = `images/${randomId}.jpg`;
     const storageRef = ref(storage, filename);
   
     const response = await fetch(uri);
@@ -257,7 +258,7 @@ export default function AddImageMemory() {
           <TouchableOpacity 
             style={styles.scheduleButton}
             onPress={() => router.push({
-              pathname: '/screens/memory/schedule-memory',
+              pathname: '/memory/schedule-memory',
               params: { memoryType: 'image' }
             })}
           >

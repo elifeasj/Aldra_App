@@ -16,8 +16,11 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: AsyncStorage,
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false, // vigtigt for mobile apps
+    detectSessionInUrl: false,
   },
 });
+
+console.log("SUPABASE_URL:", supabaseUrl); // midlertidigt log
+console.log("SUPABASE_ANON_KEY:", supabaseAnonKey); // midlertidigt log
 
 export default supabase;

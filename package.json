@@ -77,7 +77,8 @@
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "^0.20.0",
     "uuid": "^11.1.0",
-    "vite": "^6.3.2"
+    "vite": "^6.3.2",
+    "expo-crypto": "~14.1.4"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
