@@ -37,44 +37,48 @@ export default function Login() {
                 console.log('Server response data:', data);
                 console.log('Profile image from server:', data.profile_image);
                 console.log('Profile image type:', typeof data.profile_image);
-
-                // Create a token from user ID since server doesn't provide one
+            
                 const token = `user_${data.id}`;
-                console.log('Created token:', token);
-
-                // Save token in AsyncStorage
                 await AsyncStorage.setItem('token', token);
-                console.log('Token saved to AsyncStorage');
-
+            
                 const userData = {
                     id: data.id,
                     name: data.name,
                     email: data.email,
                     relationToDementiaPerson: data.relation_to_dementia_person,
-                    profile_image: data.profile_image, // Profile image URL
-                    birthday: data.birthday, // Birthday
-                    token: token // Save the authentication token
+                    profile_image: data.profile_image,
+                    birthday: data.birthday,
+                    token
                 };
-                
-                // Gem i AsyncStorage
+            
+                // Gem brugerdata med try/catch
                 try {
                     await AsyncStorage.setItem('userData', JSON.stringify(userData));
-                  } catch (err) {
+                    await AsyncStorage.setItem('personalizationCompleted', 'true');
+                } catch (err) {
                     console.error("❌ Fejl ved AsyncStorage userData:", err);
-                  }                  
-                await AsyncStorage.setItem('personalizationCompleted', 'true');
-                
-                router.push({
-                    pathname: '/(tabs)/oversigt',
-                    params: { userName: data.name }
-                });
-            } else {
-                Alert.alert('Login Fejl', data.error || 'Forkert email eller adgangskode');
+                    Alert.alert("Fejl", "Kunne ikke gemme brugerdata lokalt.");
+                    return;
+                }
+            
+                // Sikker navigation med delay
+                if (userData?.id && userData?.email) {
+                    console.log("✅ Brugerdata klar – navigerer til oversigt.");
+                    setTimeout(() => {
+                        router.push({
+                            pathname: '/(tabs)/oversigt',
+                            params: { userName: data.name }
+                        });
+                    }, 300);
+                } else {
+                    console.warn("❌ Ugyldig brugerdata:", userData);
+                    Alert.alert("Fejl", "Ugyldig brugerdata – prøv igen.");
+                }
             }
-        } catch (error) {
-            console.error('Fejl under login:', error);
-            Alert.alert('Fejl', error.message || 'Noget gik galt. Prøv venligst igen.');
-        }
+            } catch (error) {
+                console.error('Fejl under login:', error);
+                Alert.alert('Fejl', error.message || 'Noget gik galt. Prøv venligst igen.');
+            }
 
     };
 
