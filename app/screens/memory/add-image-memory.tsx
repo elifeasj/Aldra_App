@@ -99,43 +99,23 @@ export default function AddImageMemory() {
     setModalVisible(false);
   };
   
-  // Upload memory image
+  // Upload memory image - direkte til firebase storage
   const uploadMemoryImage = async (uri: string) => {
-    const formData = new FormData();
-    const filename = uri.split('/').pop() || 'image.jpg';
+    const filename = `images/${uuidv4()}.jpg`;
+    const storageRef = ref(storage, filename);
   
-    formData.append('image', {
-      uri,
-      name: filename,
-      type: 'image/jpeg',
-    } as any);
+    const response = await fetch(uri);
+    const blob = await response.blob();
   
-    const apiUrl = `${process.env.EXPO_PUBLIC_API_URL}/upload-memory-image`;
-    console.log("📤 Uploading to:", apiUrl);
+    const uploadTask = await uploadBytesResumable(storageRef, blob);
+    const downloadURL = await getDownloadURL(uploadTask.ref);
   
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      body: formData,
-    });
-  
-    const text = await response.text();
-  
-    if (!response.ok) {
-      console.error("❌ Upload failed - Status:", response.status);
-      console.error("❌ Upload failed - Body:", text);
-      throw new Error('Upload via backend fejlede');
-    }
-  
-    const data = JSON.parse(text);
-    return data.url;
+    return downloadURL;
   };
   
   
 
-  // Handle sending memory
+  // Handle sending memory - gemmer data i firestore
   const [isUploading, setIsUploading] = useState(false);
 
   const handleSendMemory = async () => {
@@ -191,8 +171,6 @@ export default function AddImageMemory() {
       setIsUploading(false);
     }
   };
-  
-
 
   // Create an array of 4 empty slots for images
   const imageSlots = Array(4).fill(null);
