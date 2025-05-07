@@ -37,6 +37,7 @@
     "esbuild": "^0.25.2",
     "expo": "~53.0.5",
     "expo-clipboard": "~7.1.4",
+    "expo-crypto": "~12.4.0",
     "expo-dev-client": "~5.1.7",
     "expo-file-system": "^18.0.12",
     "expo-font": "^13.0.4",
@@ -77,8 +78,7 @@
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "^0.20.0",
     "uuid": "^11.1.0",
-    "vite": "^6.3.2",
-    "expo-crypto": "~14.1.4"
+    "vite": "^6.3.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

@@ -15,7 +15,14 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "ios": {
+        "buildType": "release",
+        "distribution": "app-store"
+      },
+      "autoIncrement": true,
+      "env": {
+        "ENV_FILE": ".env.local"
+      }
     }
   },
   "submit": {
