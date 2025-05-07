@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 16.4.0",
+    "version": ">= 3.0.0",
     "appVersionSource": "remote"
   },
   "build": {
@@ -11,21 +11,21 @@
         "ENV_FILE": ".env.local"
       }
     },
-    "preview": {
-      "distribution": "internal"
-    },
     "production": {
       "ios": {
-        "buildType": "release",
-        "distribution": "app-store"
+        "enterpriseProvisioning": "off"
       },
-      "autoIncrement": true,
       "env": {
         "ENV_FILE": ".env.local"
-      }
+      },
+      "autoIncrement": true
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "business@aldra.dk"
+      }
+    }
   }
 }
