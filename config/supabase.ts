@@ -20,7 +20,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-console.log("SUPABASE_URL:", supabaseUrl); // midlertidigt log
-console.log("SUPABASE_ANON_KEY:", supabaseAnonKey); // midlertidigt log
+console.log("SUPABASE_URL:", supabaseUrl);
+console.log("SUPABASE_ANON_KEY:", supabaseAnonKey);
 
 export default supabase;
