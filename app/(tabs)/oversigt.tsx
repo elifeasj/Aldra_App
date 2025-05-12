@@ -883,6 +883,5 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontFamily: 'RedHatDisplay_700Bold',
-    },
-    
+    }
 });
