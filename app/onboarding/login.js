@@ -66,7 +66,7 @@ export default function Login() {
                     console.log("✅ Brugerdata klar – navigerer til oversigt.");
                     setTimeout(() => {
                         router.push({
-                            pathname: './(tabs)/oversigt',
+                            pathname: '/(tabs)/oversigt',
                             params: { userName: data.name }
                         });
                     }, 300);
