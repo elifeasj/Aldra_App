@@ -66,19 +66,26 @@ export default function AddImageMemory() {
   };
 
   const uploadMemoryImage = async (uri: string) => {
+    const firebase = await import('../../firebase');
+  
     if (!firebase.storage) {
       console.warn("❌ Firebase storage ikke klar");
       throw new Error("Firebase storage er ikke initialiseret.");
     }
+  
     const randomId = Crypto.randomUUID();
     const filename = `images/${randomId}.jpg`;
     const storageRef = ref(firebase.storage, filename);
+  
     const response = await fetch(uri);
     const blob = await response.blob();
+  
     const uploadTask = await uploadBytesResumable(storageRef, blob);
-    const downloadURL = await getDownloadURL(uploadTask.ref);
+    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+  
     return downloadURL;
   };
+  
 
   const [isUploading, setIsUploading] = useState(false);
 

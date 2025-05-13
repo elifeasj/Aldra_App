@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 console.log("🔍 Firebase env config:", {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -22,17 +22,17 @@ const firebaseConfig = {
 
 console.log("🔍 Firebase config:", firebaseConfig);
 
-let app = null;
-let db = null;
-let storage = null;
+// ✅ Nu med tydelige typer
+let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
 
 try {
-  app = initializeApp(firebaseConfig);
+  const app = initializeApp(firebaseConfig);
   db = getFirestore(app);
   storage = getStorage(app);
   console.log("✅ Firebase initialized successfully");
 } catch (error) {
-  console.error("❌ Firebase initialization failed:", error);
+  console.error("❌ Firebase init failed:", error);
 }
 
 export { db, storage };

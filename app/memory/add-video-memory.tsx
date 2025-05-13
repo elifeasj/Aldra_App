@@ -8,7 +8,7 @@ import * as FileSystem from 'expo-file-system';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ActivityIndicator } from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
+import * as Crypto from 'expo-crypto';
 
 export default function AddVideoMemory() {
   const router = useRouter();
@@ -132,7 +132,10 @@ export default function AddVideoMemory() {
 
   // Fallback direct upload to Firebase if backend fails
   const uploadToFirebaseDirectly = async (uri: string) => {
-    const filename = `videos/${uuidv4()}`;
+    const filename = `videos/${Crypto.randomUUID()}`;
+    if (!storage) {
+      throw new Error("Firebase storage er ikke initialiseret.");
+    }
     const storageRef = ref(storage, filename);
     
     const response = await fetch(uri);
@@ -178,6 +181,9 @@ export default function AddVideoMemory() {
       const videoUrl = await uploadMemoryVideo(videoUri);
       
       // Save to Firestore
+      if (!db) {
+        throw new Error("Firebase database er ikke initialiseret.");
+      }
       await addDoc(collection(db, 'memories'), {
         title: title.trim(),
         type: 'video',
