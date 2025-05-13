@@ -27,6 +27,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE
 );
 
+console.log('🔐 Supabase URL loaded:', process.env.SUPABASE_URL ? '✅' : '❌');
+console.log('🔐 Supabase Service Role Key loaded:', process.env.SUPABASE_SERVICE_ROLE ? '✅' : '❌');
+
+
 // Enable CORS
 app.use(cors());
 

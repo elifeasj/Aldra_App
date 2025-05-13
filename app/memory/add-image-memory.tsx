@@ -3,15 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView,
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { storage, db } from '../../firebase';
+import * as firebase from '../../firebase';
 import * as FileSystem from 'expo-file-system';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ActivityIndicator } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import * as ImageManipulator from 'expo-image-manipulator';
-
-
 
 export default function AddImageMemory() {
   const router = useRouter();
@@ -24,18 +22,9 @@ export default function AddImageMemory() {
 
   const showToast = () => {
     setToastVisible(true);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
+    Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     setTimeout(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => setToastVisible(false));
+      Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => setToastVisible(false));
     }, 3000);
   };
 
@@ -46,77 +35,51 @@ export default function AddImageMemory() {
 
   const pickImageFromGallery = async () => {
     if (selectedSlotIndex === null) return;
-    
-    // Ask for permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
     if (status !== 'granted') {
       Alert.alert('Tilladelse påkrævet', 'Vi har brug for adgang til dit galleri for at vælge billeder.');
       return;
     }
-
-    // Launch image picker
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-
+    const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [4, 3], quality: 1 });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const newImages = [...images];
       newImages[selectedSlotIndex] = result.assets[0].uri;
       setImages(newImages);
     }
-    
     setModalVisible(false);
   };
 
   const takePhoto = async () => {
     if (selectedSlotIndex === null) return;
-    
-    // Ask for camera permission
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    
     if (status !== 'granted') {
       Alert.alert('Tilladelse påkrævet', 'Vi har brug for adgang til dit kamera for at tage billeder.');
       return;
     }
-
-    // Launch camera
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-    
-
+    const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [4, 3], quality: 1 });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const newImages = [...images];
       newImages[selectedSlotIndex] = result.assets[0].uri;
       setImages(newImages);
     }
-    
     setModalVisible(false);
   };
-  
-  // Upload memory image - direkte til firebase storage
+
   const uploadMemoryImage = async (uri: string) => {
+    if (!firebase.storage) {
+      console.warn("❌ Firebase storage ikke klar");
+      throw new Error("Firebase storage er ikke initialiseret.");
+    }
     const randomId = Crypto.randomUUID();
     const filename = `images/${randomId}.jpg`;
-    const storageRef = ref(storage, filename);
-  
+    const storageRef = ref(firebase.storage, filename);
     const response = await fetch(uri);
     const blob = await response.blob();
-  
     const uploadTask = await uploadBytesResumable(storageRef, blob);
     const downloadURL = await getDownloadURL(uploadTask.ref);
-  
     return downloadURL;
   };
-  
-  
 
-  // Handle sending memory - gemmer data i firestore
   const [isUploading, setIsUploading] = useState(false);
 
   const handleSendMemory = async () => {
@@ -124,47 +87,38 @@ export default function AddImageMemory() {
       Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
       return;
     }
-  
     if (!title.trim()) {
       Alert.alert('Fejl', 'Indtast venligst en titel for dit minde.');
       return;
     }
-  
+
     setIsUploading(true);
-  
     try {
       console.log('🔔 handleSendMemory CALLED');
-  
       const imageUri = images[0];
-  
-      // 🚀 1. Komprimér billedet
-      const compressed = await ImageManipulator.manipulateAsync(
-        imageUri,
-        [{ resize: { width: 800 } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-      );
-  
-      // 🌐 2. Upload via din backend
+      const compressed = await ImageManipulator.manipulateAsync(imageUri, [{ resize: { width: 800 } }], { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG });
       const uploadUrl = await uploadMemoryImage(compressed.uri);
       console.log("✅ Uploaded via backend:", uploadUrl);
-  
-      // 🧠 3. Gem i Firestore
-      await addDoc(collection(db, 'moments'), {
+
+      if (!firebase.db) {
+        console.warn("❌ Firestore ikke klar");
+        throw new Error("Firebase database er ikke initialiseret.");
+      }
+
+      await addDoc(collection(firebase.db, 'moments'), {
         title: title.trim(),
         url: uploadUrl,
         type: 'image',
         createdAt: serverTimestamp(),
       });
-  
+
       console.log("✅ Dokument gemt i Firestore");
       showToast();
-  
       setTimeout(() => {
         setTitle('');
         setImages([]);
         router.back();
       }, 3500);
-  
     } catch (error: any) {
       console.error('❌ FEJL:', error);
       Alert.alert('Fejl', error.message || 'Ukendt fejl ved upload.');
@@ -173,10 +127,7 @@ export default function AddImageMemory() {
     }
   };
 
-  // Create an array of 4 empty slots for images
   const imageSlots = Array(4).fill(null);
-
-  // Check if form is valid for submission
   const isFormValid = title.trim().length > 0 && images.some(img => img);
 
   return (
