@@ -183,6 +183,8 @@ export default function Kalender() {
             shouldShowAlert: true,
             shouldPlaySound: true,
             shouldSetBadge: true,
+            shouldShowBanner: true,
+            shouldShowList: true,
         }),
     });
 
@@ -1544,7 +1546,7 @@ export default function Kalender() {
                         selectedDayBackgroundColor: '#42865F',
                         selectedDayTextColor: '#fff',
                         todayTextColor: '#42865F',
-                        todayFontWeight: '700',
+                        textDayFontWeight: '700',
                         dayTextColor: '#000',
                         textDisabledColor: '#d9e1e8',
                         monthTextColor: '#000',
@@ -1558,8 +1560,6 @@ export default function Kalender() {
                     enableSwipeMonths={true}
                     markedDates={getMarkedDates()}
                     firstDay={1}
-                    locale="da"
-                    dayNamesShort={['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør']}
                 />
 
                 {/* Appointments List */}
