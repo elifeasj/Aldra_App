@@ -40,14 +40,19 @@ export default function AddImageMemory() {
       Alert.alert('Tilladelse påkrævet', 'Vi har brug for adgang til dit galleri for at vælge billeder.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [4, 3], quality: 1 });
-    if (!result.canceled && result.assets && result.assets.length > 0) {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+    if (!result.canceled && result.assets?.length > 0) {
       const newImages = [...images];
       newImages[selectedSlotIndex] = result.assets[0].uri;
       setImages(newImages);
     }
     setModalVisible(false);
   };
+
 
   const takePhoto = async () => {
     if (selectedSlotIndex === null) return;
@@ -56,8 +61,12 @@ export default function AddImageMemory() {
       Alert.alert('Tilladelse påkrævet', 'Vi har brug for adgang til dit kamera for at tage billeder.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [4, 3], quality: 1 });
-    if (!result.canceled && result.assets && result.assets.length > 0) {
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+    if (!result.canceled && result.assets?.length > 0) {
       const newImages = [...images];
       newImages[selectedSlotIndex] = result.assets[0].uri;
       setImages(newImages);
