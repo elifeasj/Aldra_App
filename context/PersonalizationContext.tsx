@@ -39,7 +39,7 @@ export const PersonalizationProvider: React.FC<{ children: React.ReactNode }> = 
   };
 
   const saveAnswers = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = supabase.auth.user();
     if (!user) throw new Error('No user logged in');
 
     const { error } = await supabase

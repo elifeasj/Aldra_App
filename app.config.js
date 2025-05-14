@@ -9,6 +9,7 @@ export default ({ config }) => ({
   scheme: "myapp",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
+  jsEngine: "hermes",
   plugins: ["expo-font", "expo-router", "expo-notifications"],
   experiments: {
     typedRoutes: true
@@ -33,6 +34,7 @@ export default ({ config }) => ({
   ios: {
     bundleIdentifier: "com.effyo.aldraapp",
     supportsTablet: true,
+    jsEngine: "hermes",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSCameraUsageDescription: "Denne app har brug for adgang til dit kamera for at tage billeder og optage videoer.",

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js/dist/module';
+import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
 
 const supabaseUrl = Constants.expoConfig?.extra?.SUPABASE_URL;

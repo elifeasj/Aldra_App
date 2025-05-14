@@ -6,6 +6,8 @@ import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, ImageBackground
 import { useRouter } from 'expo-router';
 import "expo-router/entry";
 import Icon from 'react-native-vector-icons/Ionicons';
+import { Buffer } from 'buffer'; global.Buffer = Buffer;
+
 
 export default function IntroScreen() {
     const router = useRouter();
