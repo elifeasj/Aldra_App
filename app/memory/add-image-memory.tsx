@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView,
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import * as firebase from '../../firebase';
 import * as FileSystem from 'expo-file-system';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -19,6 +18,7 @@ export default function AddImageMemory() {
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  
 
   const showToast = () => {
     setToastVisible(true);
@@ -75,21 +75,23 @@ export default function AddImageMemory() {
   
     const randomId = Crypto.randomUUID();
     const filename = `images/${randomId}.jpg`;
-    const storageRef = ref(firebase.storage, filename);
+    const storageRef = ref(firebase.storage!, filename);
   
     const response = await fetch(uri);
     const blob = await response.blob();
   
     const uploadTask = await uploadBytesResumable(storageRef, blob);
-    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+    const downloadURL = await getDownloadURL(uploadTask.ref);
   
     return downloadURL;
   };
+  
   
 
   const [isUploading, setIsUploading] = useState(false);
 
   const handleSendMemory = async () => {
+    const firebase = await import('../../firebase');
     if (!images.some(img => img)) {
       Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
       return;
@@ -103,6 +105,10 @@ export default function AddImageMemory() {
     try {
       console.log('🔔 handleSendMemory CALLED');
       const imageUri = images[0];
+      if (!imageUri) {
+        throw new Error("Intet billede valgt");
+      }
+
       const compressed = await ImageManipulator.manipulateAsync(imageUri, [{ resize: { width: 800 } }], { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG });
       const uploadUrl = await uploadMemoryImage(compressed.uri);
       console.log("✅ Uploaded via backend:", uploadUrl);
@@ -112,7 +118,7 @@ export default function AddImageMemory() {
         throw new Error("Firebase database er ikke initialiseret.");
       }
 
-      await addDoc(collection(firebase.db, 'moments'), {
+      await addDoc(collection(firebase.db!, 'moments'), {
         title: title.trim(),
         url: uploadUrl,
         type: 'image',

@@ -32,8 +32,9 @@ export default ({ config }) => ({
     supportsTablet: true,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
-      NSPhotoLibraryUsageDescription:
-        "Denne app har brug for adgang til dit fotobibliotek for at uploade et profilbillede."
+      NSCameraUsageDescription: "Denne app har brug for adgang til dit kamera for at tage billeder og optage videoer.",
+      NSMicrophoneUsageDescription: "Denne app har brug for adgang til din mikrofon til at optage lyd i videoer.",
+      NSPhotoLibraryUsageDescription: "Denne app har brug for adgang til dit fotobibliotek for at vælge billeder og videoer."
     }
   },
   web: {
