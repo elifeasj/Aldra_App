@@ -565,6 +565,27 @@ app.post('/register', async (req, res) => {
 
       family_id = familyLink.id;
     }
+    else {
+      // Ingen kode? Opret ny family_links-post
+      const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+      const { data: newFamily, error: createFamilyError } = await supabase
+        .from('family_links')
+        .insert({
+          unique_code: uniqueCode,
+          member_count: 1,
+          status: 'active'
+        })
+        .select('id')
+        .maybeSingle();
+    
+      if (createFamilyError || !newFamily) {
+        return res.status(500).json({ error: 'Kunne ikke oprette familie-link automatisk' });
+      }
+    
+      family_id = newFamily.id;
+    }
+    
 
     const { data: newUser, error: insertError } = await supabase
       .from('users')
