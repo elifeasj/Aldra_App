@@ -20,6 +20,9 @@ export default ({ config }) => ({
       projectId: "353b4f0f-2aa3-4f8c-9ed4-e5c59de58a5e"
     }
   },
+  install: {
+    exclude: ["ws"]
+  },
   icon: "./assets/images/aldra_icon.png",
   android: {
     package: "com.effyo.aldraapp",
