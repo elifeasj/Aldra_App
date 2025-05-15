@@ -15,9 +15,10 @@
     "baseUrl": "./",
     "types": ["react", "react-native", "jest",],
     "paths": {
-      "@/*": ["app/*"],
+      "@/*": ["*"],
       "@/hooks/*": ["hooks/*"],
-      "@/components/*": ["components/*"]
+      "@/components/*": ["components/*"],
+      "@/constants/*": ["constants/*"]
     }
   },
   "include": [
