@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config';
-import Toast from '@/components/Toast';
+import Toast from '../components/Toast';
 
 const ChangePassword = () => {
   const router = useRouter();

@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FontAwesome6Brands from 'react-native-vector-icons/FontAwesome6';
-import Toast from '@/components/Toast';
+import Toast from '../../components/Toast';
 
 
 export default function GuideDetail() {

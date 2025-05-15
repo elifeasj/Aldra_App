@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Toast from '@/components/Toast';
+import Toast from '../components/Toast';
 import ConfirmationModal from '../components/ConfirmationModal';
 import CancellationModal from '../components/CancellationModal';
 

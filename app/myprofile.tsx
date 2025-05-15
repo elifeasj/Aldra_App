@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_URL } from '../config';
-import Toast from '@/components/Toast';
+import Toast from '../components/Toast';
 
 interface UserProfileData {
   name: string;

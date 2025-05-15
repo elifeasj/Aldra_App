@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Animated, ScrollView, TextStyle, ViewStyle, ImageStyle } from 'react-native';
-import Toast from '@/components/Toast';
+import Toast from '../../components/Toast';
 import Constants from 'expo-constants';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ConfirmationModal from '../components/ConfirmationModal';
-import Toast from '@/components/Toast';
+import Toast from '../components/Toast';
 
 // Define subscription plan types
 type SubscriptionPlan = 'monthly' | 'quarterly' | 'yearly';

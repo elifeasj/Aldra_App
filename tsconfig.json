@@ -12,12 +12,12 @@
     "isolatedModules": true,
     "noEmit": true,
     "allowJs": true,
-    "baseUrl": "./",
+    "baseUrl": ".",
     "types": ["react", "react-native", "jest",],
     "paths": {
-      "@/*": ["*"],
-      "@/hooks/*": ["hooks/*"],
+      "@/*": ["app/*"],
       "@/components/*": ["components/*"],
+      "@/hooks/*": ["hooks/*"],
       "@/constants/*": ["constants/*"]
     }
   },
