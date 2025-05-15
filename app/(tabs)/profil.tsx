@@ -46,6 +46,23 @@ const Profil = () => {
     }
   };
 
+  useEffect(() => {
+    async function fetchSignedUrl() {
+      if (userData.profile_image && userData.id) {
+        const response = await fetch(`${API_URL}/user/${userData.id}/avatar-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: userData.profile_image }),
+        });
+        const { signedUrl } = await response.json();
+        if (signedUrl) {
+          setUserData(prev => ({ ...prev, avatarUrl: signedUrl }));
+        }
+      }
+    }
+    fetchSignedUrl();
+  }, [userData.profile_image, userData.id]);
+
   const handleViewLog = (log: LogData) => {
     router.push({ pathname: '/ny-log', params: { date: log.created_at, logId: log.id } });
   };
@@ -105,21 +122,18 @@ const Profil = () => {
       const storedUserData = await AsyncStorage.getItem('userData');
       if (storedUserData) {
         const parsedData = JSON.parse(storedUserData);
-        console.log('Parsed userData from AsyncStorage:', parsedData);
   
-        // Fallback mellem forskellige navne
         const imagePath = parsedData.profile_image || parsedData.profileImage;
   
+        // Sæt avatarUrl initialt tom, så fallback bruges indtil signedUrl hentes
         const updated = {
           id: parsedData.id,
           name: parsedData.name,
-          relationToDementiaPerson: parsedData.relationToDementiaPerson,
+          relationToDementiaPerson: parsedData.relationToDementiaPerson ?? parsedData.relation_to_dementia_person ?? '',
           profile_image: imagePath,
-          avatarUrl: imagePath,
+          avatarUrl: '', 
         };
-        
   
-        // Midlertidigt sæt
         setUserData(updated);
   
         if (imagePath && parsedData.id) {
@@ -131,9 +145,8 @@ const Profil = () => {
   
           const result = await response.json();
           if (result.signedUrl) {
-            const updatedWithAvatar = { ...updated, avatarUrl: result.signedUrl };
-            setUserData(updatedWithAvatar);
-            console.log('Updated userData with avatarUrl:', updatedWithAvatar);
+            setUserData(prev => ({ ...prev, avatarUrl: result.signedUrl }));
+            console.log('Updated userData with avatarUrl:', result.signedUrl);
           }
         }
       }
@@ -141,9 +154,7 @@ const Profil = () => {
       console.error('Error loading user data:', error);
     }
   };
-  
-  
-  
+
 
   const revalidate = useCallback(async () => {
     await loadUserData();        
@@ -226,12 +237,6 @@ const Profil = () => {
     }
   };
 
-  const formatRelation = (relation: string) => {
-    if (!relation) return '';
-    if (relation === 'Barn') return 'Datter';
-    return relation;
-  };
-
   useEffect(() => {
     getUniqueAldraLink();
   }, [userData.id]);
@@ -250,9 +255,9 @@ const Profil = () => {
         <TouchableOpacity onPress={() => router.push('/myprofile')}>
             {userData.avatarUrl ? (
               <Image
-                source={{ uri: userData.avatarUrl }}
-                style={styles.profileImage}
-                resizeMode="cover"
+              source={{ uri: userData.avatarUrl }}
+              style={styles.profileImage}
+              resizeMode="cover"
               />
             ) : (
               <View
@@ -270,7 +275,7 @@ const Profil = () => {
           <View style={styles.profileInfo}>
             <Text style={styles.name}>{formatName(userData.name)}</Text>
             <Text style={styles.profileSubtitle}>
-              {formatRelation(userData.relationToDementiaPerson)}
+            {userData.relationToDementiaPerson || ''}
             </Text>
           </View>
         </View>

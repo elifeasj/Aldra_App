@@ -45,7 +45,7 @@ export default function Login() {
                     id: data.id,
                     name: data.name,
                     email: data.email,
-                    relationToDementiaPerson: data.relation_to_dementia_person,
+                    relationToDementiaPerson: data.relationToDementiaPerson || data.relation_to_dementia_person,
                     profile_image: data.profile_image,
                     birthday: data.birthday,
                     token
