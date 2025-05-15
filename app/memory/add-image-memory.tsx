@@ -1,3 +1,5 @@
+import { storage, db } from '../../firebase';
+import supabase from '../../config/supabase';
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView, Alert, Modal, Animated, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -75,16 +77,14 @@ export default function AddImageMemory() {
   };
 
   const uploadMemoryImage = async (uri: string) => {
-    const firebase = await import('../../firebase');
-  
-    if (!firebase.storage) {
+    if (!storage) {
       console.warn("❌ Firebase storage ikke klar");
       throw new Error("Firebase storage er ikke initialiseret.");
     }
   
     const randomId = Crypto.randomUUID();
     const filename = `images/${randomId}.jpg`;
-    const storageRef = ref(firebase.storage!, filename);
+    const storageRef = ref(storage, filename);
   
     const response = await fetch(uri);
     const blob = await response.blob();
@@ -93,14 +93,11 @@ export default function AddImageMemory() {
     const downloadURL = await getDownloadURL(uploadTask.ref);
   
     return downloadURL;
-  };
-  
-  
+  };  
 
   const [isUploading, setIsUploading] = useState(false);
 
   const handleSendMemory = async () => {
-    const firebase = await import('../../firebase');
     if (!images.some(img => img)) {
       Alert.alert('Fejl', 'Vælg mindst ét billede for at fortsætte.');
       return;
@@ -122,16 +119,19 @@ export default function AddImageMemory() {
       const uploadUrl = await uploadMemoryImage(compressed.uri);
       console.log("✅ Uploaded via backend:", uploadUrl);
 
-      if (!firebase.db) {
+      if (!db) {
         console.warn("❌ Firestore ikke klar");
         throw new Error("Firebase database er ikke initialiseret.");
       }
 
-      await addDoc(collection(firebase.db!, 'moments'), {
+      const user = supabase.auth.user();
+
+      await addDoc(collection(db!, 'moments'), {
         title: title.trim(),
         url: uploadUrl,
         type: 'image',
         createdAt: serverTimestamp(),
+        userId: user?.id,
       });
 
       console.log("✅ Dokument gemt i Firestore");

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Animated, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Animated, ScrollView, TextStyle, ViewStyle, ImageStyle } from 'react-native';
 import Toast from '@/components/Toast';
 import Constants from 'expo-constants';
 import * as Clipboard from 'expo-clipboard';
@@ -484,7 +484,6 @@ const styles = StyleSheet.create({
   logItem: {
     backgroundColor: '#fff',
     padding: 16,
-    marginBottom: 4,
     borderWidth: 1,
     borderColor: '#E5E5E5',
     borderRadius: 12,
@@ -629,7 +628,8 @@ const styles = StyleSheet.create({
   profileSection: {
     paddingVertical: 20,
     paddingHorizontal: 20,
-    marginBottom: 10,
+    backgroundColor: '#fff',
+    marginBottom: 8,
   },
   profileContainer: {
     flexDirection: 'row',
@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
   profileImage: {
     width: 95,
     height: 95,
-    borderRadius: 55,
+    borderRadius: 50,
     borderWidth: 3,
     borderColor: '#42865F',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -676,8 +676,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     backgroundColor: '#fff',
-    marginBottom: 8,
-    borderRadius: 10,
+    marginBottom: 15,
   },
   settingsSection: {
     backgroundColor: '#fff',
@@ -720,6 +719,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
   },
+
   buttonText: {
     color: '#fff',
     fontSize: 16,
@@ -773,6 +773,7 @@ const styles = StyleSheet.create({
   familyImage: {
     width: '100%',
     height: '100%',
+    overflow: 'hidden',
   },
   initialsContainer: {
     backgroundColor: '#42865F',
@@ -851,7 +852,7 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 18,
     fontFamily: 'RedHatDisplay_400Regular',
-    fontWeight: 'medium',
+    fontWeight: '500',
   },
   versionContainer: {
     justifyContent: 'center',

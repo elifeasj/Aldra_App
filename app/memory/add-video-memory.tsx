@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { storage, db } from '../../firebase';
+import supabase from '../../config/supabase';
 import * as FileSystem from 'expo-file-system';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -133,9 +134,7 @@ export default function AddVideoMemory() {
   // Fallback direct upload to Firebase if backend fails
   const uploadToFirebaseDirectly = async (uri: string) => {
     const filename = `videos/${Crypto.randomUUID()}`;
-    if (!storage) {
-      throw new Error("Firebase storage er ikke initialiseret.");
-    }
+    if (!storage) throw new Error("Firebase Storage mangler");
     const storageRef = ref(storage, filename);
     
     const response = await fetch(uri);
@@ -179,17 +178,16 @@ export default function AddVideoMemory() {
       
       // Upload video
       const videoUrl = await uploadMemoryVideo(videoUri);
-      
+      const user = supabase.auth.user();
+
       // Save to Firestore
-      if (!db) {
-        throw new Error("Firebase database er ikke initialiseret.");
-      }
+      if (!db) throw new Error("Firebase database er ikke initialiseret.");
       await addDoc(collection(db, 'memories'), {
         title: title.trim(),
         type: 'video',
         videoUrl,
         createdAt: serverTimestamp(),
-        userId: 'current-user-id', // Replace with actual user ID
+        userId: user?.id,
       });
       
       console.log("✅ Dokument gemt i Firestore");

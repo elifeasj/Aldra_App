@@ -5,11 +5,12 @@ export default ({ config }) => ({
   name: "aldraapp",
   slug: "aldraapp",
   version: "1.0.0",
+  runtimeVersion: "1.0.0",
   orientation: "portrait",
   scheme: "myapp",
   userInterfaceStyle: "automatic",
-  newArchEnabled: true,
-  jsEngine: "hermes",
+  newArchEnabled: false,
+  jsEngine: "jsc",
   plugins: ["expo-font", "expo-router", "expo-notifications"],
   experiments: {
     typedRoutes: true
@@ -34,7 +35,7 @@ export default ({ config }) => ({
   ios: {
     bundleIdentifier: "com.effyo.aldraapp",
     supportsTablet: true,
-    jsEngine: "hermes",
+    jsEngine: "jsc",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSCameraUsageDescription: "Denne app har brug for adgang til dit kamera for at tage billeder og optage videoer.",
