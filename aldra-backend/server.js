@@ -10,18 +10,46 @@ const path = require('path');
 const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
+
 const admin = require('firebase-admin');
-const { initializeApp, applicationDefault } = require('firebase-admin/app');
-const { getFirestore } = require('firebase-admin/firestore');
-const serviceAccount = require('./aldraapp-firebase-adminsdk-fbsvc-00dc6aadb0.json');
 
+// Check om du vil initialisere via fil eller env
+let serviceAccount;
 
-// Initialiser kun én gang
-initializeApp({
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    console.log('🔐 Firebase Service Account parsed from env: ✅');
+  } catch (error) {
+    console.error('❌ Failed to parse Firebase Service Account from env:', error);
+    process.exit(1);
+  }
+} else {
+  // Hvis ingen env var, fallback til fil
+  const serviceAccountPath = path.resolve(__dirname, './aldraapp-firebase-adminsdk-fbsvc-00dc6aadb0.json');
+  if (fs.existsSync(serviceAccountPath)) {
+    serviceAccount = require(serviceAccountPath);
+    console.log(`🔐 Firebase Service Account loaded from file: ${serviceAccountPath} ✅`);
+  } else {
+    console.error('❌ Firebase Service Account file not found and env var missing');
+    process.exit(1);
+  }
+}
+
+// Erstat private_key med privateKey med korrekt linjeskift, hvis nødvendigt
+if (serviceAccount.private_key) {
+  serviceAccount.privateKey = serviceAccount.private_key.replace(/\\n/g, '\n');
+  delete serviceAccount.private_key;
+}
+
+admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+
 const db = admin.firestore();
 const auth = admin.auth();
+
+
 
 const app = express();
 

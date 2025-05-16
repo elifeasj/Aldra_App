@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import { ServiceAccount } from 'firebase-admin';
-const serviceAccountRaw = require('./serviceAccountKey.json');
+const serviceAccountRaw = require('./aldraapp-firebase-adminsdk-fbsvc-00dc6aadb0.json');
 
 const serviceAccount: ServiceAccount = {
   ...serviceAccountRaw,
