@@ -11,49 +11,25 @@ const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
 
-const { auth, db } = require('./firebaseAdmin');
-// Check om du vil initialisere via fil eller env
-let serviceAccount;
-
-console.log('Raw FIREBASE_SERVICE_ACCOUNT env var:', process.env.FIREBASE_SERVICE_ACCOUNT);
-
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  try {
-    const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-    const fixed = raw.replace(/\\n/g, '\n'); // Erstat escaped linjeskift med faktiske linjeskift
-    serviceAccount = JSON.parse(fixed);
-    console.log('🔐 Firebase Service Account parsed from env: ✅');
-  } catch (error) {
-    console.error('❌ Failed to parse Firebase Service Account from env:', error);
-    process.exit(1);
-  }
-} else {
-  // fallback til fil hvis env mangler
-  const serviceAccountPath = path.resolve(__dirname, './aldraapp-firebase-adminsdk-fbsvc-00dc6aadb0.json');
-  if (fs.existsSync(serviceAccountPath)) {
-    serviceAccount = require(serviceAccountPath);
-    console.log(`🔐 Firebase Service Account loaded from file: ${serviceAccountPath} ✅`);
-  } else {
-    console.error('❌ Firebase Service Account file not found and env var missing');
-    process.exit(1);
-  }
-}
-
-// Map private_key til privateKey
-if (serviceAccount.private_key) {
-  serviceAccount.privateKey = serviceAccount.private_key.replace(/\\n/g, '\n');
-  delete serviceAccount.private_key;
-}
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
-const db = admin.firestore();
-const auth = admin.auth();
-
-
 const app = express();
+
+
+
+const { auth, db } = require('./firebaseAdmin');
+
+console.log('🔐 Firebase Admin SDK initialized — Firestore and Auth are ready to use!');
+
+async function testFirebaseConnection() {
+  try {
+    const collections = await db.listCollections();
+    console.log('✅ Firestore connected, collections count:', collections.length);
+  } catch (error) {
+    console.error('❌ Firestore connection failed:', error);
+  }
+}
+
+testFirebaseConnection();
+
 
 
 console.log('🔐 Resend API key loaded:', process.env.RESEND_API_KEY ? '✅' : '❌');
