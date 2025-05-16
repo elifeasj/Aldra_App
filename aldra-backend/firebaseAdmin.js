@@ -4,8 +4,8 @@ const fs = require('fs');
 
 let serviceAccount;
 
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT.replace(/\\n/g, '\n');
+if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+  const raw = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
   serviceAccount = JSON.parse(raw);
 } else {
   const serviceAccountPath = path.resolve(__dirname, './aldraapp-firebase-adminsdk-fbsvc-00dc6aadb0.json');
