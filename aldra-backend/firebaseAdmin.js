@@ -8,10 +8,15 @@ try {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
     const raw = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
     console.log('Decoded Firebase service account JSON:', raw);
-    serviceAccount = JSON.parse(raw);
-  } else {
-    throw new Error('Env var FIREBASE_SERVICE_ACCOUNT_BASE64 not set');
+  
+    try {
+      serviceAccount = JSON.parse(raw);
+    } catch(e) {
+      console.error('Parsing error:', e);
+      throw e;
+    }
   }
+  
 } catch (error) {
   console.warn('Failed to parse FIREBASE_SERVICE_ACCOUNT_BASE64, falling back to local file:', error.message);
   const serviceAccountPath = path.resolve(__dirname, './aldraapp-firebase-adminsdk-fbsvc-00dc6aadb0.json');
