@@ -10,7 +10,9 @@ const path = require('path');
 const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
-
+const admin = require('firebase-admin');
+const bcrypt = require('bcrypt');
+const { v4: uuidv4 } = require('uuid');
 
 
 const { auth, db } = require('./firebaseAdmin');
@@ -352,57 +354,59 @@ app.post('/change-password', async (req, res) => {
 // Login endpoint
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  const maskedData = maskSensitiveData({ email, password });
-  console.log('Login attempt:', maskedData);
+  console.log('Login attempt:', { email }); // Undgå at logge password
 
   if (!email || !password) {
-      return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
+    return res.status(400).json({ error: 'Email og adgangskode er påkrævet' });
   }
 
   try {
-      const { data: user, error: fetchError } = await supabase
-          .from('users')
-          .select('id, name, email, relation_to_dementia_person, profile_image, birthday, hashed_password')
-          .eq('email', email)
-          .maybeSingle();
-
-      console.log('Database query result:', user);
-
-      if (fetchError) throw fetchError;
-
-      if (!user) {
-          return res.status(401).json({ error: 'Forkert email eller adgangskode' });
+    // 1. Find bruger i Firebase Authentication via email
+    let userRecord;
+    try {
+      userRecord = await auth.getUserByEmail(email);
+    } catch (error) {
+      // Bruger ikke fundet
+      if (error.code === 'auth/user-not-found') {
+        return res.status(401).json({ error: 'Forkert email eller adgangskode' });
       }
+      throw error;
+    }
 
-      const isPasswordValid = await bcrypt.compare(password, user.hashed_password);
+    const uid = userRecord.uid;
 
-      if (!isPasswordValid) {
-          return res.status(401).json({ error: 'Forkert email eller adgangskode' });
-      }
+    // 2. Hent brugerdata fra Firestore
+    const userDoc = await db.collection('users').doc(uid).get();
 
-      const formattedBirthday = user.birthday ? user.birthday.split('T')[0] : null;
+    if (!userDoc.exists) {
+      return res.status(401).json({ error: 'Forkert email eller adgangskode' });
+    }
 
-      console.log('User data being sent:', {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          relationToDementiaPerson: user.relation_to_dementia_person,
-          profile_image: user.profile_image,
-          birthday: formattedBirthday,
-      });
+    const userData = userDoc.data();
 
-      res.json({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          relationToDementiaPerson: user.relation_to_dementia_person,
-          profile_image: user.profile_image,
-          birthday: formattedBirthday
-      });
+    // 3. Tjek adgangskode mod hashed_password i Firestore (hvis du gemmer hashed password der)
+    const isPasswordValid = await bcrypt.compare(password, userData.hashed_password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Forkert email eller adgangskode' });
+    }
+
+    // 4. Formater evt. fødselsdato
+    const formattedBirthday = userData.birthday ? userData.birthday.split('T')[0] : null;
+
+    // 5. Return relevant brugerdata
+    res.json({
+      id: uid,
+      name: userData.name,
+      email: userData.email,
+      relationToDementiaPerson: userData.relation_to_dementia_person,
+      profile_image: userData.profile_image || null,
+      birthday: formattedBirthday,
+    });
 
   } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ error: 'Der opstod en fejl under login' });
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Der opstod en fejl under login' });
   }
 });
 
@@ -545,8 +549,8 @@ app.put('/family-link/:id/status', async (req, res) => {
 app.post('/register', async (req, res) => {
   const { name, email, password, relationToDementiaPerson, termsAccepted, familyCode } = req.body;
   console.log('=== START REGISTRATION ===');
-  const maskedData = maskSensitiveData({ name, email, password, relationToDementiaPerson, termsAccepted, familyCode });
-  console.log('Registration attempt:', maskedData);
+  // Masking sensitive data før log evt.
+  console.log('Registration attempt:', { name, email, relationToDementiaPerson, termsAccepted, familyCode });
   console.log('=== END REGISTRATION ===');
 
   if (!name || !email || !password || !relationToDementiaPerson || termsAccepted === undefined) {
@@ -554,75 +558,80 @@ app.post('/register', async (req, res) => {
   }
 
   try {
-    const { data: existingUser, error: fetchError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
+    // 1. Tjek om bruger med email allerede findes i Firebase Auth
+    let userRecord;
+    try {
+      userRecord = await auth.getUserByEmail(email);
+      if (userRecord) {
+        return res.status(409).json({ error: 'Bruger eksisterer allerede' });
+      }
+    } catch (error) {
+      // Hvis fejlen er "user-not-found" kan vi oprette bruger
+      if (error.code !== 'auth/user-not-found') {
+        throw error;
+      }
+    }
 
-    if (fetchError) throw fetchError;
-    if (existingUser) return res.status(409).json({ error: 'Bruger eksisterer allerede' });
+    // 2. Opret bruger i Firebase Authentication
+    const createdUser = await auth.createUser({
+      email,
+      password,
+      displayName: name,
+    });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    let family_id = null;
+    const uid = createdUser.uid;
 
-    // 🔑 Slå Aldra-link op, hvis det er medsendt
+    // 3. Håndter family_links i Firestore
+    let familyId = null;
+
     if (familyCode) {
-      const { data: familyLink, error: familyError } = await supabase
-        .from('family_links')
-        .select('id')
-        .eq('unique_code', familyCode)
-        .maybeSingle();
+      const familyQuery = await db.collection('family_links')
+        .where('unique_code', '==', familyCode)
+        .limit(1)
+        .get();
 
-      if (familyError || !familyLink) {
+      if (familyQuery.empty) {
         return res.status(400).json({ error: 'Ugyldigt Aldra-link' });
       }
 
-      family_id = familyLink.id;
-    }
-    else {
-      // Ingen kode? Opret ny family_links-post
+      familyId = familyQuery.docs[0].id;
+    } else {
+      // Opret nyt family_links dokument med unikt kode
       const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
-      const { data: newFamily, error: createFamilyError } = await supabase
-        .from('family_links')
-        .insert({
-          unique_code: uniqueCode,
-          member_count: 1,
-          status: 'active'
-        })
-        .select('id')
-        .maybeSingle();
-    
-      if (createFamilyError || !newFamily) {
-        return res.status(500).json({ error: 'Kunne ikke oprette familie-link automatisk' });
-      }
-    
-      family_id = newFamily.id;
+
+      const newFamilyRef = db.collection('family_links').doc();
+      await newFamilyRef.set({
+        unique_code: uniqueCode,
+        member_count: 1,
+        status: 'active',
+        created_at: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      familyId = newFamilyRef.id;
     }
-    
 
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert([{
-        name,
-        email,
-        hashed_password: hashedPassword,
-        relation_to_dementia_person: relationToDementiaPerson,
-        termsAccepted,
-        family_id: family_id || null
-      }])
-      .select('id, name, email, relation_to_dementia_person, family_id')
-      .single();
+    // 4. Hash password (valgfrit, da Firebase Auth håndterer adgangskoder)
+    // Hvis du ikke bruger hashed_password i Firestore, kan du droppe dette.
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (insertError) throw insertError;
+    // 5. Gem brugerprofil i Firestore under 'users' collection med dokument-id = uid
+    await db.collection('users').doc(uid).set({
+      name,
+      email,
+      hashed_password: hashedPassword,
+      relation_to_dementia_person: relationToDementiaPerson,
+      termsAccepted,
+      family_id: familyId,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
+    // 6. Return svar med brugerdata
     res.status(201).json({
-      id: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
-      relationToDementiaPerson: newUser.relation_to_dementia_person,
-      familyId: newUser.family_id
+      id: uid,
+      name,
+      email,
+      relationToDementiaPerson,
+      familyId,
     });
 
   } catch (error) {
@@ -630,6 +639,7 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Fejl under registrering', message: error.message });
   }
 });
+
 
 
 // Get all dates with appointments
