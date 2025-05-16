@@ -139,7 +139,7 @@ const loadUserLogs = async () => {
           name: data.full_name || '',
           relationToDementiaPerson: data.relation_to_dementia_person || '',
           profile_image: data.profile_image || '',
-          avatarUrl: data.profile_image || '', // vis direkte som URL
+          avatarUrl: data.profile_image || '',
         });
       }
     } catch (error) {

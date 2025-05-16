@@ -8,6 +8,8 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_URL } from '../config';
 import Toast from '../components/Toast';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { initializeApp } from "firebase/app";
 
 interface UserProfileData {
   name: string;
@@ -97,29 +99,27 @@ const EditProfile = () => {
       if (!storedUserData) return;
   
       const parsedData = JSON.parse(storedUserData);
-      const imagePath = parsedData.profile_image || parsedData.profileImage; // sikrer begge versioner
+      
+      // Hvis du ikke allerede har cached signedUrl, hent den via backend
+      let avatarUrl = parsedData.profile_image_url || '';
   
-      let signedUrl = '';
-      if (imagePath && parsedData.id) {
-        console.log('Sending imagePath to backend:', imagePath);
-  
+      // Hvis signedUrl ikke er cachet, kan du hente den via API
+      if (!avatarUrl && parsedData.profile_image && parsedData.id) {
         const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: imagePath }),
+          body: JSON.stringify({ path: parsedData.profile_image }),
         });
-  
         const result = await response.json();
-        signedUrl = result.signedUrl;
-        console.log('Signed URL fetched:', signedUrl);
+        avatarUrl = result.signedUrl || '';
       }
   
       setUserData({
-        name: parsedData.name || '',
+        name: parsedData.full_name || parsedData.name || '',
         email: parsedData.email || '',
         password: '',
         birthday: parsedData.birthday || '',
-        avatarUrl: signedUrl || '',
+        avatarUrl: avatarUrl || '',
         relationToDementiaPerson: parsedData.relationToDementiaPerson || parsedData.relation_to_dementia_person || '',
         token: parsedData.token,
         id: parsedData.id
@@ -196,13 +196,13 @@ const EditProfile = () => {
       const signedUrlJson = await signedUrlRes.json();
       const signedUrl = signedUrlJson.signedUrl;
   
-      console.log('Signed URL fetched:', signedUrl); // Log the signed URL
+      console.log('Signed URL fetched:', signedUrl);
   
       const updatedUserData = {
         ...parsedData,
-        birthday: parsedData.birthday,     // gem fødselsdato
-        profile_image: result.path,         // gem kun stien!
-        avatarUrl: signedUrl,              // brug denne til visning i UI
+        birthday: parsedData.birthday,
+        profile_image: result.path,
+        avatarUrl: signedUrl,
       };
   
       await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
@@ -250,30 +250,28 @@ const EditProfile = () => {
           <View style={styles.profileImageContainer}>
             <TouchableOpacity onPress={pickImage} style={styles.profileImageWrapper}>
               {userData.avatarUrl ? (
-                <>
-                  <Image
-                    source={{ uri: userData.avatarUrl }}
-                    style={styles.profileImage}
-                    onError={() => {
-                      console.log('Image failed to load, fallback to initials');
-                      setUserData(prev => ({ ...prev, profile_image: '' }));
-                    }}
-                  />
-                  {isUploading && (
-                    <View style={[styles.placeholderImage, styles.uploadingOverlay]}>
-                      <ActivityIndicator size="large" color="#42865F" />
-                    </View>
-                  )}
-                </>
+                <Image
+                  source={{ uri: userData.avatarUrl }}
+                  style={styles.profileImage}
+                  onError={() => setUserData(prev => ({ ...prev, avatarUrl: '' }))}
+                />
               ) : (
+                // fallback initialer eller ikon
                 <View style={styles.placeholderImage}>
                   {userData.name ? (
                     <Text style={[styles.initialsText, { color: '#42865F' }]}>
                       {userData.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </Text>
                   ) : (
-                    <Ionicons name="person-outline" size={40} color="#42865F" />
+                    <Text style={[styles.initialsText, { color: '#42865F' }]}>
+                      ?
+                    </Text>
                   )}
+                </View>
+              )}
+              {isUploading && (
+                <View style={[styles.placeholderImage, styles.uploadingOverlay]}>
+                  <ActivityIndicator size="large" color="#42865F" />
                 </View>
               )}
               <View style={styles.editIconContainer}>
@@ -442,13 +440,13 @@ const EditProfile = () => {
             </TouchableOpacity>
           </View>
         </View>
-        </View>
-      </ScrollView>
+      </View>
+    </ScrollView>
 
-      { toast && (
-        <Toast type={toast.type} message={toast.message} />
-      )}
-    </KeyboardAvoidingView>
+    { toast && (
+      <Toast type={toast.type} message={toast.message} />
+    )}
+  </KeyboardAvoidingView>
   );
 };
 

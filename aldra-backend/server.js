@@ -11,6 +11,8 @@ const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
 const admin = require('firebase-admin');
+const { getStorage } = require('firebase-admin/storage');
+const bucket = getStorage().bucket();
 
 
 const { auth, db } = require('./firebaseAdmin');
@@ -155,52 +157,40 @@ app.use((req, res, next) => {
 // Handle profile image upload
 app.post('/upload-avatar', upload.single('image'), async (req, res) => {
   try {
-    const userId = req.body.userId;
     const file = req.file;
+    const userId = req.body.userId;
 
     if (!file || !userId) {
       return res.status(400).json({ error: 'Missing file or userId' });
     }
 
-    const fileName = `avatars/user_${userId}_${Date.now()}.jpg`; 
-    console.log('Uploading to bucket: profile-images');
-    console.log('File name:', fileName);    
+    const filename = `avatars/user_${userId}_${Date.now()}.jpg`;
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('profile-images')
-      .upload(fileName, file.buffer, {
-        contentType: file.mimetype,
-        upsert: true,
-      });
+    // Upload til Firebase Storage bucket
+    const fileUpload = bucket.file(filename);
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return res.status(500).json({ error: 'Failed to upload image' });
-    }
+    await fileUpload.save(file.buffer, {
+      metadata: { contentType: file.mimetype },
+      public: false,
+    });
 
-    // Gem kun stien i databasen – ikke URL
-    await supabase
-      .from('users')
-      .update({ profile_image: fileName })
-      .eq('id', userId);
+    // Lav signed URL til billedet
+    const [signedUrl] = await fileUpload.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 60 * 60 * 1000, // 1 time
+    });
 
-    // Få signed URL
-    const { data: signedUrlData, error: signedUrlError } = await supabase
-      .storage
-      .from('profile-images')
-      .createSignedUrl(fileName, 60 * 60); // 1 time
+    // Opdater Firestore med filsti og signed URL
+    await db.collection('users').doc(userId).update({
+      profile_image: filename,
+      profile_image_url: signedUrl,
+    });
 
-    if (signedUrlError) {
-      console.error('Error creating signed URL:', signedUrlError);
-      return res.status(500).json({ error: 'Could not create signed URL' });
-    }
-
-    // ✅ Success
-    res.status(200).json({ success: true, path: fileName, imageUrl: signedUrlData.signedUrl });
-
+    // Returner info til klient
+    res.status(200).json({ path: filename, signedUrl });
   } catch (error) {
-    console.error('Error in upload-avatar route:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error(error);
+    res.status(500).json({ error: 'Upload failed' });
   }
 });
 
