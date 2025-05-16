@@ -191,10 +191,10 @@ const loadUserLogs = async () => {
   
     try {
       const response = await fetch(`${endpoints.checkServer}/api/family-link/${user.uid}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const text = await response.text();
-      const data = JSON.parse(text);
-      if (data.unique_code) setUniqueCode(`aldra.dk/invite/${data.unique_code}`);
+      const data = await response.json();
+      if (data.unique_code) {
+        setUniqueCode(`aldra.dk/invite/${data.unique_code}`);
+      }
     } catch (error) {
       console.error('Error fetching unique Aldra link:', error);
     }

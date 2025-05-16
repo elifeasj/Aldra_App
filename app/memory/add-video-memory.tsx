@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView,
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { storage, db } from '../../firebase';
+import { storage, firestore } from '../../firebase';
 import supabase from '../../config/supabase';
 import * as FileSystem from 'expo-file-system';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
@@ -181,8 +181,8 @@ export default function AddVideoMemory() {
       const user = supabase.auth.user();
 
       // Save to Firestore
-      if (!db) throw new Error("Firebase database er ikke initialiseret.");
-      await addDoc(collection(db, 'memories'), {
+      if (!firestore) throw new Error("Firebase database er ikke initialiseret.");
+      await addDoc(collection(firestore, 'memories'), {
         title: title.trim(),
         type: 'video',
         videoUrl,

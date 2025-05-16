@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getStorage } from 'firebase/storage';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -13,15 +13,13 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-
 const auth = getAuth(app);
-const storage = getStorage(app);
 const firestore = getFirestore(app);
-
+const storage = getStorage(app);
 try {
   console.log("✅ Firebase initialized successfully");
 } catch (error) {
   console.error("❌ Firebase init failed:", error);
 }
 
-export { auth, storage, firestore };
+export { app, auth, firestore, storage };

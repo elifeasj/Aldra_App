@@ -149,6 +149,7 @@ app.use((req, res, next) => {
   bodyParser.urlencoded({limit: '5mb', extended: true})(req, res, next);
 });
 
+
 // Handle profile image upload
 app.post('/upload-avatar', upload.single('image'), async (req, res) => {
   try {
@@ -465,24 +466,27 @@ app.post('/family-link/generate', async (req, res) => {
 
 
 // Validate and use a family code
-app.get('/family-link/validate/:code', async (req, res) => {
-  const { code } = req.params;
+app.get('/family-link/:uid', async (req, res) => {
+  const uid = req.params.uid;
 
-  const { data, error } = await supabase
-    .from('family_links')
-    .update({
-      last_used_at: new Date().toISOString(),
-      member_count: supabase.rpc('increment_member_count', { code }) // eller gør det manuelt
-    })
-    .eq('unique_code', code)
-    .eq('status', 'active')
-    .select('id, creator_user_id, member_count')
-    .maybeSingle();
+  if (!uid) return res.status(400).json({ error: 'UID is required' });
 
-  if (error) return res.status(500).json({ error: 'Error validating family code', message: error.message });
-  if (!data) return res.status(404).json({ error: 'Invalid or inactive family link' });
+  try {
+    const { data, error } = await supabase
+      .from('family_links')
+      .select('unique_code')
+      .eq('creator_user_id', uid)
+      .eq('status', 'active')
+      .maybeSingle();
 
-  res.json({ creator_user_id: data.creator_user_id });
+    if (error) return res.status(500).json({ error: 'Error fetching family link', message: error.message });
+    if (!data) return res.status(404).json({ error: 'No active family link found for this user' });
+
+    res.json({ unique_code: data.unique_code });
+  } catch (err) {
+    console.error('Error in GET /family-link/:uid', err);
+    res.status(500).json({ error: 'Unexpected server error' });
+  }
 });
 
 

@@ -1,4 +1,4 @@
-import { storage, db } from '../../firebase';
+import { storage, firestore } from '../../firebase';
 import supabase from '../../config/supabase';
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView, Alert, Modal, Animated, KeyboardAvoidingView, Platform } from 'react-native';
@@ -119,14 +119,14 @@ export default function AddImageMemory() {
       const uploadUrl = await uploadMemoryImage(compressed.uri);
       console.log("✅ Uploaded via backend:", uploadUrl);
 
-      if (!db) {
+      if (!firestore) {
         console.warn("❌ Firestore ikke klar");
         throw new Error("Firebase database er ikke initialiseret.");
       }
 
       const user = supabase.auth.user();
 
-      await addDoc(collection(db!, 'moments'), {
+      await addDoc(collection(firestore!, 'moments'), {
         title: title.trim(),
         url: uploadUrl,
         type: 'image',
