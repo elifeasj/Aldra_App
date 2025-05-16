@@ -12,8 +12,6 @@ const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
 const admin = require('firebase-admin');
 const { getStorage } = require('firebase-admin/storage');
-const bucket = admin.storage().bucket();
-
 
 const { auth, db } = require('./firebaseAdmin');
 
@@ -23,6 +21,8 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   storageBucket: 'aldraapp.firebasestorage.app'
 });
+
+const bucket = admin.storage().bucket();
 
 console.log('🔐 Firebase Admin SDK initialized — Firestore and Auth are ready to use!');
 

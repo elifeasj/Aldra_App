@@ -23,6 +23,7 @@ if (serviceAccount.private_key) {
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
+  storageBucket: 'aldraapp.firebasestorage.app'
 });
 
 const auth = admin.auth();
