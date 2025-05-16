@@ -10,8 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
-const { auth, db, admin } = require('./firebaseAdmin');
-const bucket = admin.storage().bucket();
+const { auth, db, bucket } = require('./firebaseAdmin');
 
 console.log('🔐 Firebase Admin SDK initialized — Firestore and Auth are ready to use!');
 
