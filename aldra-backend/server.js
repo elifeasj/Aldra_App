@@ -11,8 +11,6 @@ const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
 const admin = require('firebase-admin');
-const bcrypt = require('bcrypt');
-const { v4: uuidv4 } = require('uuid');
 
 
 const { auth, db } = require('./firebaseAdmin');
