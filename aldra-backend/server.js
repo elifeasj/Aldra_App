@@ -10,18 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
-const admin = require('firebase-admin');
-const { getStorage } = require('firebase-admin/storage');
-
 const { auth, db } = require('./firebaseAdmin');
-
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: 'aldraapp.firebasestorage.app'
-});
-
 const bucket = admin.storage().bucket();
 
 console.log('🔐 Firebase Admin SDK initialized — Firestore and Auth are ready to use!');
@@ -1369,4 +1358,3 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`✅ Server listening on port ${PORT}`);
 });
-
