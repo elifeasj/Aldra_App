@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Platform, StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Modal, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -73,10 +73,14 @@ const EditProfile = () => {
 
   });
 
+
+
 // 1. Hent brugerdata, når siden loader
-  useEffect(() => {
-    loadUserData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+     loadUserData();
+   }, [])
+  );
 
 // 2. Når fødselsdatoen er sat (fra AsyncStorage), opdater selectedDate
   useEffect(() => {
@@ -86,7 +90,7 @@ const EditProfile = () => {
     }
   }, [userData.birthday]);
 
-
+  
   const loadUserData = async () => {
     try {
       const storedUserData = await AsyncStorage.getItem('userData');
@@ -116,10 +120,11 @@ const EditProfile = () => {
         password: '',
         birthday: parsedData.birthday || '',
         avatarUrl: signedUrl || '',
-        relationToDementiaPerson: parsedData.relationToDementiaPerson || '',
+        relationToDementiaPerson: parsedData.relationToDementiaPerson || parsedData.relation_to_dementia_person || '',
         token: parsedData.token,
         id: parsedData.id
       });
+      
     } catch (error) {
       console.error('Error loading user data:', error);
     }
@@ -332,13 +337,17 @@ const EditProfile = () => {
             <View style={styles.modalButtonContainer}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.modalCancelButton]}
-                onPress={() => {
+                onPress={async () => {
                   setShowDatePicker(false);
                   if (userData.birthday) {
-                    const parsed = parseBirthdayToDate(userData.birthday);
-                    setSelectedDate(parsed);
+                    const storedData = await AsyncStorage.getItem('userData');
+                    if (!storedData) return;
+
+                    const parsedData = JSON.parse(storedData);
+                    const currentDate = parseBirthdayToDate(parsedData.birthday);
+                    setSelectedDate(currentDate);
                   }
-                }}
+    }}
               >
                 <Text style={styles.modalButtonText}>Annuller</Text>
               </TouchableOpacity>
@@ -376,8 +385,7 @@ const EditProfile = () => {
                         profile_image: parsedData.profile_image,
                         relationToDementiaPerson: parsedData.relationToDementiaPerson
                       })
-                    });
-
+                    })                    
                     if (!response.ok) throw new Error('Failed to update birthday');
 
                     await AsyncStorage.setItem('userData', JSON.stringify(updatedData));
@@ -400,9 +408,6 @@ const EditProfile = () => {
 
         <View style={styles.settingsContainer}>
           <View style={styles.settingsSection}>
-
-
-           
             <TouchableOpacity 
               style={styles.settingsItem}
               onPress={() => router.push('../../change-email')}
