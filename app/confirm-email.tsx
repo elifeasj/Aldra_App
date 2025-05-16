@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, TextInput, Keyboard
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../config';
 import Toast from '../components/Toast';
+import { API_URL } from '../config';
+
 
 const ConfirmEmail = () => {
   const router = useRouter();

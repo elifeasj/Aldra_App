@@ -3,10 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../config';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { auth, firestore } from '../firebase';
 
 interface LogData {
-  id: number;
+  id: string;
   title: string;
   description: string;
   date: string;
@@ -27,30 +28,35 @@ const AllLogs = () => {
   const loadUserLogs = async () => {
     try {
       setLoading(true);
-      const userDataString = await AsyncStorage.getItem('userData');
-      if (!userDataString) return;
-      
-      const userData = JSON.parse(userDataString);
-      const response = await fetch(`${API_URL}/user-logs/${userData.id}`);
-      
-      if (!response.ok) throw new Error('Failed to fetch user logs');
-      
-      const data = await response.json();
-      
-      // Sort logs by created_at descending (newest first)
-      const sortedLogs = data.sort((a: LogData, b: LogData) => {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      const user = auth.currentUser;
+      if (!user) throw new Error('Bruger ikke logget ind');
+  
+      const q = query(
+        collection(firestore, 'user_logs'),
+        where('user_id', '==', user.uid),
+        orderBy('created_at', 'desc')
+      );
+  
+      const snapshot = await getDocs(q);
+      const logs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title || '',
+          description: data.description || '',
+          date: data.date || '',
+          created_at: data.created_at?.toDate().toISOString() || '',
+        };
       });
-      
-      setUserLogs(sortedLogs);
+  
+      setUserLogs(logs);
     } catch (error) {
-      console.error('Error fetching user logs:', error);
-      // Use dummy data if API fails
-      setUserLogs(getDummyLogs());
+      console.error('❌ Fejl ved hentning af logs:', error);
+      setUserLogs([]);
     } finally {
       setLoading(false);
     }
-  };
+  };  
 
   // Function to handle viewing a log
   const handleViewLog = (log: LogData) => {
@@ -61,61 +67,6 @@ const AllLogs = () => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return `${date.getDate()}. ${date.toLocaleString('da-DK', { month: 'long' })} ${date.getFullYear()}`;
-  };
-
-  // Get dummy logs if API fails
-  const getDummyLogs = (): LogData[] => {
-    return [
-      {
-        id: 1,
-        title: 'Besøg hos lægen',
-        description: 'Mor havde en god dag hos lægen. Blodtrykket var normalt.',
-        date: '2025-04-28',
-        created_at: '2025-04-28T14:30:00Z'
-      },
-      {
-        id: 2,
-        title: 'Gåtur i parken',
-        description: 'Vi gik en lang tur i parken og nød det gode vejr. Mor var i godt humør.',
-        date: '2025-04-25',
-        created_at: '2025-04-25T16:45:00Z'
-      },
-      {
-        id: 3,
-        title: 'Familiemiddag',
-        description: 'Hele familien var samlet til middag. Mor genkendte alle og var glad.',
-        date: '2025-04-20',
-        created_at: '2025-04-20T18:15:00Z'
-      },
-      {
-        id: 4,
-        title: 'Besøg af fysioterapeut',
-        description: 'Fysioterapeuten kom på besøg og lavede øvelser med mor.',
-        date: '2025-04-15',
-        created_at: '2025-04-15T11:00:00Z'
-      },
-      {
-        id: 5,
-        title: 'Medicinændring',
-        description: 'Lægen har justeret mors medicin. Ny dosis starter i morgen.',
-        date: '2025-04-10',
-        created_at: '2025-04-10T09:30:00Z'
-      },
-      {
-        id: 6,
-        title: 'Frisørbesøg',
-        description: 'Mor fik klippet hår og var meget tilfreds med resultatet.',
-        date: '2025-04-05',
-        created_at: '2025-04-05T13:45:00Z'
-      },
-      {
-        id: 7,
-        title: 'Tandlægebesøg',
-        description: 'Rutineundersøgelse hos tandlægen. Alt så fint ud.',
-        date: '2025-03-28',
-        created_at: '2025-03-28T10:15:00Z'
-      }
-    ];
   };
 
   return (

@@ -14,17 +14,30 @@ export default function FeedbackScreen() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
 
+  type UserWithUid = {
+    uid: string;
+    [key: string]: any;
+  };
+
+  function hasUid(user: any): user is { uid: string } {
+    return user && typeof user.uid === 'string';
+  }
+
   useEffect(() => {
     console.log('👀 Bruger i feedback:', user);
   }, [user]);
+
+  
   const handleSubmit = async () => {
-    if (isLoading || !user?.id) {
-      console.warn('⛔ Brugerdata ikke klar endnu');
+    if (isLoading || !user || !hasUid(user)) {
+      console.warn('⛔ Brugerdata ikke klar endnu eller UID mangler');
       return;
     }
   
+    const userId = user.uid;
+  
     console.log('🟡 Feedback payload:', {
-      user_id: user?.id,
+      user_id: userId,
       rating,
       comment,
     });
@@ -36,7 +49,7 @@ export default function FeedbackScreen() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: user?.id,
+          user_id: userId,
           rating,
           comment,
         }),
@@ -49,15 +62,13 @@ export default function FeedbackScreen() {
       setShowToast(true);
       setRating(0);
       setComment('');
-
-      // Hide toast after 3 seconds
+  
       setTimeout(() => {
         setShowToast(false);
         router.back();
       }, 4000);
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      // Handle error appropriately}
     }
   };
 

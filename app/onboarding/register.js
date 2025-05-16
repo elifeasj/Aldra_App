@@ -5,6 +5,9 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { endpoints } from '../../config';
 import { Ionicons } from '@expo/vector-icons';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, firestore } from '../../firebase';
 
 export default function Register() {
     const router = useRouter();
@@ -66,110 +69,48 @@ export default function Register() {
         }
     };
 
-    const registerUser = async () => {
+        const registerUser = async () => {
         if (!name || !email || !password || !relation || !termsAccepted) {
-            console.log('🚫 Mangler ét eller flere felter');
-            console.log('name:', name);
-            console.log('email:', email);
-            console.log('password:', password);
-            console.log('relation:', relation);
-            console.log('termsAccepted:', termsAccepted);
             alert('Alle felter skal udfyldes.');
             return;
         }
-    
-        console.log('📦 FULL URL being used:', endpoints.register);
-    
-        const userData = {
-            name,
-            email,
-            password,
-            relationToDementiaPerson: relation,
-            termsAccepted
-        };    
-
-        // Add Aldra code if registering via Aldra link
-        if (isAldraLink && aldraCode) {
-            userData.familyCode = aldraCode; 
-        }
-        
 
         try {
-            // Gem brugerdata i AsyncStorage
-            await AsyncStorage.setItem('userData', JSON.stringify({
-                name,
-                relationToDementiaPerson: relation
-            }));
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
 
-            console.log('Sending request to server with data:', userData);
-            
-            console.log('Attempting to connect to:', endpoints.register);
-            
-            const requestOptions = {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(userData)
-            };
-
-            console.log('Request options:', requestOptions);
-
-            console.log('Making request to:', endpoints.register);
-            const response = await fetch(endpoints.register, requestOptions);
-            console.log('Response:', {
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries())
+            // Gem data i Firestore
+            const userRef = doc(firestore, 'users', user.uid);
+            await setDoc(userRef, {
+            full_name: name,
+            email: email,
+            relation_to_dementia_person: relation,
+            termsAccepted: termsAccepted,
+            profile_image: '',
+            birthday: '',
+            created_at: serverTimestamp(),
+            family_code: isAldraLink && aldraCode ? aldraCode : null,
             });
-            
-            let responseData;
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                responseData = await response.json();
-            } else {
-                const text = await response.text();
-                console.error('Server returned non-JSON response:', text);
-                throw new Error('Serveren returnerede et ugyldigt svar');
-            }
-            
-            if (!response.ok) {
-                const errorMessage = responseData.error || 'Der opstod en fejl';
-                console.error('Server error response:', errorMessage);
-                throw new Error(errorMessage);
-            }
 
-            const data = responseData;
-            console.log('Registration successful:', data);
-
-            // Store user data in AsyncStorage
+            // Gem lokalt
             await AsyncStorage.setItem('userData', JSON.stringify({
-                id: data.id,
-                name: data.name,
-                email: data.email,
-                relationToDementiaPerson: data.relationToDementiaPerson,
-                familyId: data.familyId
+            uid: user.uid,
+            full_name: name,
+            email: email,
+            relation_to_dementia_person: relation,
             }));
 
-            // Navigate to overview
+            // Naviger videre
             router.push('/(tabs)/oversigt');
         } catch (error) {
-            console.error('Detailed error:', error);
-            console.error('Error name:', error.name);
-            console.error('Error message:', error.message);
-            
-            console.log('Server URL:', endpoints.register);
-            if (error.message.includes('Network request failed')) {
-                alert('Netværksfejl: Kunne ikke forbinde til serveren. Kontroller at din enhed er forbundet til internettet.');
-            } else if (error.response) {
-                // Server responded with an error status
-                alert('Server fejl: ' + (error.response.data?.error || error.message));
+            console.error('❌ Firebase register error:', error.message);
+            if (error.code === 'auth/email-already-in-use') {
+            alert('Denne e-mail er allerede i brug.');
             } else {
-                alert('Der opstod en fejl under registreringen. Prøv igen senere.');
+            alert('Der opstod en fejl under registreringen.');
             }
         }
-    };
+        };
 
     return (
         <KeyboardAvoidingView 

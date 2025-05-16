@@ -7,10 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { API_URL } from '../../config';
+import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { auth, firestore } from '../../firebase';
+import { endpoints } from '../../config';
 
 interface UserData {
-  id?: number;
+  id?: string;
   name: string;
   relationToDementiaPerson: string;
   familyId?: number;
@@ -19,12 +21,13 @@ interface UserData {
 }
 
 interface LogData {
-  id: number;
+  id: string;
   title: string;
   description: string;
   date: string;
   created_at: string;
 }
+
 
 const Profil = () => {
   const router = useRouter();
@@ -46,119 +49,107 @@ const Profil = () => {
     }
   };
 
-  useEffect(() => {
-    async function fetchSignedUrl() {
-      if (userData.profile_image && userData.id) {
-        const response = await fetch(`${API_URL}/user/${userData.id}/avatar-url`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: userData.profile_image }),
-        });
-        const { signedUrl } = await response.json();
-        if (signedUrl) {
-          setUserData(prev => ({ ...prev, avatarUrl: signedUrl }));
-        }
-      }
-    }
-    fetchSignedUrl();
-  }, [userData.profile_image, userData.id]);
 
   const handleViewLog = (log: LogData) => {
     router.push({ pathname: '/ny-log', params: { date: log.created_at, logId: log.id } });
   };
 
-  const loadFamilyMembers = async () => {
-    try {
-      const userDataString = await AsyncStorage.getItem('userData');
-      if (!userDataString) return;
-      const userData = JSON.parse(userDataString);
-      const response = await fetch(`${API_URL}/users/family/${userData.id}`);
-      if (!response.ok) throw new Error('Failed to fetch family members');
-      const data = await response.json();
-      setFamilyMembers(data);
-    } catch (error) {
-      console.error('Error fetching family members:', error);
-    }
-  };
+const loadFamilyMembers = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
 
-  const loadUserLogs = async () => {
-    try {
-      const userDataString = await AsyncStorage.getItem('userData');
-      if (!userDataString) return;
-      const userData = JSON.parse(userDataString);
-      const response = await fetch(`${API_URL}/user-logs/${userData.id}`);
-      if (!response.ok) throw new Error('Failed to fetch user logs');
-      const data = await response.json();
-      setUserLogs(data);
-    } catch (error) {
-      console.error('Error fetching user logs:', error);
-    }
-  };
+    // 1. Hent den nuværende bruger
+    const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+    if (!userDoc.exists()) return;
 
-  const loadProfileImage = async () => {
-    try {
-      const storedUserData = await AsyncStorage.getItem('userData');
-      if (storedUserData) {
-        const parsedData = JSON.parse(storedUserData);
-        if (parsedData.profile_image && parsedData.id) {
-          const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: parsedData.profile_image }),
-          });
-          const result = await response.json();
-          if (result.signedUrl) {
-            setUserData(prev => ({ ...prev, avatarUrl: result.signedUrl }));
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Fejl ved indlæsning af profilbillede:', error);
+    const userData = userDoc.data();
+    const familyId = userData.family_id;
+
+    if (!familyId) {
+      console.log('Brugeren har ingen family_id');
+      return;
     }
-  };
+
+    // 2. Hent alle brugere med samme family_id
+    const q = query(collection(firestore, 'users'), where('family_id', '==', familyId));
+    const snapshot = await getDocs(q);
+
+    const members = snapshot.docs
+      .filter(doc => doc.id !== user.uid) // fjern dig selv
+      .map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.full_name || '',
+          relationToDementiaPerson: data.relation_to_dementia_person || '',
+          profile_image: data.profile_image || '',
+        };
+      });
+
+    setFamilyMembers(members);
+  } catch (error) {
+    console.error('❌ Fejl ved hentning af familiemedlemmer:', error);
+  }
+};
+
+
+const loadUserLogs = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Hent alle logs for denne bruger
+    const q = query(
+      collection(firestore, 'user_logs'),
+      where('user_id', '==', user.uid),
+      orderBy('created_at', 'desc')
+    );
+
+    const snapshot = await getDocs(q);
+
+    const logs = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        title: data.title || '',
+        description: data.description || '',
+        date: data.created_at?.toDate().toISOString().split('T')[0] || '',
+        created_at: data.created_at?.toDate().toISOString() || '',
+      };
+    });
+
+    setUserLogs(logs);
+  } catch (error) {
+    console.error('❌ Fejl ved hentning af brugerlogs:', error);
+  }
+};
 
   const loadUserData = async () => {
     try {
-      const storedUserData = await AsyncStorage.getItem('userData');
-      if (storedUserData) {
-        const parsedData = JSON.parse(storedUserData);
+      const user = auth.currentUser;
+      if (!user) return;
   
-        const imagePath = parsedData.profile_image || parsedData.profileImage;
+      const userRef = doc(firestore, 'users', user.uid);
+      const snapshot = await getDoc(userRef);
   
-        // Sæt avatarUrl initialt tom, så fallback bruges indtil signedUrl hentes
-        const updated = {
-          id: parsedData.id,
-          name: parsedData.name,
-          relationToDementiaPerson: parsedData.relationToDementiaPerson ?? parsedData.relation_to_dementia_person ?? '',
-          profile_image: imagePath,
-          avatarUrl: '', 
-        };
-  
-        setUserData(updated);
-  
-        if (imagePath && parsedData.id) {
-          const response = await fetch(`${API_URL}/user/${parsedData.id}/avatar-url`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: imagePath }),
-          });
-  
-          const result = await response.json();
-          if (result.signedUrl) {
-            setUserData(prev => ({ ...prev, avatarUrl: result.signedUrl }));
-            console.log('Updated userData with avatarUrl:', result.signedUrl);
-          }
-        }
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setUserData({
+          name: data.full_name || '',
+          relationToDementiaPerson: data.relation_to_dementia_person || '',
+          profile_image: data.profile_image || '',
+          avatarUrl: data.profile_image || '', // vis direkte som URL
+        });
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('Fejl ved hentning af brugerdata:', error);
     }
   };
 
 
   const revalidate = useCallback(async () => {
-    await loadUserData();        
-    await loadProfileImage();     
+    await loadUserData();          
     getUniqueAldraLink();
     loadFamilyMembers();
     loadUserLogs();
@@ -195,18 +186,20 @@ const Profil = () => {
   };
 
   const getUniqueAldraLink = async () => {
-    if (userData.id) {
-      try {
-        const response = await fetch(`${API_URL}/api/family-link/${userData.id}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const text = await response.text();
-        const data = JSON.parse(text);
-        if (data.unique_code) setUniqueCode(`aldra.dk/invite/${data.unique_code}`);
-      } catch (error) {
-        console.error('Error fetching unique code:', error);
-      }
+    const user = auth.currentUser;
+    if (!user) return;
+  
+    try {
+      const response = await fetch(`${endpoints.checkServer}/api/family-link/${user.uid}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const text = await response.text();
+      const data = JSON.parse(text);
+      if (data.unique_code) setUniqueCode(`aldra.dk/invite/${data.unique_code}`);
+    } catch (error) {
+      console.error('Error fetching unique Aldra link:', error);
     }
   };
+  
 
   const handleCopyLink = async () => {
     await Clipboard.setStringAsync(uniqueCode);
@@ -238,8 +231,10 @@ const Profil = () => {
   };
 
   useEffect(() => {
-    getUniqueAldraLink();
-  }, [userData.id]);
+    if (auth.currentUser) {
+      getUniqueAldraLink();
+    }
+  }, [auth.currentUser]);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>

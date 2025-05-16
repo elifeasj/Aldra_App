@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config';
 import Toast from '../components/Toast';
+import { auth } from '../firebase';
 
 const DeleteAccount = () => {
   const router = useRouter();
@@ -15,42 +16,43 @@ const DeleteAccount = () => {
   const handleDeleteAccount = async () => {
     try {
       setIsLoading(true);
-
-      // Hent brugerdata fra AsyncStorage
+  
+      const user = auth.currentUser;
+      if (!user) throw new Error('Ingen bruger er logget ind');
+      const idToken = await user.getIdToken();
+  
       const userData = await AsyncStorage.getItem('userData');
-      if (!userData) throw new Error('No user data found');
-
-      const { id, token } = JSON.parse(userData);
-
-      // Send delete account request
+      if (!userData) throw new Error('Ingen brugerdata fundet');
+      const { id } = JSON.parse(userData);
+  
       const response = await fetch(`${API_URL}/user/${id}/delete-account`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${idToken}`,
+        },
       });
-
+  
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Kunne ikke slette kontoen');
-      }
-
-      // Clear AsyncStorage
+      if (!response.ok) throw new Error(data.error || 'Kunne ikke slette kontoen');
+  
       await AsyncStorage.clear();
-
-      // Vis success besked og redirect til login
+  
       setToast({ type: 'success', message: 'Din konto er nu slettet' });
       setTimeout(() => {
         router.replace('/onboarding/login');
       }, 2000);
-
     } catch (error) {
-      console.error('Error deleting account:', error);
-      setToast({ type: 'error', message: 'Der opstod en fejl ved sletning af kontoen' });
+      let errorMessage = 'Der opstod en fejl ved sletning af kontoen';
+    
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+    
+      setToast({ type: 'error', message: errorMessage });
       setTimeout(() => setToast(null), 4000);
-    } finally {
+    }
+    finally {
       setIsLoading(false);
       setIsModalVisible(false);
     }

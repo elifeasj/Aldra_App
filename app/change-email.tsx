@@ -3,8 +3,14 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, TextInput, Keyboard
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../config';
 import Toast from '../components/Toast';
+import { updateEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { auth } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { firestore } from '../firebase';
+import { Alert } from 'react-native';
+import { API_URL } from 'config';
+
 
 const ChangeEmail = () => {
   const router = useRouter();
@@ -34,64 +40,59 @@ const ChangeEmail = () => {
   email: string;
 }
 
-interface ApiResponse {
-  error?: string;
-}
 
 const handleRequestChange = async () => {
-    try {
-      if (!newEmail) {
-        setToast({ type: 'error', message: 'Indtast venligst en ny e-mailadresse' });
-        setTimeout(() => setToast(null), 4000);
-        return;
-      }
-
-      if (newEmail === currentEmail) {
-        setToast({ type: 'error', message: 'Den nye e-mailadresse skal være forskellig fra den nuværende' });
-        setTimeout(() => setToast(null), 4000);
-        return;
-      }
-
-      setIsLoading(true);
-      const userData = await AsyncStorage.getItem('userData');
-      if (!userData) throw new Error('No user data found');
-
-      const { id } = JSON.parse(userData) as UserData;
-      
-      const response = await fetch(`${API_URL}/request-email-change`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: id,
-          newEmail,
-        }),
-      });
-
-      const data = await response.json() as ApiResponse;
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Could not request email change');
-      }
-
-      // Navigate to confirmation screen
-      router.push({
-        pathname: '/confirm-email',
-        params: { newEmail },
-      });
-
-    } catch (error) {
-      console.error('Error requesting email change:', error);
-      setToast({ 
-        type: 'error', 
-        message: error instanceof Error ? error.message : 'Der opstod en fejl'
-      });
+  try {
+    if (!newEmail) {
+      setToast({ type: 'error', message: 'Indtast venligst en ny e-mailadresse' });
       setTimeout(() => setToast(null), 4000);
-    } finally {
-      setIsLoading(false);
+      return;
     }
-  };
+
+    if (newEmail === currentEmail) {
+      setToast({ type: 'error', message: 'Den nye e-mailadresse skal være forskellig fra den nuværende' });
+      setTimeout(() => setToast(null), 4000);
+      return;
+    }
+
+    const user = auth.currentUser;
+    if (!user || !user.email) throw new Error('Ingen bruger er logget ind');
+
+    setIsLoading(true);
+
+    const response = await fetch(`${API_URL}/request-email-change`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: user.uid,
+        newEmail: newEmail,
+      }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result?.error || 'Kunne ikke sende bekræftelseskode');
+    }
+
+    Alert.alert(
+      "Bekræft din nye e-mail",
+      "Vi har sendt en bekræftelseskode til den nye adresse. Indtast koden i næste trin for at fuldføre ændringen."
+    );
+
+    router.push({ pathname: '/confirm-email', params: { newEmail } });
+
+    
+  } catch (error) {
+    console.error('Fejl ved ændring af e-mail:', error);
+    const msg = error instanceof Error ? error.message : 'Der opstod en fejl';
+    setToast({ type: 'error', message: msg });
+    setTimeout(() => setToast(null), 4000);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView 

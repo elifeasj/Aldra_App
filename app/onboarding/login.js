@@ -4,6 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { endpoints } from '../../config';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, firestore } from '../../firebase';
 
 export default function Login() {
     const router = useRouter();
@@ -14,74 +17,43 @@ export default function Login() {
 
     const handleLogin = async () => {
         try {
-            const response = await fetch(endpoints.login, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
-    
-            const responseText = await response.text(); // Hent svaret som tekst først
-            console.log('Server response:', responseText); // Debugging
-    
-            let data;
-            try {
-                data = JSON.parse(responseText); // Prøv at parse JSON
-            } catch (error) {
-                console.error('JSON Parse Error:', error, 'Response:', responseText);
-                throw new Error('Ugyldigt svar fra serveren');
-            }
-    
-            if (response.ok) {
-                console.log('Server response data:', data);
-                console.log('Profile image from server:', data.profile_image);
-                console.log('Profile image type:', typeof data.profile_image);
-            
-                const token = `user_${data.id}`;
-                await AsyncStorage.setItem('token', token);
-            
-                const userData = {
-                    id: data.id,
-                    name: data.name,
-                    email: data.email,
-                    relationToDementiaPerson: data.relationToDementiaPerson || data.relation_to_dementia_person,
-                    profile_image: data.profile_image,
-                    birthday: data.birthday,
-                    token
-                };
-            
-                // Gem brugerdata med try/catch
-                try {
-                    await AsyncStorage.setItem('userData', JSON.stringify(userData));
-                    await AsyncStorage.setItem('personalizationCompleted', 'true');
-                } catch (err) {
-                    console.error("❌ Fejl ved AsyncStorage userData:", err);
-                    Alert.alert("Fejl", "Kunne ikke gemme brugerdata lokalt.");
-                    return;
-                }
-            
-                // Sikker navigation med delay
-                if (userData?.id && userData?.email) {
-                    console.log("✅ Brugerdata klar – navigerer til oversigt.");
-                    setTimeout(() => {
-                        router.push({
-                            pathname: '/(tabs)/oversigt',
-                            params: { userName: data.name }
-                        });
-                    }, 300);
-                } else {
-                    console.warn("❌ Ugyldig brugerdata:", userData);
-                    Alert.alert("Fejl", "Ugyldig brugerdata – prøv igen.");
-                }
-            }
-            } catch (error) {
-                console.error('Fejl under login:', error);
-                Alert.alert('Fejl', error.message || 'Noget gik galt. Prøv venligst igen.');
-            }
-
-    };
-
+          // 1. Log ind med Firebase Auth
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+      
+          // 2. Hent brugerdata fra Firestore
+          const userRef = doc(firestore, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+      
+          if (!userSnap.exists()) {
+            throw new Error('Brugerdata ikke fundet i databasen');
+          }
+      
+          const userData = userSnap.data();
+      
+          // 3. Gem lokalt
+          await AsyncStorage.setItem('userData', JSON.stringify({
+            uid: user.uid,
+            full_name: userData.full_name,
+            email: userData.email,
+            relation_to_dementia_person: userData.relation_to_dementia_person,
+            profile_image: userData.profile_image || '',
+            birthday: userData.birthday || '',
+          }));
+      
+          await AsyncStorage.setItem('personalizationCompleted', 'true');
+      
+          // 4. Naviger videre
+          router.push({
+            pathname: '/(tabs)/oversigt',
+            params: { userName: userData.full_name }
+          });
+      
+        } catch (error) {
+          console.error('❌ Login fejl:', error.message);
+          Alert.alert('Login-fejl', error.message || 'Noget gik galt. Prøv igen.');
+        }
+      };
     
 
     return (

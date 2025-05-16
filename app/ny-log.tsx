@@ -3,7 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { API_URL, endpoints } from '../config';
+import { collection, doc, getDoc, setDoc, addDoc, Timestamp } from 'firebase/firestore';
+import { auth, firestore } from '../firebase';
+
 
 export default function NyLog() {
     const params = useLocalSearchParams();
@@ -14,93 +16,69 @@ export default function NyLog() {
     // Convert params to string
     const date = Array.isArray(params.date) ? params.date[0] : params.date;
     const logId = params.logId ? (Array.isArray(params.logId) ? params.logId[0] : params.logId) : undefined;
-    const appointment_id = params.appointment_id ? 
-        (Array.isArray(params.appointment_id) ? parseInt(params.appointment_id[0]) : parseInt(params.appointment_id)) 
-        : undefined;
+    const appointment_id = params.appointment_id 
+    ? (Array.isArray(params.appointment_id) ? params.appointment_id[0] : params.appointment_id)
+    : undefined;
+
 
     useEffect(() => {
         const fetchExistingLog = async () => {
-            console.log('Log ID from params:', logId);
-            if (logId) {
-                try {
-                    const userDataString = await AsyncStorage.getItem('userData');
-                    if (!userDataString) {
-                        console.error('No user data found');
-                        return;
-                    }
-                    const userData = JSON.parse(userDataString);
-                    const user_id = userData.id;
-                    console.log('User ID:', user_id);
-
-                    const url = `${endpoints.logs}/${logId}?user_id=${user_id}`;
-                    console.log('Fetching log from URL:', url);
-
-                    const response = await fetch(url);
-                    const responseText = await response.text();
-                    console.log('Raw server response:', responseText);
-
-                    if (!response.ok) {
-                        throw new Error(`Failed to fetch log: ${responseText}`);
-                    }
-
-                    const log = JSON.parse(responseText);
-                    console.log('Parsed log data:', log);
-                    
-                    // Opdater form med eksisterende data
-                    setTitle(log.title || '');
-                    setDescription(log.description || '');
-                } catch (error) {
-                    console.error('Error fetching log:', error);
-                }
+            if (!logId) return;
+            try {
+              const user = auth.currentUser;
+              if (!user) throw new Error('Bruger ikke logget ind');
+          
+              const logRef = doc(firestore, 'user_logs', logId);
+              const logSnap = await getDoc(logRef);
+          
+              if (logSnap.exists()) {
+                const log = logSnap.data();
+                setTitle(log.title || '');
+                setDescription(log.description || '');
+              } else {
+                console.warn('Log ikke fundet:', logId);
+              }
+            } catch (error) {
+              console.error('Fejl ved hentning af log:', error);
             }
-        };
+          };
+          
 
         fetchExistingLog();
     }, [logId]);
 
     const handleSubmit = async () => {
         if (!title.trim() || !description.trim()) {
-            return;
+          Alert.alert('Udfyld alle felter');
+          return;
         }
-
+      
         try {
-            const userDataString = await AsyncStorage.getItem('userData');
-            if (!userDataString) {
-                console.error('No user data found');
-                return;
-            }
-            const userData = JSON.parse(userDataString);
-            const user_id = userData.id;
-
-            const method = logId ? 'PUT' : 'POST';
-            const url = logId ? `${endpoints.logs}/${logId}` : endpoints.savelog;
-            
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    title,
-                    description,
-                    date,
-                    appointment_id,
-                    user_id
-                }),
-            });
-
-            if (!response.ok) {
-                console.error('Server error:', await response.text());
-                return;
-            }
-
-            const result = await response.json();
-            console.log('Server response:', result);
-            router.back();
+          const user = auth.currentUser;
+          if (!user) throw new Error('Bruger ikke logget ind');
+      
+          const logData = {
+            title,
+            description,
+            date: date || new Date().toISOString().split('T')[0],
+            appointment_id: appointment_id || null,
+            user_id: user.uid,
+            created_at: Timestamp.now()
+          };          
+      
+          if (logId) {
+            await setDoc(doc(firestore, 'user_logs', logId), logData);
+          } else {
+            await addDoc(collection(firestore, 'user_logs'), logData);
+          }
+      
+          router.back();
         } catch (error) {
-            console.error('Error saving log:', error);
+          console.error('Fejl ved gemning af log:', error);
+          Alert.alert('Kunne ikke gemme loggen');
         }
-    };
+      };
+      
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);

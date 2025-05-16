@@ -9,26 +9,28 @@ import { TimeIntervalTriggerInput, SchedulableTriggerInputTypes } from 'expo-not
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
+import { collection, doc, getDocs, addDoc, deleteDoc, query, where, Timestamp } from 'firebase/firestore';
+import { auth, firestore } from '../../firebase';
+import { API_URL } from '../../config';
 
 interface Appointment {
-    id: number;
+    id: string;
     title: string;
     description: string;
     date: string;
     start_time: string;
     end_time: string;
     reminder: boolean;
-}
-
+    user_id?: string;
+    created_at?: Timestamp;
+  }  
+  
 interface MarkedDates {
     [date: string]: {
         marked: boolean;
         dotColor: string;
     };
 }
-
-// API base URL
-import { API_URL } from '../../config';
 
 const dayNames = {
     'mon': 'man',
@@ -60,9 +62,10 @@ export default function Kalender() {
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
     const [showStartTimePicker, setShowStartTimePicker] = useState<boolean>(false);
     const [showEndTimePicker, setShowEndTimePicker] = useState<boolean>(false);
+    const [hasLogForSelectedDate, setHasLogForSelectedDate] = useState<boolean>(false);
     
     const [newAppointment, setNewAppointment] = useState<Appointment>({
-        id: Date.now(),
+        id: Date.now().toString(),
         title: '',
         description: '',
         date: '',
@@ -81,7 +84,7 @@ export default function Kalender() {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     // State til at holde styr på hvilke aftaler der har logs
-    const [appointmentsWithLogs, setAppointmentsWithLogs] = useState<{ [key: number]: number }>({});
+    const [appointmentsWithLogs, setAppointmentsWithLogs] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -96,60 +99,45 @@ export default function Kalender() {
     }, []);
 
     // Funktion til at tjekke logs for appointments
-    const checkLogsForAppointments = async (appointments: Appointment[]) => {
+    const checkLogsForAppointments = async () => {
         try {
-            const userDataString = await AsyncStorage.getItem('userData');
-            if (!userDataString) {
-                console.error('No user data found');
-                return;
-            }
-            const userData = JSON.parse(userDataString);
-            const user_id = userData.id;
-
-            const response = await fetch(`${API_URL}/logs?user_id=${user_id}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch logs');
-            }
-            const logs = await response.json();
-            
-            console.log('Fetched logs:', logs);
-            
-            // Map logs til appointments baseret på appointment_id
-            const logsMap: { [key: number]: number } = {};
-            
-            if (Array.isArray(logs)) {
-                logs.forEach((log: any) => {
-                    if (log.appointment_id) {
-                        console.log('Mapping log:', log.id, 'to appointment:', log.appointment_id);
-                        logsMap[log.appointment_id] = log.id;
-                    }
-                });
-            }
-            
-            console.log('Final logs map:', logsMap);
-            setAppointmentsWithLogs(logsMap);
+          const user = auth.currentUser;
+          if (!user) return;
+      
+          const q = query(
+            collection(firestore, 'user_logs'),
+            where('user_id', '==', user.uid)
+          );
+      
+          const snapshot = await getDocs(q);
+          const logs = snapshot.docs.map(doc => doc.data());
+      
+          const datesWithLogs = logs.map(log => log.date); // eller brug created_at.toDate().toISOString().split('T')[0]
+      
+          setHasLogForSelectedDate(datesWithLogs.includes(selectedDate));
         } catch (error) {
-            console.error('Error checking logs:', error);
+          console.error('Fejl ved hentning af logs:', error);
         }
-    };
+      };
+      
 
     // Kør checkLogsForAppointments når appointments ændres
     useEffect(() => {
         if (appointments.length > 0) {
-            checkLogsForAppointments(appointments);
+            checkLogsForAppointments();
         }
     }, [appointments]);
 
     // Opdater logs hver 2. sekund
     useEffect(() => {
         const interval = setInterval(() => {
-            if (appointments.length > 0) {
-                checkLogsForAppointments(appointments);
-            }
+          if (appointments.length > 0) {
+            checkLogsForAppointments();
+          }
         }, 2000);
-
         return () => clearInterval(interval);
-    }, [appointments]);
+      }, [appointments]);
+      
 
     useEffect(() => {
         fetchAppointments(selectedDate);
@@ -300,58 +288,72 @@ export default function Kalender() {
     // Fetch appointments for selected date
     const fetchAppointments = async (date: string) => {
         try {
-            const userDataString = await AsyncStorage.getItem('userData');
-            if (!userDataString) {
-                console.error('No user data found');
-                return;
+          const user = auth.currentUser;
+          if (!user) throw new Error('Ingen bruger logget ind');
+      
+          const q = query(
+            collection(firestore, 'appointments'),
+            where('user_id', '==', user.uid),
+            where('date', '==', date)
+          );
+      
+          const snapshot = await getDocs(q);
+      
+          const fetchedAppointments = snapshot.docs.map(doc => {
+            const data = doc.data();
+      
+            // Ekstra log til debug
+            if (!data.title || !data.date) {
+              console.warn('⚠️ Manglende felter i appointment:', doc.id, data);
             }
-            const userData = JSON.parse(userDataString);
-            const user_id = userData.id;
-
-            console.log('Fetching appointments for date:', date);
-            const response = await fetch(`${API_URL}/appointments/${date}?user_id=${user_id}`);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server error:', errorText);
-                return;
-            }
-
-            const data = await response.json();
-            console.log('Received appointments:', data);
-            setAppointments(data);
+      
+            return {
+              id: doc.id,
+              title: data.title || '',
+              description: data.description || '',
+              date: data.date || '',
+              start_time: data.start_time || '',
+              end_time: data.end_time || '',
+              reminder: data.reminder || false,
+              user_id: data.user_id || '',
+              created_at: data.created_at || Timestamp.now()
+            };
+          });
+      
+          setAppointments(fetchedAppointments);
         } catch (error) {
-            console.error('Error fetching appointments:', error);
+          console.error('❌ Fejl i fetchAppointments:', error instanceof Error ? error.message : error);
         }
-    };
+      };
+      
 
     // Fetch all dates with appointments
     const fetchDatesWithAppointments = async () => {
         try {
-            const userDataString = await AsyncStorage.getItem('userData');
-            if (!userDataString) {
-                console.error('No user data found');
-                return;
+          const user = auth.currentUser;
+          if (!user) return;
+      
+          const q = query(
+            collection(firestore, 'appointments'),
+            where('user_id', '==', user.uid)
+          );
+      
+          const snapshot = await getDocs(q);
+      
+          const datesSet = new Set<string>();
+      
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.date) {
+              datesSet.add(data.date);
             }
-            const userData = JSON.parse(userDataString);
-            const user_id = userData.id;
-
-            console.log('Fetching all dates with appointments');
-            const response = await fetch(`${API_URL}/appointments/dates/all?user_id=${user_id}`);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server error:', errorText);
-                return;
-            }
-
-            const dates = await response.json();
-            console.log('Received dates with appointments:', dates);
-            setDatesWithAppointments(dates);
+          });
+      
+          setDatesWithAppointments(Array.from(datesSet));
         } catch (error) {
-            console.error('Error fetching dates with appointments:', error);
+          console.error('Fejl ved hentning af datoer:', error);
         }
-    };
+      };
 
     // Format date to match server format
     const formatDate = (date: string | Date) => {
@@ -505,143 +507,75 @@ export default function Kalender() {
     };
 
     const handleCreateAppointment = async () => {
-        console.log('Værdier før oprettelse af aftale:', newAppointment); // Tilføj logbesked
         if (!newAppointment.title || !newAppointment.date || !newAppointment.start_time || !newAppointment.end_time) {
-            Alert.alert('Udfyld venligst alle påkrævede felter');
-            return;
+          Alert.alert('Udfyld venligst alle påkrævede felter');
+          return;
         }
-
+      
         try {
-            console.log('Creating appointment with data:', {
-                title: newAppointment.title,
-                description: newAppointment.description,
-                date: newAppointment.date,
-                startTime: newAppointment.start_time,
-                endTime: newAppointment.end_time,
-                reminder: newAppointment.reminder
-            });
-
-            console.log('Data der sendes til server:', {
-                title: newAppointment.title,
-                description: newAppointment.description,
-                date: newAppointment.date,
-                startTime: newAppointment.start_time,
-                endTime: newAppointment.end_time,
-                reminder: newAppointment.reminder
-            });
-
-            const userDataString = await AsyncStorage.getItem('userData');
-            if (!userDataString) {
-                console.error('No user data found');
-                return;
-            }
-            const userData = JSON.parse(userDataString);
-            const user_id = userData.id;
-
-            const response = await fetch(`${API_URL}/appointments`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  title: newAppointment.title,
-                  description: newAppointment.description,
-                  date: newAppointment.date,
-                  start_time: newAppointment.start_time,
-                  end_time: newAppointment.end_time,     
-                  reminder: newAppointment.reminder,
-                  user_id: user_id
-                }),
-              });
-              
-
-            console.log('Data sendt til server:', {
-                title: newAppointment.title,
-                description: newAppointment.description,
-                date: newAppointment.date,
-                startTime: newAppointment.start_time,
-                endTime: newAppointment.end_time,
-                reminder: newAppointment.reminder
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server error:', errorText);
-                Alert.alert('Der opstod en fejl', errorText || 'Ukendt fejl');
-                return;
-            }
-
-            const data = await response.json();
-            console.log('Appointment created:', data);
-            
-            // Update appointments list and close modal
-            setAppointments(prev => [...prev, data]);
-            setIsModalVisible(false);
-            
-            // Set the selected date to the appointment date and fetch appointments
-            setSelectedDate(newAppointment.date);
-            await fetchAppointments(newAppointment.date);
-            
-            // Reset form
-            setNewAppointment({
-                id: Date.now(),
-                title: '',
-                description: '',
-                date: '',
-                start_time: '',
-                end_time: '',
-                reminder: false,
-            });
-            
-            // Fetch updated appointments for the selected date
-            await fetchAppointments(newAppointment.date);
-            
-            // Fetch all dates with appointments to update calendar dots
-            await fetchDatesWithAppointments();
-            
-            if (newAppointment.reminder) {
-                await scheduleNotification(
-                    newAppointment.date,
-                    newAppointment.start_time,
-                    newAppointment.title
-                );
-            }
+          const user = auth.currentUser;
+          if (!user) throw new Error('Ikke logget ind');
+      
+          const appointmentData = {
+            title: newAppointment.title,
+            description: newAppointment.description,
+            date: newAppointment.date,
+            start_time: newAppointment.start_time,
+            end_time: newAppointment.end_time,
+            reminder: newAppointment.reminder,
+            user_id: user.uid,
+            created_at: Timestamp.now()
+          };
+      
+          const docRef = await addDoc(collection(firestore, 'appointments'), appointmentData);
+      
+          setAppointments(prev => [...prev, { ...appointmentData, id: docRef.id }]);
+          setIsModalVisible(false);
+          setSelectedDate(newAppointment.date);
+      
+          if (newAppointment.reminder) {
+            await scheduleNotification(newAppointment.date, newAppointment.start_time, newAppointment.title);
+          }
+      
+          setNewAppointment({
+            id: String(Date.now()),
+            title: '',
+            description: '',
+            date: '',
+            start_time: '',
+            end_time: '',
+            reminder: false,
+          });
+      
+          await fetchAppointments(newAppointment.date);
+          await fetchDatesWithAppointments();
+      
         } catch (error) {
-            console.error('Error adding appointment:', error);
-            Alert.alert('Der opstod en fejl ved oprettelse af aftalen');
+          console.error('Fejl ved oprettelse:', error);
+          Alert.alert('Der opstod en fejl ved oprettelse af aftalen');
         }
-    };
+      };
 
-    const handleDeleteAppointment = async (id: number) => {
+      const handleDeleteAppointment = async (appointmentId: string) => {
         try {
-            console.log('Attempting to delete appointment with ID:', id);
-            const response = await fetch(`${API_URL}/appointments/${id}`, {
-                method: 'DELETE',
-            });
-
-            console.log('Delete response status:', response.status);
-            const responseData = await response.json();
-            console.log('Delete response data:', responseData);
-
-            if (!response.ok) {
-                throw new Error('Failed to delete appointment');
-            }
-
-            // Opdater listen af aftaler efter sletning
-            setAppointments(prevAppointments => {
-                console.log('Current appointments:', prevAppointments);
-                const newAppointments = prevAppointments.filter(appointment => appointment.id !== id);
-                console.log('Appointments after deletion:', newAppointments);
-                return newAppointments;
-            });
-
-            // Opdater kalenderen
-            fetchDatesWithAppointments();
+          // Slet fra Firestore
+          await deleteDoc(doc(firestore, 'appointments', appointmentId));
+      
+          // Hent datoen for den slettede aftale
+          const deletedAppointment = appointments.find(item => item.id === appointmentId);
+          const deletedDate = deletedAppointment?.date;
+      
+          // Opdater visning af aftaler for den aktuelle dato
+          await fetchAppointments(deletedDate || selectedDate);
+      
+          // Opdater hvilke datoer der har aftaler
+          await fetchDatesWithAppointments();
         } catch (error) {
-            console.error('Error deleting appointment:', error);
-            Alert.alert('Der opstod en fejl ved sletning af aftalen');
+          console.error('Fejl ved sletning af aftale:', error);
+          Alert.alert('Der opstod en fejl ved sletning');
         }
-    };
+      };
+      
 
     const renderModal = () => (
         <Modal

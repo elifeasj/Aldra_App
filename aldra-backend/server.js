@@ -11,7 +11,17 @@ const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
 const admin = require('firebase-admin');
+const { initializeApp, applicationDefault } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+const serviceAccount = require('./aldraapp-firebase-adminsdk-fbsvc-00dc6aadb0.json');
 
+
+// Initialiser kun én gang
+initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+const db = admin.firestore();
+const auth = admin.auth();
 
 const app = express();
 
@@ -1013,43 +1023,52 @@ app.get('/test', (req, res) => {
 app.post('/request-email-change', async (req, res) => {
   try {
     const { userId, newEmail } = req.body;
-    
-    // Check if email is already in use
-    const { data: existingUser, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', newEmail)
-      .single();
 
-    if (existingUser) {
-      return res.status(400).json({ 
-        error: 'Denne e-mailadresse er allerede i brug' 
-      });
+    // 1. Tjek om email allerede er i brug
+    const existingUsers = await db.collection('users')
+      .where('email', '==', newEmail)
+      .get();
+
+    if (!existingUsers.empty) {
+      return res.status(400).json({ error: 'Denne e-mailadresse er allerede i brug' });
     }
 
-    // Generate 6-digit code
+    // 2. Generér 6-cifret kode og hash den
     const confirmationCode = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedCode = await bcrypt.hash(confirmationCode, 10);
 
-    // Delete any existing unverified requests for this user
-    await supabase
-      .from('email_change_requests')
-      .delete()
-      .eq('user_id', userId)
-      .is('verified_at', null);
+    // 3. Hent tidligere uverificerede anmodninger
+    const existingRequests = await db.collection('email_change_requests')
+      .where('userId', '==', userId)
+      .where('verifiedAt', '==', null)
+      .orderBy('sentAt', 'desc')
+      .limit(1)
+      .get();
 
-    // Create new request
-    const { error: insertError } = await supabase
-      .from('email_change_requests')
-      .insert([{
-        user_id: userId,
-        new_email: newEmail,
-        confirmation_code: hashedCode,
-      }]);
+    // 4. RATE LIMIT – afvis hvis sidste anmodning var < 60 sekunder siden
+    if (!existingRequests.empty) {
+      const lastRequest = existingRequests.docs[0].data();
+      const requestAge = Date.now() - new Date(lastRequest.sentAt).getTime();
+      if (requestAge < 60 * 1000) {
+        return res.status(429).json({ error: 'Vent et øjeblik før du prøver igen' });
+      }
+    }
 
-    if (insertError) throw insertError;
+    // 5. Slet gamle uverificerede anmodninger
+    for (const doc of existingRequests.docs) {
+      await doc.ref.delete();
+    }
 
-    // Send email
+    // 6. Gem ny e-mailændringsanmodning
+    await db.collection('email_change_requests').add({
+      userId,
+      newEmail,
+      confirmationCode: hashedCode,
+      sentAt: new Date().toISOString(),
+      verifiedAt: null
+    });
+
+    // 7. Send e-mail via Resend
     await resend.emails.send({
       from: 'Aldra App <noreply@aldra.dk>',
       to: newEmail,
@@ -1065,7 +1084,9 @@ app.post('/request-email-change', async (req, res) => {
       `
     });
 
+    // 8. Send svar
     res.json({ success: true });
+
   } catch (error) {
     console.error('Error requesting email change:', error);
     res.status(500).json({ error: 'Der opstod en fejl' });
@@ -1077,98 +1098,119 @@ app.post('/confirm-email-change', async (req, res) => {
   try {
     const { userId, code } = req.body;
 
-    // Get the latest unverified request
-    const { data: request, error: requestError } = await supabase
-      .from('email_change_requests')
-      .select('*')
-      .eq('user_id', userId)
-      .is('verified_at', null)
-      .order('sent_at', { ascending: false })
+    // 1. Find seneste uverificerede anmodning
+    const requestSnapshot = await db.collection('email_change_requests')
+      .where('userId', '==', userId)
+      .where('verifiedAt', '==', null)
+      .orderBy('sentAt', 'desc')
       .limit(1)
-      .single();
+      .get();
 
-    if (requestError || !request) {
-      return res.status(400).json({ 
-        error: 'Ingen aktiv anmodning fundet' 
-      });
+    if (requestSnapshot.empty) {
+      return res.status(400).json({ error: 'Ingen aktiv anmodning fundet' });
     }
 
-    // Check if request is expired (10 minutes)
-    const requestAge = Date.now() - new Date(request.sent_at).getTime();
+    const requestDoc = requestSnapshot.docs[0];
+    const request = requestDoc.data();
+    const requestId = requestDoc.id;
+
+    // 2. Tjek om koden er udløbet (efter 10 minutter)
+    const requestAge = Date.now() - new Date(request.sentAt).getTime();
     if (requestAge > 10 * 60 * 1000) {
-      return res.status(400).json({ 
-        error: 'Bekræftelseskoden er udløbet' 
-      });
+      return res.status(400).json({ error: 'Bekræftelseskoden er udløbet' });
     }
 
-    // Verify code
-    const isValidCode = await bcrypt.compare(code, request.confirmation_code);
+    // 3. Sammenlign koden
+    const isValidCode = await bcrypt.compare(code, request.confirmationCode);
     if (!isValidCode) {
-      return res.status(400).json({ 
-        error: 'Ugyldig bekræftelseskode' 
-      });
+      return res.status(400).json({ error: 'Ugyldig bekræftelseskode' });
     }
 
-    // Update user's email
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ email: request.new_email })
-      .eq('id', userId);
+    const newEmail = request.newEmail;
 
-    if (updateError) throw updateError;
+    // 4. Opdater Firebase Authentication
+    await auth.updateUser(userId, { email: newEmail });
 
-    // Mark request as verified
-    await supabase
-      .from('email_change_requests')
-      .update({ verified_at: new Date().toISOString() })
-      .eq('id', request.id);
+    // 5. Opdater e-mail i Firestore (users)
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    if (userDoc.exists) {
+      await userRef.update({ email: newEmail });
+    }
 
-      // Cleanup old requests
-      const { error: cleanupError } = await supabase.rpc('cleanup_expired_email_requests');
-      if (cleanupError) {
-        console.warn('⚠️ Cleanup RPC fejlede:', cleanupError);
-      }
-
-    res.json({ 
-      success: true,
-      email: request.new_email 
+    // 6. Markér anmodningen som verificeret
+    await requestDoc.ref.update({
+      verifiedAt: new Date().toISOString()
     });
+
+    // 7. Ryd op – slet ældre uverificerede anmodninger
+    const oldRequests = await db.collection('email_change_requests')
+      .where('userId', '==', userId)
+      .where('verifiedAt', '==', null)
+      .get();
+
+    for (const doc of oldRequests.docs) {
+      if (doc.id !== requestId) {
+        await doc.ref.delete();
+      }
+    }
+
+    // 8. Send OK-svar
+    res.json({ success: true, email: newEmail });
+
   } catch (error) {
     console.error('Error confirming email change:', error);
-    res.status(500).json({ error: 'Der opstod en fejl' });
+    res.status(500).json({ error: 'Der opstod en fejl under bekræftelse af e-mail' });
   }
 });
 
-// Delete account endpoint
-app.delete('/user/:id/delete-account', async (req, res) => {
+
+// Middleware til Firebase Auth validering
+const authenticateFirebase = async (req, res, next) => {
   try {
-    const { id } = req.params;
-
-    // Slet ALT afhængigt data manuelt først
-    await Promise.all([
-      supabase.from('appointments').delete().eq('user_id', id),
-      supabase.from('logs').delete().eq('user_id', id),
-      supabase.from('notifications').delete().eq('user_id', id),
-      supabase.from('push_tokens').delete().eq('user_id', id),
-      supabase.from('family_links').delete().eq('creator_user_id', id),
-      supabase.from('email_change_requests').delete().eq('user_id', id)
-    ]);
-
-    // Slet brugeren til sidst
-    const { error: deleteError } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', id);
-
-    if (deleteError) {
-      console.error('Error deleting user:', deleteError);
-      return res.status(500).json({ error: 'Kunne ikke slette kontoen' });
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Ingen autorisation header' });
     }
 
-    res.json({ success: true, message: 'Konto slettet' });
+    const idToken = authHeader.split('Bearer ')[1];
+    const decodedToken = await auth.verifyIdToken(idToken);
 
+    if (decodedToken.uid !== req.params.id) {
+      return res.status(403).json({ error: 'Ikke tilladt' });
+    }
+
+    req.user = { uid: decodedToken.uid };
+    next();
   } catch (error) {
-    console.error('Error in delete-account route:', error);
+    return res.status(401).json({ error: 'Ugyldig eller udløbet token' });
+  }
+};
+
+app.delete('/user/:id/delete-account', authenticateFirebase, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const batch = db.batch();
+
+    // Slet brugerprofil
+    batch.delete(db.collection('users').doc(userId));
+
+    // Slet alle brugerrelaterede dokumenter - fx appointments, logs, notifications
+    const collectionsToDelete = ['appointments', 'logs', 'notifications', 'push_tokens', 'family_links', 'email_change_requests'];
+
+    for (const collectionName of collectionsToDelete) {
+      const snapshot = await db.collection(collectionName).where('user_id', '==', userId).get();
+      snapshot.forEach(doc => batch.delete(doc.ref));
+    }
+
+    await batch.commit();
+
+    // Slet Firebase Authentication brugeren
+    await auth.deleteUser(userId);
+
+    res.json({ success: true, message: 'Konto slettet' });
+  } catch (error) {
+    console.error('Fejl ved sletning af konto:', error);
     res.status(500).json({ error: 'Der opstod en fejl ved sletning af kontoen' });
   }
 });
@@ -1182,23 +1224,17 @@ app.post('/submit-feedback', async (req, res) => {
     if (!user_id || !rating || !comment) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-
     if (rating < 1 || rating > 5) {
       return res.status(400).json({ error: 'Invalid rating' });
     }
 
-    const { error: insertError } = await supabase
-      .from('feedback')
-      .insert([{
-        user_id,
-        rating,
-        comment
-      }]);
-
-    if (insertError) {
-      console.error('Error inserting feedback:', insertError);
-      throw insertError;
-    }
+    const docRef = db.collection('feedback').doc();
+    await docRef.set({
+      user_id,
+      rating,
+      comment,
+      created_at: new Date().toISOString(),
+    });
 
     res.json({ success: true });
   } catch (error) {
@@ -1206,8 +1242,6 @@ app.post('/submit-feedback', async (req, res) => {
     res.status(500).json({ error: 'Der opstod en fejl ved indsendelse af feedback' });
   }
 });
-
-
 
 // Personalization endpoint
 app.post('/save-answers', async (req, res) => {

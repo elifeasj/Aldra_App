@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, TextInput, Alert, K
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../config';
 import Toast from '../components/Toast';
+import { auth } from '../firebase';
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+
 
 const ChangePassword = () => {
   const router = useRouter();
@@ -24,82 +26,52 @@ const ChangePassword = () => {
     return minLength && hasNumber && hasSpecialChar;
   };
 
+
   const handleChangePassword = async () => {
     try {
-      // Tjek om alle felter er udfyldt
       if (!currentPassword || !newPassword || !confirmPassword) {
         setToast({ type: 'error', message: 'Udfyld venligst alle felter' });
-        setTimeout(() => setToast(null), 4000); // 4 sekunder
+        setTimeout(() => setToast(null), 4000);
         return;
       }
-
-      // Tjek om nye adgangskoder er ens
+  
       if (newPassword !== confirmPassword) {
         setToast({ type: 'error', message: 'De nye adgangskoder matcher ikke' });
-        setTimeout(() => setToast(null), 4000); // 4 sekunder
+        setTimeout(() => setToast(null), 4000);
         return;
       }
-
-      // Tjek adgangskode strenghed
+  
       if (!validatePassword(newPassword)) {
-        setToast({ type: 'error', message: 'Den nye adgangskode skal indeholde mindst 8 tegn, et tal og et specialtegn' });
-        setTimeout(() => setToast(null), 4000); // 4 sekunder
+        setToast({ type: 'error', message: 'Den nye adgangskode skal være mindst 8 tegn og indeholde tal og specialtegn' });
+        setTimeout(() => setToast(null), 4000);
         return;
       }
-
-      // Tjek om nye adgangskoder er ens
+  
       if (currentPassword === newPassword) {
         setToast({ type: 'error', message: 'Den nye adgangskode må ikke være den samme som den nuværende' });
-        setTimeout(() => setToast(null), 4000); // 4 sekunder
+        setTimeout(() => setToast(null), 4000);
         return;
       }
-
+  
       setIsLoading(true);
-
-      // Hent brugerdata fra AsyncStorage
-      const userData = await AsyncStorage.getItem('userData');
-      if (!userData) throw new Error('No user data found');
-
-      const { id, token } = JSON.parse(userData);
-
-      // Log only non-sensitive information
-      console.log('Attempting to change password...');
-
-      // Send change-password request
-      const response = await fetch(`${API_URL}/change-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          userId: id,
-          currentPassword,
-          newPassword
-        })
-      });
-
-      // Log response
-      console.log('Password change request sent');
-
-      const data = await response.json();
-
-      // Tjek response
-      if (!response.ok) {
-        console.log('Server response not OK:', response.status);
-        const errorMessage = data.error || 'Kunne ikke ændre adgangskode';
-        throw new Error(errorMessage);
-      }
-
-      // Vis success overlay
-      setToast({ type: 'success', message: 'Din adgangskode er opdateret – brug den ved næste login.' });
-      setTimeout(() => {
-        router.back();
-      }, 5000);
+  
+      const user = auth.currentUser;
+      if (!user || !user.email) throw new Error('Bruger ikke logget ind');
+  
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+  
+      await updatePassword(user, newPassword);
+  
+      setToast({ type: 'success', message: 'Adgangskoden er opdateret. Brug den næste gang du logger ind.' });
+      setTimeout(() => router.back(), 4000);
     } catch (error) {
-      console.error('Error changing password:', error instanceof Error ? error.message : 'Unknown error');
-      setToast({ type: 'error', message: 'Der opstod en fejl ved ændring af adgangskode' });
-      setTimeout(() => setToast(null), 4000); // 4 sekunder
+      console.error('Fejl ved adgangskodeopdatering:', error);
+      const message = error instanceof Error && error.message.includes('auth/wrong-password')
+        ? 'Den nuværende adgangskode er forkert'
+        : 'Kunne ikke opdatere adgangskode';
+      setToast({ type: 'error', message });
+      setTimeout(() => setToast(null), 4000);
     } finally {
       setIsLoading(false);
     }
