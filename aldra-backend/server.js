@@ -15,6 +15,8 @@ const { auth, db } = require('./firebaseAdmin');
 // Check om du vil initialisere via fil eller env
 let serviceAccount;
 
+console.log('Raw FIREBASE_SERVICE_ACCOUNT env var:', process.env.FIREBASE_SERVICE_ACCOUNT);
+
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   try {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
