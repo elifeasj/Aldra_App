@@ -4,10 +4,16 @@ const fs = require('fs');
 
 let serviceAccount;
 
-if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
-  const raw = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
-  serviceAccount = JSON.parse(raw);
-} else {
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+    const raw = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
+    console.log('Decoded Firebase service account JSON:', raw);
+    serviceAccount = JSON.parse(raw);
+  } else {
+    throw new Error('Env var FIREBASE_SERVICE_ACCOUNT_BASE64 not set');
+  }
+} catch (error) {
+  console.warn('Failed to parse FIREBASE_SERVICE_ACCOUNT_BASE64, falling back to local file:', error.message);
   const serviceAccountPath = path.resolve(__dirname, './aldraapp-firebase-adminsdk-fbsvc-00dc6aadb0.json');
   if (fs.existsSync(serviceAccountPath)) {
     serviceAccount = require(serviceAccountPath);
