@@ -11,8 +11,6 @@ const fs = require('fs');
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
 
-const app = express();
-
 
 
 const { auth, db } = require('./firebaseAdmin');
@@ -31,6 +29,8 @@ async function testFirebaseConnection() {
 testFirebaseConnection();
 
 
+const app = express();
+
 
 console.log('🔐 Resend API key loaded:', process.env.RESEND_API_KEY ? '✅' : '❌');
 
@@ -45,7 +45,6 @@ const supabase = createClient(
 
 console.log('🔐 Supabase URL loaded:', process.env.SUPABASE_URL ? '✅' : '❌');
 console.log('🔐 Supabase Service Role Key loaded:', process.env.SUPABASE_SERVICE_ROLE ? '✅' : '❌');
-
 
 // Enable CORS
 app.use(cors());
