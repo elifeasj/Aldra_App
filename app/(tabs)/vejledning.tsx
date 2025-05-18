@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { GuideCategory } from '../../components/guides/GuideCategory';
 import { Guide, UserProfileAnswers } from '../../types/guides';
-import supabase from '../../config/supabase';
+// import supabase from '../../config/supabase';
 import { STRAPI_URL } from '../../config/api';
 import { mapGuideData } from '../../utils/guideUtils';
 

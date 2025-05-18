@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, KeyboardAv
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../config';
-import supabase from '../../config/supabase';
+// import supabase from '../../config/supabase';
 import * as Progress from 'react-native-progress';
 import { useIsFocused } from '@react-navigation/native';
 import { Guide } from '../../types/guides';
@@ -91,7 +91,7 @@ export default function Oversigt() {
                   slug,
                   title,
                   image: image ? `${STRAPI_URL}${image}` : undefined,
-              },
+              } as const
           });
       }
   };
@@ -197,7 +197,7 @@ export default function Oversigt() {
           return (
             <TouchableOpacity 
               style={[styles.card, styles.progressCard]}
-              onPress={() => router.push('/personalization')}
+              onPress={() => router.push('/personalization' as any)}
             >
               <View style={styles.progressContainer}>
                 <View style={styles.progressCircle}>
@@ -362,22 +362,26 @@ export default function Oversigt() {
                       <TouchableOpacity style={[styles.addLogButton,appointmentsWithLogs[appointment.id] ? styles.editLogButton : styles.addLogButton]}
                         onPress={() => {
                             if (appointmentsWithLogs[appointment.id]) {
-                              router.push({
-                                pathname: '/ny-log',
-                                params: { 
-                                  date: appointment.date,
-                                  appointment_id: appointment.id,
-                                  logId: appointmentsWithLogs[appointment.id]
-                                }
-                              });
+                              router.push(
+                                {
+                                  pathname: '/ny-log',
+                                  params: {
+                                    date: appointment.date,
+                                    appointment_id: appointment.id,
+                                    logId: appointmentsWithLogs[appointment.id],
+                                  },
+                                } as any
+                              );
                             } else {
-                              router.push({
-                                pathname: '/ny-log',
-                                params: { 
-                                  date: appointment.date,
-                                  appointment_id: appointment.id
-                                }
-                              });
+                              router.push(
+                                {
+                                  pathname: '/ny-log',
+                                  params: {
+                                    date: appointment.date,
+                                    appointment_id: appointment.id,
+                                   },
+                                } as any
+                              );
                             }
                           }}
                         >
@@ -451,8 +455,8 @@ export default function Oversigt() {
                           image: guide.image,
                           category: guide.category,
                           content: JSON.stringify(guide.content),
-                        },
-                      })
+                        }
+                      } as any)
                     }
                   />
                 ))}

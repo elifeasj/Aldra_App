@@ -16,8 +16,14 @@ export default ({ config }) => ({
     typedRoutes: true
   },
   extra: {
-    SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
-    SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    firebaseConfig: {
+      apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+    },
     eas: {
       projectId: "353b4f0f-2aa3-4f8c-9ed4-e5c59de58a5e"
     }
