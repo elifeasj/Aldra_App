@@ -9,7 +9,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, firestore } from '../../firebase';
 
-export default function Login() {
+const Login = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -196,3 +196,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
+export default Login;

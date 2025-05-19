@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, Image, TouchableOpacity, ScrollView, Pressable, SafeAreaView, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { endpoints } from '../../config';
@@ -9,9 +9,9 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, firestore } from '../../firebase';
 
-export default function Register() {
+const Register = () => {
     const router = useRouter();
-    const navigation = useNavigation();
+    const params = useLocalSearchParams();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -28,7 +28,7 @@ export default function Register() {
     // Check for Aldra link code from navigation params when component mounts
     useEffect(() => {
         const checkForAldraCode = async () => {
-            const code = router.params?.aldraCode;
+            const code = params?.aldraCode;
             if (code) {
                 setIsAldraLink(true);
                 setAldraCode(code);
@@ -37,7 +37,7 @@ export default function Register() {
         };
         
         checkForAldraCode();
-    }, [router.params?.aldraCode]);
+    }, [params?.aldraCode]);
 
     // Validate Aldra code
     const validateAldraCode = async (code) => {
@@ -427,3 +427,6 @@ const styles = StyleSheet.create({
         fontFamily: 'RedHatDisplay_700Bold',
     },
 });
+
+export default Register;
+

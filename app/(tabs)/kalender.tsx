@@ -101,8 +101,8 @@ export default function Kalender() {
     // Funktion til at tjekke logs for appointments
     const checkLogsForAppointments = async () => {
         try {
+          if (!auth || !auth.currentUser) return;
           const user = auth.currentUser;
-          if (!user) return;
       
           const q = query(
             collection(firestore, 'user_logs'),

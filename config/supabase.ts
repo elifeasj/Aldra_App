@@ -1,4 +1,4 @@
-/* import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -16,4 +16,4 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 console.log("SUPABASE_URL:", supabaseUrl);
 console.log("SUPABASE_ANON_KEY:", supabaseAnonKey);
 
-export default supabase;// */
+export default supabase;

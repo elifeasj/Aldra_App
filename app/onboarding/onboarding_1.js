@@ -3,7 +3,7 @@ import { Text, View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useState } from 'react';
 
-export default function Onboarding1() {
+const Onboarding1 = () => {
     const router = useRouter();
     const [currentStep, setCurrentStep] = useState(1); // Start på første trin
 
@@ -200,3 +200,5 @@ const styles = StyleSheet.create({
         color: '#42865F', 
     },
 });
+
+export default Onboarding1;

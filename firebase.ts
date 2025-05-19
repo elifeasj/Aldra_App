@@ -1,34 +1,34 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import Constants from 'expo-constants';
 
+const extra = Constants.expoConfig?.extra || (Constants.manifest as any)?.extra;
+
 const firebaseConfig = {
-  apiKey: Constants.expoConfig?.extra?.firebaseConfig?.apiKey,
-  authDomain: Constants.expoConfig?.extra?.firebaseConfig?.authDomain,
-  projectId: Constants.expoConfig?.extra?.firebaseConfig?.projectId,
-  storageBucket: Constants.expoConfig?.extra?.firebaseConfig?.storageBucket,
-  messagingSenderId: Constants.expoConfig?.extra?.firebaseConfig?.messagingSenderId,
-  appId: Constants.expoConfig?.extra?.firebaseConfig?.appId,
+  apiKey: extra?.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: extra?.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: extra?.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: extra?.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: extra?.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: extra?.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-console.log('✅ Firebase config loaded:', firebaseConfig);
-
-// Kun initialiser Firebase hvis vi har en gyldig config
 if (!firebaseConfig.apiKey) {
-  throw new Error('Firebase config mangler! Tjek app.config.js og .env filen');
+  throw new Error('❌ Firebase config mangler – check .env eller app.config.js');
 }
 
-const app = initializeApp(firebaseConfig);
+console.log('✅ FIREBASE CONFIG:', firebaseConfig);
+
+// Init app
+const app = getApps().length === 0
+  ? initializeApp(firebaseConfig)
+  : getApps()[0];
+
+// Brug getAuth i stedet for initializeAuth
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 const storage = getStorage(app);
-
-try {
-  console.log("✅ Firebase initialized successfully");
-} catch (error) {
-  console.error("❌ Firebase init failed:", error);
-}
 
 export { app, auth, firestore, storage };

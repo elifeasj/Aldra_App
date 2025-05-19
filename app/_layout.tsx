@@ -2,7 +2,7 @@ import { AuthProvider } from '../context/auth';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { Text, TextInput, View, StatusBar, Appearance } from 'react-native';
+import { Text, TextInput, View, StatusBar, Appearance, Linking } from 'react-native';
 import { 
     useFonts,
     RedHatDisplay_400Regular,
@@ -36,21 +36,12 @@ export default function Layout() {
 
         return (
             <AuthProvider>
-              <StatusBar
-                barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-                backgroundColor={isDarkMode ? '#000000' : '#FFFFFF'}
-              />
-              <Stack screenOptions={{ headerShown: false }}>
-        
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding/onboarding_1" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding/onboarding_2" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding/onboarding_3" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding/onboarding_4" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding/onboarding_5" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding/register" options={{ headerShown: false }} />
-        </Stack>
-        </AuthProvider>
-    );
+                <StatusBar
+                    barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+                    backgroundColor={isDarkMode ? '#000000' : '#FFFFFF'}
+                />
+                <Stack screenOptions={{ headerShown: false }} />
+            </AuthProvider>
+        );
 }
 

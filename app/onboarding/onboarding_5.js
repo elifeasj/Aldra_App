@@ -3,7 +3,7 @@ import { Text, View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useState } from 'react';
 
-export default function Onboarding5() {
+const Onboarding5 = () => {
     const router = useRouter();
     const [currentStep, setCurrentStep] = useState(5); // Start på første trin
 
@@ -41,7 +41,7 @@ export default function Onboarding5() {
                 {/* Næste knap */}
                 <TouchableOpacity
                     style={[styles.button, styles.nextButton]} // Næste knap specifik stil
-                    onPress={handleNext} // Naviger til næste onboarding_2
+                    onPress={handleNext}
                 >
                     <View style={styles.buttonContent}>
                         <Text style={styles.nextButtonText}>Opret bruger</Text>
@@ -152,3 +152,5 @@ const styles = StyleSheet.create({
         color: '#42865F', // Farve for aktive punkter
     },
 });
+
+export default Onboarding5;

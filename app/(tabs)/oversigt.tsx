@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, KeyboardAv
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../config';
-// import supabase from '../../config/supabase';
+import supabase from '../../config/supabase';
 import * as Progress from 'react-native-progress';
 import { useIsFocused } from '@react-navigation/native';
 import { Guide } from '../../types/guides';
