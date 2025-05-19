@@ -53,6 +53,6 @@ export default {
     favicon: "./assets/images/aldra_icon.png"
   },
   plugins: [
-    "expo-web-browser"
+    "expo-font"
   ],
 };
