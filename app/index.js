@@ -1,5 +1,3 @@
-import { Buffer } from 'buffer';
-global.Buffer = Buffer;
 import React from 'react';
 import 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
@@ -9,9 +7,12 @@ import { useRouter } from 'expo-router';
 import "expo-router/entry";
 import Icon from 'react-native-vector-icons/Ionicons';
 
+const { Buffer } = require('buffer');
+global.Buffer = Buffer;
 
 export default function IntroScreen() {
     const router = useRouter();
+
 
     return (
         <ImageBackground
