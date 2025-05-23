@@ -26,8 +26,14 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
-    "app/types/**/*.d.ts"
-, "aldra-backend/firebaseAdmin.js", "app/onboarding/register.js"  ],
+    "app/types/**/*.d.ts",
+    "aldra-backend/firebaseAdmin.js",
+    "app/onboarding/register.js",
+    "types/**/*.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "app/**/*"
+  ],
   "exclude": [
     "node_modules"
   ],

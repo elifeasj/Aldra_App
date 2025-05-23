@@ -1,9 +1,12 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, initializeAuth, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
+import { getReactNativePersistence } from 'firebase/auth/react-native';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Hent ekstra Firebase config fra app.config.js / .env
 const extra = Constants.expoConfig?.extra || (Constants.manifest as any)?.extra;
 
 const firebaseConfig = {
@@ -21,13 +24,22 @@ if (!firebaseConfig.apiKey) {
 
 console.log('✅ FIREBASE CONFIG:', firebaseConfig);
 
-// Init app
-const app = getApps().length === 0
-  ? initializeApp(firebaseConfig)
-  : getApps()[0];
+// Initialiser Firebase app
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Brug getAuth i stedet for initializeAuth
-const auth = getAuth(app);
+// Initialiser Firebase Auth med AsyncStorage (persistens)
+let auth;
+try {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} catch (error: any) {
+  if (!/already exists|has already been initialized/.test(error.message)) {
+    throw error;
+  }
+  auth = getAuth(app);
+}
+
 const firestore = getFirestore(app);
 const storage = getStorage(app);
 
