@@ -1,14 +1,17 @@
 import { AuthProvider } from '../context/auth';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import { Text, TextInput, View, StatusBar, Appearance, Linking } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Text, TextInput, View, StatusBar, Appearance } from 'react-native';
 import { 
     useFonts,
     RedHatDisplay_400Regular,
     RedHatDisplay_500Medium,
     RedHatDisplay_700Bold,
 } from '@expo-google-fonts/red-hat-display';
+import { auth } from '../firebase';
+import { User } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Hold splash screen synlig mens vi loader resourcer
 SplashScreen.preventAutoHideAsync();
@@ -19,29 +22,55 @@ export default function Layout() {
         RedHatDisplay_500Medium,
         RedHatDisplay_700Bold,
     });
-
+    const [authLoaded, setAuthLoaded] = useState(false);
+    
     const colorScheme = Appearance.getColorScheme();
     const isDarkMode = colorScheme === 'dark';
 
     useEffect(() => {
-        if (fontsLoaded) {
-            // Skjul splash screen når fonts er loaded
+        const loadAuth = async () => {
+            try {
+                // Tjek først AsyncStorage for gemt bruger
+                const savedUser = await AsyncStorage.getItem('user');
+                if (savedUser) {
+                    setAuthLoaded(true);
+                    return;
+                }
+
+                // Hvis ingen gemt bruger, vent på auth state
+                await new Promise<User | null>((resolve) => {
+                    const unsubscribe = auth.onAuthStateChanged((user) => {
+                        unsubscribe();
+                        setAuthLoaded(true);
+                        resolve(user);
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading auth:', error);
+                setAuthLoaded(true);
+            }
+        };
+
+        loadAuth();
+    }, []);
+
+    useEffect(() => {
+        if (fontsLoaded && authLoaded) {
             SplashScreen.hideAsync();
         }
-    }, [fontsLoaded]);
+    }, [fontsLoaded, authLoaded]);
 
-    if (!fontsLoaded) {
+    if (!fontsLoaded || !authLoaded) {
         return null;
     }
 
-        return (
-            <AuthProvider>
-                <StatusBar
-                    barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-                    backgroundColor={isDarkMode ? '#000000' : '#FFFFFF'}
-                />
-                <Stack screenOptions={{ headerShown: false }} />
-            </AuthProvider>
-        );
+    return (
+        <AuthProvider>
+            <StatusBar
+                barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+                backgroundColor={isDarkMode ? '#000000' : '#FFFFFF'}
+            />
+            <Stack screenOptions={{ headerShown: false }} />
+        </AuthProvider>
+    );
 }
-

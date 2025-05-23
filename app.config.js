@@ -10,7 +10,12 @@ export default {
   userInterfaceStyle: "automatic",
   newArchEnabled: false,
   jsEngine: "jsc",
-  plugins: ["expo-font", "expo-router", "expo-notifications"],
+  plugins: [
+    "expo-font",
+    "expo-router",
+    "expo-web-browser",
+    "expo-notifications"
+  ],
   experiments: {
     typedRoutes: true
   },
@@ -52,10 +57,5 @@ export default {
   web: {
     bundler: "metro",
     favicon: "./assets/images/aldra_icon.png"
-  },
-  plugins: [
-    "expo-font",
-    "expo-router",
-    "expo-web-browser"
-  ]
+  }
 };

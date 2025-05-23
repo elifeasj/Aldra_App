@@ -1,12 +1,9 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, initializeAuth, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
-import { getReactNativePersistence } from 'firebase/auth/react-native';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Hent ekstra Firebase config fra app.config.js / .env
 const extra = Constants.expoConfig?.extra || (Constants.manifest as any)?.extra;
 
 const firebaseConfig = {
@@ -18,29 +15,26 @@ const firebaseConfig = {
   appId: extra?.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-if (!firebaseConfig.apiKey) {
-  throw new Error('❌ Firebase config mangler – check .env eller app.config.js');
-}
+let app: FirebaseApp;
+let auth: Auth;
+let firestore: Firestore;
+let storage: FirebaseStorage;
 
-console.log('✅ FIREBASE CONFIG:', firebaseConfig);
-
-// Initialiser Firebase app
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-
-// Initialiser Firebase Auth med AsyncStorage (persistens)
-let auth;
 try {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
-} catch (error: any) {
-  if (!/already exists|has already been initialized/.test(error.message)) {
-    throw error;
+  if (getApps().length === 0) {
+    console.log('✅ Firebase App Initialized');
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp();
   }
-  auth = getAuth(app);
-}
 
-const firestore = getFirestore(app);
-const storage = getStorage(app);
+  auth = getAuth(app);
+  firestore = getFirestore(app);
+  storage = getStorage(app);
+
+} catch (error) {
+  console.error('🔥 Firebase initialization error:', error);
+  throw error;
+}
 
 export { app, auth, firestore, storage };

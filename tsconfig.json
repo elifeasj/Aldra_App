@@ -19,7 +19,11 @@
       "@/components/*": ["components/*"],
       "@/hooks/*": ["hooks/*"],
       "@/constants/*": ["constants/*"]
-    }
+    },
+    "typeRoots": [
+      "./node_modules/@types",
+      "./types"
+    ]
   },
   "include": [
     "**/*.ts",
