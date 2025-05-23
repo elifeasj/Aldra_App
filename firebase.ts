@@ -1,10 +1,10 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { initializeApp, getApps } from 'firebase/app';
+import { initializeAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import Constants from 'expo-constants';
 
-const extra = Constants.expoConfig?.extra || (Constants.manifest as any)?.extra;
+const extra = Constants.expoConfig?.extra;
 
 const firebaseConfig = {
   apiKey: extra?.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -15,26 +15,23 @@ const firebaseConfig = {
   appId: extra?.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp;
-let auth: Auth;
-let firestore: Firestore;
-let storage: FirebaseStorage;
+console.log('🔍 Firebase Config Check:', {
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasAuthDomain: !!firebaseConfig.authDomain,
+  hasProjectId: !!firebaseConfig.projectId,
+  hasAppId: !!firebaseConfig.appId,
+});
 
-try {
-  if (getApps().length === 0) {
-    console.log('✅ Firebase App Initialized');
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApp();
-  }
+// Initialize Firebase
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-  auth = getAuth(app);
-  firestore = getFirestore(app);
-  storage = getStorage(app);
+// Initialize Auth (React Native compatible)
+const auth = initializeAuth(app);
 
-} catch (error) {
-  console.error('🔥 Firebase initialization error:', error);
-  throw error;
-}
+// Initialize other services
+const firestore = getFirestore(app);
+const storage = getStorage(app);
+
+console.log('✅ Firebase initialized successfully');
 
 export { app, auth, firestore, storage };

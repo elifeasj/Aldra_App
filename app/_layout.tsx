@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { Text, TextInput, View, StatusBar, Appearance } from 'react-native';
-import { 
+import {
     useFonts,
     RedHatDisplay_400Regular,
     RedHatDisplay_500Medium,
@@ -11,7 +11,15 @@ import {
 } from '@expo-google-fonts/red-hat-display';
 import { auth } from '../firebase';
 import { User } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Simple in-memory storage alternative
+const memoryStorage = {
+    user: null as User | null,
+    setUser: (user: User | null) => {
+        memoryStorage.user = user;
+    },
+    getUser: () => memoryStorage.user,
+};
 
 // Hold splash screen synlig mens vi loader resourcer
 SplashScreen.preventAutoHideAsync();
@@ -30,17 +38,19 @@ export default function Layout() {
     useEffect(() => {
         const loadAuth = async () => {
             try {
-                // Tjek først AsyncStorage for gemt bruger
-                const savedUser = await AsyncStorage.getItem('user');
+                // Check memory storage first
+                const savedUser = memoryStorage.getUser();
                 if (savedUser) {
                     setAuthLoaded(true);
                     return;
                 }
 
-                // Hvis ingen gemt bruger, vent på auth state
+                // Wait for auth state change
                 await new Promise<User | null>((resolve) => {
                     const unsubscribe = auth.onAuthStateChanged((user) => {
                         unsubscribe();
+                        // Save to memory storage
+                        memoryStorage.setUser(user);
                         setAuthLoaded(true);
                         resolve(user);
                     });
