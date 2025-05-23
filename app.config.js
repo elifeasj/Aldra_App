@@ -40,6 +40,7 @@ export default {
   ios: {
     bundleIdentifier: "com.effyo.aldraapp",
     supportsTablet: true,
+    deploymentTarget: "15.1",
     jsEngine: "jsc",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
