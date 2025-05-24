@@ -1,7 +1,7 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { initializeAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 import Constants from 'expo-constants';
 
 const extra = Constants.expoConfig?.extra;
@@ -15,23 +15,13 @@ const firebaseConfig = {
   appId: extra?.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-console.log('🔍 Firebase Config Check:', {
-  hasApiKey: !!firebaseConfig.apiKey,
-  hasAuthDomain: !!firebaseConfig.authDomain,
-  hasProjectId: !!firebaseConfig.projectId,
-  hasAppId: !!firebaseConfig.appId,
-});
+// Brug eksisterende app hvis den allerede er initialiseret
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-
-// Initialize Auth (React Native compatible)
-const auth = initializeAuth(app);
-
-// Initialize other services
-const firestore = getFirestore(app);
+// Brug standard getAuth — det virker med Expo SDK 53
+const auth = getAuth(app);
+const db = getFirestore(app);
 const storage = getStorage(app);
+export const firestore = getFirestore(app);
 
-console.log('✅ Firebase initialized successfully');
-
-export { app, auth, firestore, storage };
+export { app, auth, db, storage };

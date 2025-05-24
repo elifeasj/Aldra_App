@@ -47,7 +47,7 @@ export default function Layout() {
 
                 // Wait for auth state change
                 await new Promise<User | null>((resolve) => {
-                    const unsubscribe = auth.onAuthStateChanged((user) => {
+                    const unsubscribe = auth.onAuthStateChanged((user: User | null) => {
                         unsubscribe();
                         // Save to memory storage
                         memoryStorage.setUser(user);

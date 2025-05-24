@@ -18,7 +18,7 @@
       "@/*": ["app/*"],
       "@/components/*": ["components/*"],
       "@/hooks/*": ["hooks/*"],
-      "@/constants/*": ["constants/*"]
+      "@/constants/*": ["constants/*"],
     },
     "typeRoots": [
       "./node_modules/@types",
@@ -31,12 +31,11 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "app/types/**/*.d.ts",
-    "aldra-backend/firebaseAdmin.js",
-    "app/onboarding/register.js",
     "types/**/*.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "app/**/*"
+    "app/**/*",
+    "firebase-auth-react-native.d.ts", "src", "app", "firebase.ts"
   ],
   "exclude": [
     "node_modules"

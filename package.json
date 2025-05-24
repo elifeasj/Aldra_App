@@ -54,7 +54,7 @@
     "expo-updates": "^0.28.13",
     "expo-web-browser": "~14.1.6",
     "express": "^4.17.1",
-    "firebase": "^10.8.0",
+    "firebase": "^10.14.1",
     "glob": "^8.1.0",
     "graphql": "^16.10.0",
     "koa": "^2.16.1",
