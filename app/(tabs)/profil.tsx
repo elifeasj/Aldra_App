@@ -51,7 +51,7 @@ const Profil = () => {
 
 
   const handleViewLog = (log: LogData) => {
-    router.push({ pathname: '/ny-log', params: { date: log.created_at, logId: log.id } });
+    router.push({ pathname: '/ny-log', params: { date: log.date, logId: log.id } });
   };
 
 const loadFamilyMembers = async () => {
@@ -114,7 +114,7 @@ const loadUserLogs = async () => {
         id: doc.id,
         title: data.title || '',
         description: data.description || '',
-        date: data.created_at?.toDate().toISOString().split('T')[0] || '',
+        date: data.date || '',
         created_at: data.created_at?.toDate().toISOString() || '',
       };
     });
@@ -139,7 +139,7 @@ const loadUserLogs = async () => {
           name: data.full_name || '',
           relationToDementiaPerson: data.relation_to_dementia_person || '',
           profile_image: data.profile_image || '',
-          avatarUrl: data.profile_image || '',
+          avatarUrl: data.profile_image_url || data.profile_image || '',
         });
       }
     } catch (error) {
@@ -351,7 +351,7 @@ const loadUserLogs = async () => {
               <View style={styles.titleAndDescription}>
                 <Text style={styles.logTitle} numberOfLines={1}>{log.title}</Text>
                 <Text style={styles.dateText} numberOfLines={1}>
-                  {`${new Date(log.created_at).getDate()}. ${new Date(log.created_at).toLocaleString('da-DK', { month: 'long' })} ${new Date(log.created_at).getFullYear()}`}
+                  {`${new Date(log.date).getDate()}. ${new Date(log.date).toLocaleString('da-DK', { month: 'long' })} ${new Date(log.date).getFullYear()}`}
                 </Text>
               </View>
               <View style={styles.buttonContainer}>

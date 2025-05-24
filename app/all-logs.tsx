@@ -60,7 +60,7 @@ const AllLogs = () => {
 
   // Function to handle viewing a log
   const handleViewLog = (log: LogData) => {
-    router.push({ pathname: '/ny-log', params: { date: log.created_at, logId: log.id } });
+    router.push({ pathname: '/ny-log', params: { date: log.date, logId: log.id } });
   };
 
   // Format date for display
@@ -104,7 +104,7 @@ const AllLogs = () => {
                     <View style={styles.titleAndDescription}>
                       <Text style={styles.logTitle} numberOfLines={1}>{log.title}</Text>
                       <Text style={styles.dateText} numberOfLines={1}>
-                        {formatDate(log.created_at)}
+                        {formatDate(log.date)}
                       </Text>
                     </View>
                     <View style={styles.buttonContainer}>

@@ -119,7 +119,8 @@ const EditProfile = () => {
         email: parsedData.email || '',
         password: '',
         birthday: parsedData.birthday || '',
-        avatarUrl: avatarUrl || '',
+        profile_image: parsedData.profile_image || '',
+        avatarUrl: avatarUrl,
         relationToDementiaPerson: parsedData.relationToDementiaPerson || parsedData.relation_to_dementia_person || '',
         token: parsedData.token,
         id: parsedData.id
@@ -161,7 +162,7 @@ const EditProfile = () => {
       if (!storedUserData) throw new Error('No user data found');
   
       const parsedData = JSON.parse(storedUserData);
-      const userId = parsedData.id;
+      const userId = parsedData.id || parsedData.uid;
   
       const manipulatedImage = await manipulateAsync(
         uri,
@@ -175,6 +176,12 @@ const EditProfile = () => {
         type: 'image/jpeg',
         name: `user_${userId}_${Date.now()}.jpg`,
       });
+
+      if (!parsedData.uid) {
+        console.error('❌ Brugerdata mangler uid:', parsedData);
+        Alert.alert('Fejl', 'Kan ikke finde bruger-ID.');
+        return;
+      }
       formData.append('userId', userId.toString());
   
       const response = await fetch(`${API_URL}/upload-avatar`, {
@@ -202,6 +209,7 @@ const EditProfile = () => {
         ...parsedData,
         birthday: parsedData.birthday,
         profile_image: result.path,
+        profile_image_url: signedUrl,
         avatarUrl: signedUrl,
       };
   
@@ -249,13 +257,16 @@ const EditProfile = () => {
 
           <View style={styles.profileImageContainer}>
             <TouchableOpacity onPress={pickImage} style={styles.profileImageWrapper}>
-              {userData.avatarUrl ? (
-                <Image
-                  source={{ uri: userData.avatarUrl }}
-                  style={styles.profileImage}
-                  onError={() => setUserData(prev => ({ ...prev, avatarUrl: '' }))}
-                />
-              ) : (
+            {userData.avatarUrl ? (
+              <Image
+                source={{ uri: userData.avatarUrl }}
+                style={styles.profileImage}
+                onError={() => {
+                  console.warn('⚠️ Kunne ikke loade billede:', userData.avatarUrl);
+                  setUserData(prev => ({ ...prev, avatarUrl: '' }));
+                }}
+              />
+            ) : (
                 // fallback initialer eller ikon
                 <View style={styles.placeholderImage}>
                   {userData.name ? (
@@ -370,6 +381,16 @@ const EditProfile = () => {
 
                     const updatedData = { ...parsedData, birthday: formattedDate };
 
+                    console.log('🔁 Sender opdatering til backend med:', {
+                      url: `${API_URL}/users/${parsedData.uid}`,
+                      birthday: isoDate,
+                      name: parsedData.name,
+                      email: parsedData.email,
+                      profile_image: parsedData.profile_image,
+                      relationToDementiaPerson: parsedData.relationToDementiaPerson,
+                      token: parsedData.token
+                    });
+                    
                     const response = await fetch(`${API_URL}/users/${parsedData.id}`, {
                       method: 'PUT',
                       headers: {
@@ -384,7 +405,11 @@ const EditProfile = () => {
                         relationToDementiaPerson: parsedData.relationToDementiaPerson
                       })
                     })                    
-                    if (!response.ok) throw new Error('Failed to update birthday');
+                    if (!response.ok) {
+                      const resultText = await response.text();
+                      console.error('❌ Fejl fra API:', resultText);
+                      throw new Error('Failed to update birthday');
+                    }                    
 
                     await AsyncStorage.setItem('userData', JSON.stringify(updatedData));
                     setShowDatePicker(false);

@@ -57,20 +57,27 @@ export default function NyLog() {
           const user = auth.currentUser;
           if (!user) throw new Error('Bruger ikke logget ind');
       
-          const logData = {
+          const now = Timestamp.now();
+
+          const logData: any = {
             title,
             description,
             date: date || new Date().toISOString().split('T')[0],
             appointment_id: appointment_id || null,
-            user_id: user.uid,
-            created_at: Timestamp.now()
-          };          
-      
+            user_id: user.uid
+          };
+          
           if (logId) {
-            await setDoc(doc(firestore, 'user_logs', logId), logData);
+            logData.updated_at = now;
+          } else {
+            logData.created_at = now;
+          }
+
+          if (logId) {
+            await setDoc(doc(firestore, 'user_logs', logId), logData, { merge: true });
           } else {
             await addDoc(collection(firestore, 'user_logs'), logData);
-          }
+          }          
       
           router.back();
         } catch (error) {

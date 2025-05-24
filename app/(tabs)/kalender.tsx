@@ -100,25 +100,56 @@ export default function Kalender() {
 
     // Funktion til at tjekke logs for appointments
     const checkLogsForAppointments = async () => {
-        try {
-          if (!auth || !auth.currentUser) return;
-          const user = auth.currentUser;
-      
-          const q = query(
-            collection(firestore, 'user_logs'),
-            where('user_id', '==', user.uid)
-          );
-      
-          const snapshot = await getDocs(q);
-          const logs = snapshot.docs.map(doc => doc.data());
-      
-          const datesWithLogs = logs.map(log => log.date); // eller brug created_at.toDate().toISOString().split('T')[0]
-      
-          setHasLogForSelectedDate(datesWithLogs.includes(selectedDate));
-        } catch (error) {
-          console.error('Fejl ved hentning af logs:', error);
-        }
-      };
+      try {
+        if (!auth || !auth.currentUser) return;
+        const user = auth.currentUser;
+    
+        const q = query(
+          collection(firestore, 'user_logs'),
+          where('user_id', '==', user.uid)
+        );
+    
+        const snapshot = await getDocs(q);
+        const logs = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...(doc.data() as {
+            appointment_id: string;
+            date: string;
+            title?: string;
+            description?: string;
+            created_at?: any;
+            user_id: string;
+          })
+        }));
+            
+        const logMap: { [appointmentId: string]: string } = {};
+    
+        logs.forEach(log => {
+          console.log('🧾 Log:', log);
+          console.log('🧾 log.appointment_id:', log.appointment_id);
+          console.log('🧾 log.id:', log.id);
+        
+          if (log.appointment_id) {
+            logMap[log.appointment_id] = log.id;
+          }
+        });
+    
+        setAppointmentsWithLogs(logMap);
+
+        console.log('📦 logMap:', logMap);
+        appointments.forEach((a) => {
+          console.log('📅 Appointment ID:', a.id);
+          console.log('🔍 Har log?', !!logMap[a.id]);
+        });
+    
+        // Til valgfri tjek for udvalgt dato
+        const datesWithLogs = logs.map(log => log.date);
+        setHasLogForSelectedDate(datesWithLogs.includes(selectedDate));
+        
+      } catch (error) {
+        console.error('Fejl ved hentning af logs:', error);
+      }
+    };    
       
 
     // Kør checkLogsForAppointments når appointments ændres
@@ -134,7 +165,7 @@ export default function Kalender() {
           if (appointments.length > 0) {
             checkLogsForAppointments();
           }
-        }, 2000);
+        }, 5000);
         return () => clearInterval(interval);
       }, [appointments]);
       
@@ -549,6 +580,7 @@ export default function Kalender() {
       
           await fetchAppointments(newAppointment.date);
           await fetchDatesWithAppointments();
+          await checkLogsForAppointments();
       
         } catch (error) {
           console.error('Fejl ved oprettelse:', error);
